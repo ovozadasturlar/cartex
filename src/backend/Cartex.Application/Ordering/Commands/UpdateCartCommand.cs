@@ -75,7 +75,8 @@ public sealed class UpdateCartCommandHandler(
             && !currentUser.HasPermission(AppPermissions.Sales.Discount))
             throw new ForbiddenException("Savdoda chegirma berishga ruxsat yo'q.");
 
-        await quantityPolicy.ValidateAsync(request.Items.Select(x => (x.VariantId, x.Quantity)), cancellationToken);
+        await quantityPolicy.ValidateAsync(
+            request.Items.Where(x => x.PrepackId is null).Select(x => (x.VariantId, x.Quantity)), cancellationToken);
         var participants = await participantService.ResolveAsync(
             request.Participants, ParticipantContext.Cart, request.CustomerId, cancellationToken);
         var baseCurrency = (await currency.BaseAsync(cancellationToken)).ToUpperInvariant();
@@ -108,6 +109,7 @@ public sealed class UpdateCartCommandHandler(
             cart.Items.Add(new CartItem
             {
                 VariantId = row.VariantId,
+                PrepackId = row.PrepackId,
                 Quantity = row.Quantity,
                 UnitPriceOverride = row.UnitPrice
             });
@@ -141,7 +143,7 @@ public sealed class UpdateCartCommandHandler(
             cart.CreditAmount,
             cart.UseCustomerAdvance
         }, "Ochiq savat yangilandi", cart.BranchId);
-        await notifier.CartsChangedAsync(cart.Kind.ToString(), cancellationToken);
+        await db.RunAfterCommitAsync(() => notifier.CartsChangedAsync(cart.BranchId, cart.Kind.ToString(), cancellationToken));
         return Unit.Value;
     }
 }
@@ -152,7 +154,7 @@ public sealed class UpdateCartCommandValidator : AbstractValidator<UpdateCartCom
     {
         RuleFor(x => x.Code).NotEmpty().MaximumLength(40);
         RuleFor(x => x.Items).NotEmpty().Must(x => x.Count <= 500)
-            .Must(x => x.Select(i => i.VariantId).Distinct().Count() == x.Count)
+            .Must(x => x.Select(i => (i.VariantId, i.PrepackId)).Distinct().Count() == x.Count)
             .WithMessage("Mahsulot qatorlari noto'g'ri.");
         RuleForEach(x => x.Items).Must(x => x.Quantity > 0);
         RuleFor(x => x.Note).MaximumLength(1000);

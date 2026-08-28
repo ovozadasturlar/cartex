@@ -1,3 +1,4 @@
+using Cartex.Application.Common.Interfaces;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
@@ -5,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Printing;
 
-public sealed class PrintRoutingService(IApplicationDbContext db)
+public sealed class PrintRoutingService(IApplicationDbContext db, IHubPresence presence)
 {
     public async Task<PrintRoutingPolicy> GetOrCreatePolicyAsync(long branchId, PrintJobKind kind, CancellationToken cancellationToken)
     {
@@ -15,15 +16,7 @@ public sealed class PrintRoutingService(IApplicationDbContext db)
             .ThenInclude(x => x.PrintNode)
             .FirstOrDefaultAsync(x => x.BranchId == branchId && x.Kind == kind, cancellationToken);
 
-        if (policy is not null)
-        {
-            if (!Enum.IsDefined(policy.RoutingMode))
-            {
-                policy.RoutingMode = PrintRoutingMode.LocalFirst;
-                await db.SaveChangesAsync(cancellationToken);
-            }
-            return policy;
-        }
+        if (policy is not null) return policy;
 
         policy = new PrintRoutingPolicy
         {
@@ -42,19 +35,18 @@ public sealed class PrintRoutingService(IApplicationDbContext db)
         if (!policy.IsEnabled) return false;
 
         var capability = CapabilityFor(job.Kind);
-        var onlineAfter = DateTime.UtcNow.AddSeconds(-45);
         var endpoints = await db.PrinterEndpoints
             .Include(x => x.PrintNode)
             .Where(x => x.PrintNode.BranchId == job.BranchId
                 && x.IsEnabled
                 && x.PrintNode.IsTrusted
                 && x.PrintNode.HostEnabled
-                && x.PrintNode.LastSeenAt >= onlineAfter
                 && (x.Capabilities & capability) == capability)
             .ToListAsync(cancellationToken);
+        endpoints.RemoveAll(x => !presence.IsOnline(HubChannels.PrintHost(x.PrintNode.DeviceId)));
 
         var attempted = await db.PrintAttempts
-            .Where(x => x.PrintJobId == job.Id)
+            .Where(x => x.PrintJobId == job.Id && x.ErrorCode != "host_offline")
             .Select(x => new { x.PrinterEndpointId, FailedAt = x.CompletedAt ?? x.StartedAt })
             .ToListAsync(cancellationToken);
         endpoints.RemoveAll(endpoint => attempted.Any(attempt => attempt.PrinterEndpointId == endpoint.Id
@@ -110,6 +102,9 @@ public sealed class PrintRoutingService(IApplicationDbContext db)
     {
         if (endpoints.Count == 0) return null;
 
+        if (policy.RoutingMode == PrintRoutingMode.LocalOnly)
+            return Configured(policy, endpoints);
+
         if (policy.RoutingMode == PrintRoutingMode.LocalFirst)
         {
             var local = job.OriginNodeId is null
@@ -124,21 +119,18 @@ public sealed class PrintRoutingService(IApplicationDbContext db)
             if (sticky is not null) return sticky;
         }
 
-        var priorities = policy.Targets
+        return Configured(policy, endpoints)
+            ?? (policy.AllowFallback
+                ? endpoints.OrderByDescending(x => x.LastSuccessAt).ThenBy(x => x.Id).FirstOrDefault()
+                : null);
+    }
+
+    private static PrinterEndpoint? Configured(PrintRoutingPolicy policy, IReadOnlyCollection<PrinterEndpoint> endpoints) =>
+        policy.Targets
             .Where(x => x.IsEnabled)
             .OrderBy(x => x.Priority)
-            .Select(x => x.PrinterEndpointId)
-            .ToList();
-        foreach (var endpointId in priorities)
-        {
-            var configured = endpoints.FirstOrDefault(x => x.Id == endpointId);
-            if (configured is not null) return configured;
-        }
-
-        return policy.AllowFallback
-            ? endpoints.OrderByDescending(x => x.LastSuccessAt).ThenBy(x => x.Id).FirstOrDefault()
-            : null;
-    }
+            .Select(x => endpoints.FirstOrDefault(e => e.Id == x.PrinterEndpointId))
+            .FirstOrDefault(x => x is not null);
 
     private static bool IsStickyValid(PrintRoutingPolicy policy) => policy.StickyEndpointId is not null && policy.StickyMode switch
     {

@@ -24,7 +24,8 @@ public sealed class GetStockOnHandQueryHandler(
     IObjectStorage storage,
     IFeatureStateProvider features,
     ISettingsService settings,
-    ICurrencyService currency) : IRequestHandler<GetStockOnHandQuery, StockOnHandPageDto>
+    ICurrencyService currency,
+    IProductPopularity popularity) : IRequestHandler<GetStockOnHandQuery, StockOnHandPageDto>
 {
     public async Task<StockOnHandPageDto> Handle(GetStockOnHandQuery request, CancellationToken cancellationToken)
     {
@@ -67,9 +68,10 @@ public sealed class GetStockOnHandQueryHandler(
                 : variantQuery.Where(v => ids.Contains(v.Id));
         }
 
+        long branchId = 0;
         if (request.ForSale)
         {
-            var branchId = await db.Warehouses
+            branchId = await db.Warehouses
                 .Where(x => x.Id == request.WarehouseId)
                 .Select(x => x.BranchId)
                 .FirstOrDefaultAsync(cancellationToken);
@@ -177,15 +179,20 @@ public sealed class GetStockOnHandQueryHandler(
             .FirstOrDefaultAsync(cancellationToken);
 
         var strictNameQuery = ProductCatalogSearch.StrictNameQuery(search);
+        var ranks = request.ForSale && search.Terms.Count == 0
+            ? await popularity.GetRanksAsync(branchId, cancellationToken)
+            : null;
         var pageQuery = query;
         Dictionary<long, int>? relevanceOrder = null;
-        if (strictNameQuery.Length > 0)
+        if (strictNameQuery.Length > 0 || ranks is { Count: > 0 })
         {
             var candidates = await query
-                .Select(x => new { x.VariantId, x.ProductName })
+                .Select(x => new { x.VariantId, x.ProductId, x.ProductName })
                 .ToListAsync(cancellationToken);
             var rankedIds = candidates
-                .OrderBy(x => ProductCatalogSearch.NameRank(x.ProductName, strictNameQuery))
+                .OrderBy(x => ranks is null
+                    ? ProductCatalogSearch.NameRank(x.ProductName, strictNameQuery)
+                    : ranks.GetValueOrDefault(x.ProductId, int.MaxValue))
                 .ThenBy(x => x.ProductName, StringComparer.OrdinalIgnoreCase)
                 .ThenBy(x => x.VariantId)
                 .Select(x => x.VariantId);

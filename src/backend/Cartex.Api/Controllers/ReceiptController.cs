@@ -22,17 +22,17 @@ public class ReceiptController(ISender sender, IObjectStorage storage) : Control
     [HttpGet("{token}")]
     public async Task<ActionResult<ReceiptDto>> GetReceipt(string token)
     {
-        var receipt = await sender.Send(new GetReceiptByTokenQuery(token));
-        if (receipt is null)
-            return NotFound();
-
         if (Request.Headers.Accept.ToString().Contains("text/html", StringComparison.OrdinalIgnoreCase))
         {
+            var receipt = await sender.Send(new GetReceiptByTokenQuery(token));
+            if (receipt is null)
+                return NotFound();
             var receiptSettings = await sender.Send(new Cartex.Application.Settings.Queries.GetReceiptSettingsQuery());
             return Content(ReceiptHtmlRenderer.Render(receipt, ToRenderSettings(receiptSettings)), "text/html; charset=utf-8");
         }
 
-        return Ok(receipt);
+        var publicReceipt = await sender.Send(new GetPublicReceiptQuery(token));
+        return publicReceipt is null ? NotFound() : Ok(publicReceipt);
     }
 
     [HttpGet("{token}/pdf")]

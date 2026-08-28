@@ -15,7 +15,7 @@ namespace Cartex.Application.Printing;
 
 public record GetPrintNodesQuery(long BranchId) : IRequest<IReadOnlyList<PrintNodeDto>>;
 
-public sealed class GetPrintNodesQueryHandler(IApplicationDbContext db, ICurrentUser currentUser)
+public sealed class GetPrintNodesQueryHandler(IApplicationDbContext db, ICurrentUser currentUser, IHubPresence presence)
     : IRequestHandler<GetPrintNodesQuery, IReadOnlyList<PrintNodeDto>>
 {
     public async Task<IReadOnlyList<PrintNodeDto>> Handle(GetPrintNodesQuery request, CancellationToken cancellationToken)
@@ -24,7 +24,7 @@ public sealed class GetPrintNodesQueryHandler(IApplicationDbContext db, ICurrent
         var nodes = await db.PrintNodes.AsNoTracking().Include(x => x.Endpoints)
             .Where(x => x.BranchId == request.BranchId)
             .OrderBy(x => x.Name).ToListAsync(cancellationToken);
-        return nodes.Select(PrintingMapper.Node).ToList();
+        return nodes.Select(x => PrintingMapper.Node(x, presence.IsOnline(HubChannels.PrintHost(x.DeviceId)))).ToList();
     }
 }
 
@@ -49,7 +49,7 @@ public record GetPrintDevicesQuery(long BranchId) : IRequest<PrintDevicesDto>;
 
 /// One row per physical device for the settings screen: requester record and host node
 /// joined by device id, so trust reads as a single switch.
-public sealed class GetPrintDevicesQueryHandler(IApplicationDbContext db, ICurrentUser currentUser)
+public sealed class GetPrintDevicesQueryHandler(IApplicationDbContext db, ICurrentUser currentUser, IHubPresence presence)
     : IRequestHandler<GetPrintDevicesQuery, PrintDevicesDto>
 {
     public async Task<PrintDevicesDto> Handle(GetPrintDevicesQuery request, CancellationToken cancellationToken)
@@ -62,7 +62,6 @@ public sealed class GetPrintDevicesQueryHandler(IApplicationDbContext db, ICurre
         var requesters = await db.PrintRequesterDevices.AsNoTracking().Include(x => x.LastUser)
             .Where(x => x.BranchId == request.BranchId).ToListAsync(cancellationToken);
 
-        var staleBefore = DateTime.UtcNow.AddSeconds(-90);
         var devices = nodes.Select(x => x.DeviceId).Union(requesters.Select(x => x.DeviceId), StringComparer.Ordinal)
             .Select(deviceId =>
             {
@@ -70,9 +69,9 @@ public sealed class GetPrintDevicesQueryHandler(IApplicationDbContext db, ICurre
                 var requester = requesters.FirstOrDefault(x => x.DeviceId == deviceId);
                 var status = node is null
                     ? (Cartex.Shared.Models.Printing.PrintNodeStatus?)null
-                    : node.Status == Cartex.Domain.Enums.PrintNodeStatus.Online && node.LastSeenAt < staleBefore
-                        ? Cartex.Shared.Models.Printing.PrintNodeStatus.Offline
-                        : (Cartex.Shared.Models.Printing.PrintNodeStatus)node.Status;
+                    : presence.IsOnline(HubChannels.PrintHost(deviceId))
+                        ? Cartex.Shared.Models.Printing.PrintNodeStatus.Online
+                        : Cartex.Shared.Models.Printing.PrintNodeStatus.Offline;
                 var lastSeen = new[] { node?.LastSeenAt, requester?.LastSeenAt }.Max();
                 return new PrintDeviceDto(
                     deviceId,
@@ -119,7 +118,8 @@ public sealed class GetPrintingBootstrapQueryHandler(
     IApplicationDbContext db,
     ICurrentUser currentUser,
     PrintRoutingService routing,
-    ReceiptPrintPolicyService receiptPolicy)
+    ReceiptPrintPolicyService receiptPolicy,
+    IHubPresence presence)
     : IRequestHandler<GetPrintingBootstrapQuery, PrintingBootstrapDto>
 {
     public async Task<PrintingBootstrapDto> Handle(
@@ -137,7 +137,7 @@ public sealed class GetPrintingBootstrapQueryHandler(
             var entity = await db.PrintNodes.AsNoTracking().Include(x => x.Endpoints)
                 .FirstOrDefaultAsync(x => x.BranchId == request.BranchId && x.DeviceId == deviceId,
                     cancellationToken);
-            if (entity is not null) node = PrintingMapper.Node(entity);
+            if (entity is not null) node = PrintingMapper.Node(entity, presence.IsOnline(HubChannels.PrintHost(entity.DeviceId)));
         }
 
         var settingRevision = await db.BusinessSettings.AsNoTracking()
@@ -297,7 +297,7 @@ public sealed class RetryPrintJobCommandHandler(
         if (await routing.AssignAsync(job, cancellationToken) && job.AssignedNodeId is not null)
         {
             var deviceId = await db.PrintNodes.Where(x => x.Id == job.AssignedNodeId).Select(x => x.DeviceId).FirstAsync(cancellationToken);
-            await notifier.NotifyJobAvailableAsync(deviceId, job.Id, cancellationToken);
+            await db.RunAfterCommitAsync(() => notifier.NotifyJobAvailableAsync(deviceId, job.Id, cancellationToken));
         }
         return PrintingMapper.Job(job);
     }
@@ -308,23 +308,32 @@ public record RecoverPrintJobsCommand : ICommand<int>;
 public sealed class RecoverPrintJobsCommandHandler(
     IApplicationDbContext db,
     PrintRoutingService routing,
-    IPrintJobNotifier notifier) : IRequestHandler<RecoverPrintJobsCommand, int>
+    IPrintJobNotifier notifier,
+    IHubPresence presence) : IRequestHandler<RecoverPrintJobsCommand, int>
 {
     public async Task<int> Handle(RecoverPrintJobsCommand request, CancellationToken cancellationToken)
     {
         var now = DateTime.UtcNow;
-        var expired = await db.PrintJobs.Include(x => x.Attempts)
-            .Where(x => (x.Status == DomainJobStatus.Assigned || x.Status == DomainJobStatus.Accepted) && x.LeaseExpiresAt < now)
+        var inFlight = await db.PrintJobs.Include(x => x.Attempts).Include(x => x.AssignedNode)
+            .Where(x => x.Status == DomainJobStatus.Assigned || x.Status == DomainJobStatus.Accepted)
             .OrderBy(x => x.CreatedAt)
             .Take(100).ToListAsync(cancellationToken);
-        foreach (var job in expired)
+        var expired = inFlight
+            .Select(job => (Job: job, Reason: job.LeaseExpiresAt < now
+                ? "lease_expired"
+                : job.Status == DomainJobStatus.Assigned && !presence.IsOnline(HubChannels.PrintHost(job.AssignedNode?.DeviceId ?? ""))
+                    ? "host_offline"
+                    : null))
+            .Where(x => x.Reason is not null)
+            .ToList();
+        foreach (var (job, reason) in expired)
         {
             var attempt = job.Attempts.FirstOrDefault(x => x.LeaseToken == job.LeaseToken);
             if (attempt is not null)
             {
                 attempt.Status = DomainAttemptStatus.FailedBeforeSubmit;
                 attempt.CompletedAt = now;
-                attempt.ErrorCode = "lease_expired";
+                attempt.ErrorCode = reason;
             }
             job.Status = DomainJobStatus.Pending;
             job.AssignedNodeId = null;
@@ -357,7 +366,8 @@ public sealed class RecoverPrintJobsCommandHandler(
         {
             if (!await routing.AssignAsync(job, cancellationToken) || job.AssignedNodeId is null) continue;
             var deviceId = await db.PrintNodes.Where(x => x.Id == job.AssignedNodeId).Select(x => x.DeviceId).FirstAsync(cancellationToken);
-            await notifier.NotifyJobAvailableAsync(deviceId, job.Id, cancellationToken);
+            var jobId = job.Id;
+            await db.RunAfterCommitAsync(() => notifier.NotifyJobAvailableAsync(deviceId, jobId, cancellationToken));
             assigned++;
         }
         return assigned;

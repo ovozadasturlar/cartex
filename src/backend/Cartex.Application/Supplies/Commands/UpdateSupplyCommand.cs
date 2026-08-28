@@ -7,6 +7,7 @@ using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
+using Cartex.Persistence.Services;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 
@@ -29,7 +30,8 @@ public sealed class UpdateSupplyCommandHandler(
     ICurrencyService currency,
     ISettingsService settingsService,
     IBranchCatalogService branchCatalog,
-    IAuditService audit) : IRequestHandler<UpdateSupplyCommand, Unit>
+    IAuditService audit,
+    InventoryReasonState inventoryReason) : IRequestHandler<UpdateSupplyCommand, Unit>
 {
     public async Task<Unit> Handle(UpdateSupplyCommand request, CancellationToken cancellationToken)
     {
@@ -44,18 +46,27 @@ public sealed class UpdateSupplyCommandHandler(
 
         var supply = await db.Supplies
             .Include(s => s.Items)
-            .FirstOrDefaultAsync(s => s.Id == request.Id, cancellationToken)
-            ?? throw new NotFoundException("Ta'minot topilmadi.");
+            .FirstOrDefaultAsync(s => s.Id == request.Id, cancellationToken);
+        if (supply is null || (await db.LockAsync<Supply>(
+                $"SELECT * FROM supplies WHERE id = {request.Id} AND is_deleted = false FOR UPDATE",
+                cancellationToken)).Count == 0)
+            throw new NotFoundException("Ta'minot topilmadi.");
 
         var warehouse = await db.Warehouses.FirstOrDefaultAsync(w => w.Id == request.WarehouseId, cancellationToken)
             ?? throw new NotFoundException("Warehouse not found.");
 
-        var stocks = await db.Stocks.Where(s => s.SupplyId == supply.Id).ToListAsync(cancellationToken);
+        var stocks = await db.LockAsync<Stock>(
+            $"SELECT * FROM stocks WHERE supply_id = {supply.Id} AND is_deleted = false ORDER BY id FOR UPDATE",
+            cancellationToken);
         foreach (var group in supply.Items.GroupBy(i => i.VariantId))
         {
-            var remaining = stocks.Where(s => s.VariantId == group.Key).Sum(s => s.Quantity);
-            if (remaining < group.Sum(i => i.Quantity))
-                throw new BusinessRuleException("Bu kirimdagi mahsulotlardan sotilgan yoki ishlatilgan — tahrirlab bo'lmaydi, bekor qilib qaytadan kiriting.");
+            // Ortiqcha qoldiq ham o'zgarish: mijoz qaytargan tovar shu partiyaga qaytgan bo'lsa,
+            // partiya endi faqat shu kirimga tegishli emas — uni qayta yozish qaytgan tovarni
+            // ro'yxatdan yo'qotardi.
+            if (stocks.Where(s => s.VariantId == group.Key).Sum(s => s.Quantity) != group.Sum(i => i.Quantity))
+                throw new BusinessRuleException(
+                    "Bu kirimdagi partiyalar o'zgargan (sotilgan, ishlatilgan yoki qaytarilgan) — tahrirlab bo'lmaydi, bekor qilib qaytadan kiriting.",
+                    "supply_stock_modified");
         }
 
         var payments = await db.Transactions
@@ -86,8 +97,13 @@ public sealed class UpdateSupplyCommandHandler(
             .Include(t => t.ToAccount)
             .ToListAsync(cancellationToken);
 
+        await ledger.LockAsync(SupplyLedger.AccountIds(charges), cancellationToken);
+
         foreach (var charge in charges)
-            ledger.Post(charge.OperationType, charge.Amount, charge.ToAccount, charge.FromAccount, userId, rate: charge.Rate).Supply = supply;
+            (await ledger.PostAsync(charge.OperationType, charge.Amount, charge.ToAccount, charge.FromAccount, userId, cancellationToken, rate: charge.Rate)).Supply = supply;
+
+        inventoryReason.Declare(new(InventoryMovementKind.SupplyReceipt, "Supply", supply.Id,
+            InventoryLocation.External(request.SupplierId ?? 0)));
 
         foreach (var stock in stocks)
         {
@@ -139,7 +155,7 @@ public sealed class UpdateSupplyCommandHandler(
         if (request.SupplierId is { } sid)
         {
             var supplierDebt = await ledger.SupplierAccountAsync(sid, AccountType.Debt, cancellationToken, supplyCurrency);
-            ledger.Post(OperationType.DebtCharge, total, supplierDebt, null, userId, rate: supplyRate).Supply = supply;
+            (await ledger.PostAsync(OperationType.DebtCharge, total, supplierDebt, null, userId, cancellationToken, rate: supplyRate)).Supply = supply;
         }
 
         await branchCatalog.ActivateAsync(warehouse.BranchId, request.Items.Select(x => x.VariantId), BranchCatalogActivationSource.Supply, cancellationToken);

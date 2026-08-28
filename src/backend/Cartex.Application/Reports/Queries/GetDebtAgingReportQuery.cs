@@ -18,7 +18,7 @@ public sealed class GetDebtAgingReportQueryHandler(IApplicationDbContext db) : I
             {
                 a.Id,
                 CustomerId = a.CustomerId!.Value,
-                CustomerName = a.Customer!.FullName,
+                CustomerName = a.Customer!.Party.FullName,
                 a.Balance,
                 a.Currency,
                 BalanceBase = a.Balance * (a.Currency == baseCode ? 1m

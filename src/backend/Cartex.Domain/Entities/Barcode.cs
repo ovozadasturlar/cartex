@@ -10,7 +10,4 @@ public class Barcode : SoftDeleteEntity
     public string Code { get; set; } = null!;
 
     public decimal PackQty { get; set; } = 1;
-
-    public long? PackId { get; set; }
-    public ProductPack? Pack { get; set; }
 }

@@ -14,10 +14,7 @@ public class PrintNode : AuditableEntity, IBranchScoped
     public string? ClientVersion { get; set; }
     public bool IsTrusted { get; set; }
     public bool HostEnabled { get; set; }
-    public PrintNodeStatus Status { get; set; } = PrintNodeStatus.Offline;
     public DateTime? LastSeenAt { get; set; }
-    public DateTime? LastConnectedAt { get; set; }
-    public DateTime? LastDisconnectedAt { get; set; }
     public long? LastUserId { get; set; }
     public User? LastUser { get; set; }
     public string? LastClient { get; set; }

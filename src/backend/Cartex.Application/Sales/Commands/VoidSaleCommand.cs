@@ -3,12 +3,14 @@ using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Partners;
 using Cartex.Application.Common.Sales;
 using Cartex.Application.Common.Settings;
+using Cartex.Application.Common.Shifts;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
 using Unit = Cartex.Application.Common.Messaging.Unit;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
+using Cartex.Persistence.Services;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 
@@ -26,13 +28,22 @@ public sealed class VoidSaleCommandHandler(
     ILedgerService ledger,
     ISaleCorrectionPolicy correctionPolicy,
     IPartnerRewardService partnerRewards,
-    IAuditService audit) : IRequestHandler<VoidSaleCommand, Unit>
+    IShiftLock shiftLock,
+    IAuditService audit,
+    InventoryReasonState inventoryReason) : IRequestHandler<VoidSaleCommand, Unit>
 {
     public async Task<Unit> Handle(VoidSaleCommand request, CancellationToken cancellationToken)
     {
         var userId = currentUser.UserId ?? throw new UnauthorizedAccessException("Not authenticated.");
         if (!currentUser.HasPermission(AppPermissions.Sales.Void))
             throw new ForbiddenException("Savdoni bekor qilishga ruxsat yo'q.");
+
+        var postingShiftId = await db.Sales
+            .Where(x => x.Id == request.SaleId)
+            .Select(x => x.ShiftId)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (postingShiftId is { } shiftId)
+            await shiftLock.ByIdAsync(shiftId, cancellationToken);
 
         var sale = await db.Sales
             .FromSqlInterpolated($"SELECT * FROM sales WHERE id = {request.SaleId} FOR UPDATE")
@@ -54,8 +65,8 @@ public sealed class VoidSaleCommandHandler(
 
         await correctionPolicy.EnsureCanCorrectAsync(sale, cancellationToken);
 
-        await ReverseLedgerAsync(sale, userId, cancellationToken);
         await RestoreStockAsync(sale, cancellationToken);
+        await ReverseLedgerAsync(sale, userId, cancellationToken);
         await partnerRewards.ReverseSaleAsync(sale, cancellationToken);
 
         sale.Status = SaleStatus.Voided;
@@ -91,8 +102,8 @@ public sealed class VoidSaleCommandHandler(
             var to = original.FromAccountId is { } fromId ? await ledger.AccountAsync(fromId, cancellationToken) : null;
             if (from is null && to is null) continue;
 
-            var reversal = ledger.Post(original.OperationType, original.Amount, from, to,
-                userId, original.ShiftId, original.Rate);
+            var reversal = await ledger.PostAsync(original.OperationType, original.Amount, from, to,
+                userId, cancellationToken, original.ShiftId, original.Rate);
             reversal.SaleId = sale.Id;
             reversal.BranchId = original.BranchId;
             reversal.Description = $"VOID {sale.ReceiptToken}";
@@ -105,9 +116,12 @@ public sealed class VoidSaleCommandHandler(
         var byStock = items.GroupBy(x => x.StockId).ToDictionary(x => x.Key, x => x.Sum(item => item.Quantity));
         if (byStock.Count == 0) return;
 
+        inventoryReason.Declare(new(InventoryMovementKind.SaleVoid, "Sale", sale.Id,
+            InventoryLocation.Customer(sale.CustomerId ?? 0)));
+
         var stockIds = byStock.Keys.ToArray();
         var stocks = await db.Stocks
-            .FromSqlInterpolated($"SELECT * FROM stocks WHERE id = ANY({stockIds}) FOR UPDATE")
+            .FromSqlInterpolated($"SELECT * FROM stocks WHERE id = ANY({stockIds}) ORDER BY id FOR UPDATE")
             .ToListAsync(cancellationToken);
         foreach (var stock in stocks)
             stock.Quantity += byStock[stock.Id];

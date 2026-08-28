@@ -3,6 +3,8 @@ using System.Reflection;
 using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Npgsql;
 
 namespace Cartex.Persistence;
 
@@ -10,12 +12,17 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
 {
     private readonly bool _branchFilterDisabled;
     private readonly long[] _accessibleBranchIds;
+    private readonly ILogger<ApplicationDbContext> _logger;
 
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, ICurrentUser currentUser)
+    public ApplicationDbContext(
+        DbContextOptions<ApplicationDbContext> options,
+        ICurrentUser currentUser,
+        ILogger<ApplicationDbContext> logger)
         : base(options)
     {
         _branchFilterDisabled = !currentUser.IsAuthenticated || currentUser.CanAccessAllBranches;
         _accessibleBranchIds = [.. currentUser.BranchIds];
+        _logger = logger;
     }
 
     public DbSet<Business> Businesses => Set<Business>();
@@ -30,7 +37,6 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<Unit> Units => Set<Unit>();
     public DbSet<ProductType> ProductTypes => Set<ProductType>();
     public DbSet<Product> Products => Set<Product>();
-    public DbSet<ProductReference> ProductReferences => Set<ProductReference>();
     public DbSet<ProductVariant> ProductVariants => Set<ProductVariant>();
     public DbSet<Barcode> Barcodes => Set<Barcode>();
     public DbSet<ProductPack> ProductPacks => Set<ProductPack>();
@@ -73,8 +79,6 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<CustomerSession> CustomerSessions => Set<CustomerSession>();
     public DbSet<NotificationDelivery> NotificationDeliveries => Set<NotificationDelivery>();
     public DbSet<NotificationDeliveryAttempt> NotificationDeliveryAttempts => Set<NotificationDeliveryAttempt>();
-    [Obsolete("Legacy SMS journal retained to preserve historical production data.")]
-    public DbSet<SmsMessage> SmsMessages => Set<SmsMessage>();
     public DbSet<Prepack> Prepacks => Set<Prepack>();
     public DbSet<HardwareKey> HardwareKeys => Set<HardwareKey>();
     public DbSet<PrintNode> PrintNodes => Set<PrintNode>();
@@ -95,8 +99,9 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<CustomerReturnDocument> CustomerReturnDocuments => Set<CustomerReturnDocument>();
     public DbSet<CustomerReturnLine> CustomerReturnLines => Set<CustomerReturnLine>();
     public DbSet<CustomerReturnSettlement> CustomerReturnSettlements => Set<CustomerReturnSettlement>();
-    public DbSet<InventoryPosition> InventoryPositions => Set<InventoryPosition>();
     public DbSet<InventoryMovement> InventoryMovements => Set<InventoryMovement>();
+    public DbSet<StockWriteOffDocument> StockWriteOffDocuments => Set<StockWriteOffDocument>();
+    public DbSet<StockWriteOffLine> StockWriteOffLines => Set<StockWriteOffLine>();
     public DbSet<Party> Parties => Set<Party>();
     public DbSet<PartnerProfile> PartnerProfiles => Set<PartnerProfile>();
     public DbSet<ParticipantRoleDefinition> ParticipantRoleDefinitions => Set<ParticipantRoleDefinition>();
@@ -109,12 +114,19 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<OfflineAuthorityLease> OfflineAuthorityLeases => Set<OfflineAuthorityLease>();
     public DbSet<OfflineSyncEvent> OfflineSyncEvents => Set<OfflineSyncEvent>();
 
-    private readonly List<Action> _afterCommit = [];
+    private readonly List<Func<Task>> _afterCommit = [];
 
     public void RunAfterCommit(Action action)
     {
         if (Database.CurrentTransaction is null) action();
-        else _afterCommit.Add(action);
+        else _afterCommit.Add(() => { action(); return Task.CompletedTask; });
+    }
+
+    public Task RunAfterCommitAsync(Func<Task> action)
+    {
+        if (Database.CurrentTransaction is null) return action();
+        _afterCommit.Add(action);
+        return Task.CompletedTask;
     }
 
     public Task ReloadAsync(object entity, CancellationToken cancellationToken = default)
@@ -125,6 +137,22 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         return entry.ReloadAsync(cancellationToken);
     }
 
+    public async Task<List<TEntity>> LockAsync<TEntity>(FormattableString sql, CancellationToken cancellationToken = default)
+        where TEntity : BaseEntity
+    {
+        var set = Set<TEntity>();
+        var tracked = set.Local.Select(x => x.Id).ToHashSet();
+        var rows = await set.FromSqlInterpolated(sql).ToListAsync(cancellationToken);
+        foreach (var row in rows)
+            if (tracked.Contains(row.Id))
+                await ReloadAsync(row, cancellationToken);
+        return rows;
+    }
+
+    public long TransactionGeneration { get; private set; }
+
+    private const int MaxTransactionAttempts = 3;
+
     public async Task<T> ExecuteInTransactionAsync<T>(Func<Task<T>> action, CancellationToken cancellationToken = default)
     {
         if (Database.CurrentTransaction is not null)
@@ -133,14 +161,49 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         var strategy = Database.CreateExecutionStrategy();
         return await strategy.ExecuteAsync(async () =>
         {
-            _afterCommit.Clear();
-            await using var transaction = await Database.BeginTransactionAsync(cancellationToken);
-            var result = await action();
-            await transaction.CommitAsync(cancellationToken);
-            foreach (var deferred in _afterCommit) deferred();
-            _afterCommit.Clear();
-            return result;
+            for (var attempt = 1; ; attempt++)
+            {
+                _afterCommit.Clear();
+                TransactionGeneration++;
+                try
+                {
+                    await using var transaction = await Database.BeginTransactionAsync(cancellationToken);
+                    var result = await action();
+                    await transaction.CommitAsync(cancellationToken);
+                    await DrainAfterCommitAsync();
+                    return result;
+                }
+                catch (Exception exception) when (attempt < MaxTransactionAttempts && IsLockConflict(exception))
+                {
+                    ChangeTracker.Clear();
+                    await Task.Delay(Random.Shared.Next(20, 80) * attempt, cancellationToken);
+                }
+            }
         });
+    }
+
+    private async Task DrainAfterCommitAsync()
+    {
+        foreach (var deferred in _afterCommit)
+        {
+            try
+            {
+                await deferred();
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(exception, "After-commit action failed.");
+            }
+        }
+        _afterCommit.Clear();
+    }
+
+    private static bool IsLockConflict(Exception exception)
+    {
+        for (var current = exception; current is not null; current = current.InnerException)
+            if (current is PostgresException { SqlState: PostgresErrorCodes.DeadlockDetected or PostgresErrorCodes.SerializationFailure })
+                return true;
+        return false;
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -162,55 +225,6 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public Task<long> NextDocumentSequenceAsync(CancellationToken cancellationToken = default) =>
         Database.SqlQueryRaw<long>("SELECT nextval('document_number_seq') AS \"Value\"")
             .SingleAsync(cancellationToken);
-
-    public Task UpsertInventoryPositionAsync(
-        long branchId,
-        Cartex.Domain.Enums.InventoryLocationKind locationKind,
-        long locationId,
-        long variantId,
-        decimal quantity,
-        long? userId,
-        CancellationToken cancellationToken = default) =>
-        Database.ExecuteSqlInterpolatedAsync($"""
-            INSERT INTO inventory_positions
-                (branch_id, location_kind, location_id, variant_id, quantity, created_at, created_by)
-            VALUES
-                ({branchId}, {locationKind.ToString()}, {locationId}, {variantId}, {quantity}, {DateTime.UtcNow}, {userId})
-            ON CONFLICT (branch_id, location_kind, location_id, variant_id)
-            DO UPDATE SET quantity = inventory_positions.quantity + EXCLUDED.quantity,
-                          updated_at = EXCLUDED.created_at,
-                          updated_by = EXCLUDED.created_by
-            """, cancellationToken);
-
-    public async Task<bool> AdjustInventoryPositionAsync(
-        long branchId,
-        Cartex.Domain.Enums.InventoryLocationKind locationKind,
-        long locationId,
-        long variantId,
-        decimal delta,
-        long? userId,
-        CancellationToken cancellationToken = default)
-    {
-        if (delta >= 0)
-        {
-            await UpsertInventoryPositionAsync(branchId, locationKind, locationId, variantId,
-                delta, userId, cancellationToken);
-            return true;
-        }
-
-        var affected = await Database.ExecuteSqlInterpolatedAsync($"""
-            UPDATE inventory_positions
-               SET quantity = quantity + {delta},
-                   updated_at = {DateTime.UtcNow},
-                   updated_by = {userId}
-             WHERE branch_id = {branchId}
-               AND location_kind = {locationKind.ToString()}
-               AND location_id = {locationId}
-               AND variant_id = {variantId}
-               AND quantity + {delta} >= 0
-            """, cancellationToken);
-        return affected == 1;
-    }
 
     private static readonly MethodInfo ConfigureFilterMethod =
         typeof(ApplicationDbContext).GetMethod(nameof(ConfigureGlobalFilter), BindingFlags.Instance | BindingFlags.NonPublic)!;

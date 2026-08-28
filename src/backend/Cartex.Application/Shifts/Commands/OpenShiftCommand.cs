@@ -36,10 +36,12 @@ public sealed class OpenShiftCommandHandler(IApplicationDbContext db, ICurrentUs
             BranchId = branchId,
             UserId = userId,
             OpenedAt = DateTime.UtcNow,
-            OpeningFloat = request.OpeningFloat,
             Status = ShiftStatus.Open
         };
 
+        // SMENA-06: bazaviy valyuta ham boshqalar kabi o'z qatorida yashaydi; klient uni
+        // shift darajasidagi maydonda yuboradi, alohida qator sifatida emas.
+        shift.CashRows.Add(new ShiftCash { Currency = baseCode, OpeningFloat = request.OpeningFloat });
         foreach (var row in request.Floats ?? [])
             shift.CashRows.Add(new ShiftCash { Currency = row.Currency, OpeningFloat = row.Amount });
 

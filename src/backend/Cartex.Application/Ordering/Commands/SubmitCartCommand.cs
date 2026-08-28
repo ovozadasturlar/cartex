@@ -14,7 +14,7 @@ using Cartex.Application.Sales.Commands;
 
 namespace Cartex.Application.Ordering.Commands;
 
-public record SubmitCartItemDto(long VariantId, decimal Quantity, decimal? UnitPrice = null);
+public record SubmitCartItemDto(long VariantId, decimal Quantity, decimal? UnitPrice = null, long? PrepackId = null);
 
 public sealed record SubmitCartCommand(long WarehouseId, long? CustomerId, List<SubmitCartItemDto> Items) : ICommand<string>
 {
@@ -88,7 +88,7 @@ public sealed class SubmitCartCommandHandler(
             throw new ForbiddenException("Savdoda chegirma berishga ruxsat yo'q.");
 
         await quantityPolicy.ValidateAsync(
-            request.Items.Select(x => (x.VariantId, x.Quantity)), cancellationToken);
+            request.Items.Where(x => x.PrepackId is null).Select(x => (x.VariantId, x.Quantity)), cancellationToken);
         var resolvedParticipants = await participantService.ResolveAsync(
             request.Participants, ParticipantContext.Cart, request.CustomerId, cancellationToken);
         var baseCurrency = (await currency.BaseAsync(cancellationToken)).ToUpperInvariant();
@@ -132,6 +132,7 @@ public sealed class SubmitCartCommandHandler(
             cart.Items.Add(new CartItem
             {
                 VariantId = item.VariantId,
+                PrepackId = item.PrepackId,
                 Quantity = item.Quantity,
                 UnitPriceOverride = item.UnitPrice
             });
@@ -172,7 +173,7 @@ public sealed class SubmitCartCommandHandler(
             participants = cart.Participants.Select(x => new
                 { x.RoleDefinitionId, x.PartyId, x.PartyNameSnapshot, x.RoleLabelSnapshot })
         }, "Savat navbatga yuborildi", warehouse.BranchId);
-        await notifier.CartsChangedAsync(cart.Kind.ToString(), cancellationToken);
+        await db.RunAfterCommitAsync(() => notifier.CartsChangedAsync(warehouse.BranchId, cart.Kind.ToString(), cancellationToken));
 
         return cart.AggregateCode;
     }
@@ -194,7 +195,7 @@ public sealed class SubmitCartCommandValidator : AbstractValidator<SubmitCartCom
     {
         RuleFor(x => x.Items).NotEmpty();
         RuleFor(x => x.Items).Must(x => x.Count <= 500).WithMessage("Bitta savatda 500 tadan ortiq qator bo'lishi mumkin emas.");
-        RuleFor(x => x.Items).Must(x => x.Select(i => i.VariantId).Distinct().Count() == x.Count)
+        RuleFor(x => x.Items).Must(x => x.Select(i => (i.VariantId, i.PrepackId)).Distinct().Count() == x.Count)
             .WithMessage("Bir mahsulot varianti savatda takrorlanmasligi kerak.");
         RuleForEach(x => x.Items).Must(i => i.Quantity > 0).WithMessage("Miqdor 0 dan katta bo'lishi kerak.");
         RuleForEach(x => x.Items).Must(i => i.UnitPrice is null or >= 0).WithMessage("Narx manfiy bo'lishi mumkin emas.");

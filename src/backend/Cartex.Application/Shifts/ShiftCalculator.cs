@@ -56,12 +56,13 @@ public static class ShiftCalculator
 
         var baseAccountId = cashAccounts.FirstOrDefault(a => a.Currency == baseCode)?.Id;
         var baseTerms = Terms(baseAccountId);
+        var openingFloat = cashRows.FirstOrDefault(c => c.Currency == baseCode)?.OpeningFloat ?? 0;
         var payIn = txns.Where(t => t.OperationType == OperationType.CashIn).Sum(t => t.Amount);
         // QARZ-10: hamkorga naqd mukofot ham yashikdan chiqadi, shuning uchun kutilgan naqdni kamaytiradi.
         var payOut = txns.Where(t => t.OperationType == OperationType.CashOut
             || (t.OperationType == OperationType.PartnerRewardCash && t.FromAccountId != null)).Sum(t => t.Amount);
 
-        var expected = shift.OpeningFloat + baseTerms.Sales - baseTerms.Returns + payIn - payOut
+        var expected = openingFloat + baseTerms.Sales - baseTerms.Returns + payIn - payOut
             + baseTerms.DebtIn - baseTerms.SupplyOut - baseTerms.ChangeOut;
 
         var currencies = new List<ZReportCurrencyDto>();
@@ -75,7 +76,7 @@ public static class ShiftCalculator
             currencies.Add(new ZReportCurrencyDto(account.Currency, opening, terms.Sales, terms.Returns, terms.DebtIn, terms.SupplyOut, expectedCcy, counted, counted - expectedCcy));
         }
 
-        return new ZReportDto(shift.Id, shift.OpeningFloat, baseTerms.Sales, baseTerms.Returns, payIn, payOut,
+        return new ZReportDto(shift.Id, openingFloat, baseTerms.Sales, baseTerms.Returns, payIn, payOut,
             baseTerms.DebtIn, baseTerms.SupplyOut, expected, countedCash, countedCash - expected)
         {
             CardSales = cardSales,

@@ -7,6 +7,7 @@ public class Supplier : SoftDeleteEntity
     public string Name { get; set; } = null!;
     public string? SearchFold { get; set; }
     public string? Phone { get; set; }
+    public bool AcceptsReturns { get; set; }
 
     public ICollection<Supply> Supplies { get; set; } = [];
     public ICollection<Account> Accounts { get; set; } = [];

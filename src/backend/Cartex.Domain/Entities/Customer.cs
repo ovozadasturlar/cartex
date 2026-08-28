@@ -6,12 +6,7 @@ public class Customer : SoftDeleteEntity
 {
     public long PartyId { get; set; }
     public Party Party { get; set; } = null!;
-    public string FullName { get; set; } = null!;
-    public string? SearchFold { get; set; }
     public string? LastName { get; set; }
-    public string? Address { get; set; }
-    public string? Phone { get; set; }
-    public string? Email { get; set; }
     public string? CardBarcode { get; set; }
     public string? TelegramChatId { get; set; }
     public string? PreferredLanguage { get; set; }

@@ -8,6 +8,7 @@ using Cartex.Application.Common.Measurement;
 using Cartex.Application.Common.Participants;
 using Cartex.Application.Common.Partners;
 using Cartex.Application.Common.Security;
+using Cartex.Application.Common.Shifts;
 using Cartex.Application.Auth;
 using Cartex.Auth.Services;
 using Cartex.Application.Printing;
@@ -34,6 +35,8 @@ public static class DependencyInjection
         services.AddScoped<Store.StoreTokenBuilder>();
 
         services.AddScoped<ILedgerService, LedgerService>();
+        services.AddScoped<IShiftLock, ShiftLock>();
+        services.AddScoped<Customers.CustomerOpeningBalance>();
         services.AddScoped<ICurrencyService, CurrencyService>();
         services.AddScoped<IQuantityPolicyService, QuantityPolicyService>();
         services.AddScoped<IParticipantService, ParticipantService>();
@@ -47,6 +50,7 @@ public static class DependencyInjection
         services.AddScoped<IStockAllocator, StockAllocator>();
         services.AddScoped<Common.Sales.ISaleCorrectionPolicy, Common.Sales.SaleCorrectionPolicy>();
         services.AddScoped<IBranchCatalogService, BranchCatalogService>();
+        services.AddScoped<Catalog.ICatalogReference, Catalog.CatalogReference>();
         services.AddScoped<PrintRoutingService>();
         services.AddScoped<ReceiptPrintPolicyService>();
         services.AddScoped<SmsGatewayRoutingService>();

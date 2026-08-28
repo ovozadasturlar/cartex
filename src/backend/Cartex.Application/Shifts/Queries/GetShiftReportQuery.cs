@@ -19,6 +19,11 @@ public sealed class GetShiftReportQueryHandler(IApplicationDbContext db, ICurren
         if (shift.UserId != currentUser.UserId && !currentUser.HasPermission(AppPermissions.Shifts.ViewAll))
             throw new ForbiddenException("Boshqa kassir smenasini ko'rishga ruxsat yo'q.");
 
-        return await ShiftCalculator.ComputeAsync(db, shift, shift.CountedCash ?? 0, cancellationToken);
+        var baseCode = await db.Businesses.Select(b => b.Currency).FirstAsync(cancellationToken);
+        var counted = await db.ShiftCashes
+            .Where(c => c.ShiftId == shift.Id && c.Currency == baseCode)
+            .Select(c => c.CountedCash)
+            .FirstOrDefaultAsync(cancellationToken);
+        return await ShiftCalculator.ComputeAsync(db, shift, counted ?? 0, cancellationToken);
     }
 }

@@ -110,11 +110,19 @@ public sealed class TelegramUpdatePoller(
     {
         var chatId = message.Chat!.Id;
 
-        if (message.Contact?.PhoneNumber is { } rawPhone)
+        if (message.Contact is { PhoneNumber: { } rawPhone } contact)
         {
-            var phone = Phones.Normalize(rawPhone);
-            var customer = phone is null ? null : await db.Customers.FirstOrDefaultAsync(c => c.Phone == phone, ct);
             _pendingLanguage.Remove(chatId, out var pending);
+
+            if (message.From?.Id is not { } fromId || contact.UserId != fromId)
+            {
+                var promptLang = pending ?? TelegramBotTexts.DefaultLanguage;
+                await SendAsync(client, token, chatId, TelegramBotTexts.Get("share_button_required", promptLang), SharePhoneKeyboard(promptLang), ct);
+                return;
+            }
+
+            var phone = Phones.Normalize(rawPhone);
+            var customer = phone is null ? null : await db.Customers.FirstOrDefaultAsync(c => c.Party.Phone == phone, ct);
             var lang = pending ?? customer?.PreferredLanguage ?? TelegramBotTexts.DefaultLanguage;
 
             if (customer is null)
@@ -206,12 +214,14 @@ public sealed class TelegramUpdatePoller(
         SendAsync(client, token, chatId, TelegramBotTexts.Get("menu", lang), MenuKeyboard(lang), ct);
 
     private Task SendSharePhoneAsync(HttpClient client, string token, long chatId, string lang, CancellationToken ct) =>
-        SendAsync(client, token, chatId, TelegramBotTexts.Get("share_phone", lang), new
-        {
-            keyboard = new[] { new[] { new { text = TelegramBotTexts.Get("btn_share", lang), request_contact = true } } },
-            resize_keyboard = true,
-            one_time_keyboard = true
-        }, ct);
+        SendAsync(client, token, chatId, TelegramBotTexts.Get("share_phone", lang), SharePhoneKeyboard(lang), ct);
+
+    private static object SharePhoneKeyboard(string lang) => new
+    {
+        keyboard = new[] { new[] { new { text = TelegramBotTexts.Get("btn_share", lang), request_contact = true } } },
+        resize_keyboard = true,
+        one_time_keyboard = true
+    };
 
     private Task SendLanguagePickerAsync(HttpClient client, string token, long chatId, string lang, CancellationToken ct) =>
         SendAsync(client, token, chatId, TelegramBotTexts.Get("choose_language", lang), new
@@ -250,8 +260,11 @@ public sealed class TelegramUpdatePoller(
         [property: JsonPropertyName("update_id")] long UpdateId,
         Message? Message,
         [property: JsonPropertyName("callback_query")] CallbackQuery? CallbackQuery);
-    private sealed record Message(Chat? Chat, Contact? Contact, string? Text);
+    private sealed record Message(Chat? Chat, Contact? Contact, string? Text, User? From);
+    private sealed record User(long Id);
     private sealed record Chat(long Id);
-    private sealed record Contact([property: JsonPropertyName("phone_number")] string? PhoneNumber);
+    private sealed record Contact(
+        [property: JsonPropertyName("phone_number")] string? PhoneNumber,
+        [property: JsonPropertyName("user_id")] long? UserId);
     private sealed record CallbackQuery(string Id, string? Data, Message? Message);
 }

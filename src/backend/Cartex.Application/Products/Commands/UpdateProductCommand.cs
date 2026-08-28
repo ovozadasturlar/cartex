@@ -1,7 +1,6 @@
 using Cartex.Application.Common.Finance;
 using Cartex.Application.Common.Interfaces;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Cartex.Persistence;
 using Cartex.Application.Common.Catalog;
 using Cartex.Application.Common.Measurement;
@@ -32,8 +31,7 @@ public record UpdateProductCommand(
 public sealed class UpdateProductCommandHandler(
     IApplicationDbContext db,
     ICurrencyService currency,
-    IObjectStorage storage,
-    ILogger<UpdateProductCommandHandler> logger) : IRequestHandler<UpdateProductCommand, Unit>
+    IObjectStorage storage) : IRequestHandler<UpdateProductCommand, Unit>
 {
     public async Task<Unit> Handle(UpdateProductCommand request, CancellationToken cancellationToken)
     {
@@ -88,17 +86,11 @@ public sealed class UpdateProductCommandHandler(
         await db.SaveChangesAsync(cancellationToken);
 
         if (oldImageKey is not null && oldImageKey != request.ImageKey)
-        {
-            try
+            await db.RunAfterCommitAsync(async () =>
             {
                 await storage.DeleteAsync(oldImageKey, cancellationToken);
                 await storage.DeleteAsync($"t_{oldImageKey}", cancellationToken);
-            }
-            catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
-            {
-                logger.LogWarning(ex, "Could not delete replaced product image {ImageKey}", oldImageKey);
-            }
-        }
+            });
 
         return Unit.Value;
     }

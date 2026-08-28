@@ -5,11 +5,11 @@ namespace Cartex.Api.Hubs;
 
 public sealed class SignalRCartNotifier(IHubContext<OrderingHub> hub, ILogger<SignalRCartNotifier> logger) : ICartNotifier
 {
-    public async Task CartsChangedAsync(string kind, CancellationToken cancellationToken = default)
+    public async Task CartsChangedAsync(long branchId, string kind, CancellationToken cancellationToken = default)
     {
         try
         {
-            await hub.Clients.All.SendAsync("CartsChanged", kind, cancellationToken);
+            await hub.Clients.Group(HubChannels.CartFeed(branchId)).SendAsync("CartsChanged", kind, cancellationToken);
         }
         catch (Exception exception)
         {

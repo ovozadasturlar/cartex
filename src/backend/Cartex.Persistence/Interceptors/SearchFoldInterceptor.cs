@@ -29,8 +29,7 @@ public sealed class SearchFoldInterceptor : SaveChangesInterceptor
             return;
 
         Apply(context.ChangeTracker.Entries<Product>(), nameof(Product.Name), x => x.Name, (x, value) => x.SearchFold = value);
-        Apply(context.ChangeTracker.Entries<ProductReference>(), nameof(ProductReference.Name), x => x.Name, (x, value) => x.SearchFold = value);
-        Apply(context.ChangeTracker.Entries<Customer>(), nameof(Customer.FullName), x => x.FullName, (x, value) => x.SearchFold = value);
+        Apply(context.ChangeTracker.Entries<Party>(), nameof(Party.FullName), x => x.FullName, (x, value) => x.SearchFold = value);
         Apply(context.ChangeTracker.Entries<Supplier>(), nameof(Supplier.Name), x => x.Name, (x, value) => x.SearchFold = value);
         Apply(context.ChangeTracker.Entries<Category>(), nameof(Category.Name), x => x.Name, (x, value) => x.SearchFold = value);
         Apply(context.ChangeTracker.Entries<Manufacturer>(), nameof(Manufacturer.Name), x => x.Name, (x, value) => x.SearchFold = value);

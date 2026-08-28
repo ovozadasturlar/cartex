@@ -39,7 +39,7 @@ internal static class SaleQueryFilters
             query = query.Where(s =>
                 (isId && s.Id == id) ||
                 EF.Functions.ILike(s.ReceiptToken, pattern, "\\") ||
-                (s.Customer != null && EF.Functions.ILike(s.Customer.FullName, pattern, "\\")) ||
+                (s.Customer != null && EF.Functions.ILike(s.Customer.Party.FullName, pattern, "\\")) ||
                 EF.Functions.ILike(s.User.FullName, pattern, "\\") ||
                 s.Items.Any(i => EF.Functions.ILike(i.Variant.Product.Name, pattern, "\\")));
         }

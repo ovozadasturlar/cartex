@@ -48,6 +48,16 @@ public class StocksController(ISender sender) : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("movements")]
+    [HasPermission(AppPermissions.Stocks.View)]
+    public async Task<ActionResult<IReadOnlyCollection<InventoryMovementDto>>> GetMovements(
+        [FromQuery] long variantId, [FromQuery] long? warehouseId = null,
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
+    {
+        var result = await sender.Send(new GetInventoryMovementsQuery(variantId, warehouseId, page, pageSize));
+        return Ok(result);
+    }
+
     [HttpGet("low-stock")]
     [HasPermission(AppPermissions.Stocks.View)]
     public async Task<ActionResult<IReadOnlyCollection<LowStockDto>>> GetLowStock([FromQuery] long warehouseId)
@@ -62,5 +72,13 @@ public class StocksController(ISender sender) : ControllerBase
     {
         await sender.Send(command);
         return NoContent();
+    }
+
+    [HttpPost("opening-balance")]
+    [HasPermission(AppPermissions.Stocks.Reconcile)]
+    public async Task<ActionResult<OpeningStockBackfillDto>> BackfillOpeningBalance()
+    {
+        var result = await sender.Send(new BackfillOpeningStockCommand());
+        return Ok(result);
     }
 }

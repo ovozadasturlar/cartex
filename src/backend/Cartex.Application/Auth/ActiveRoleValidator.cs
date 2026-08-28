@@ -22,11 +22,13 @@ public sealed class ActiveRoleValidator(IApplicationDbContext db, IMemoryCache c
         {
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(30);
 
-            var userIsActive = await db.Users
+            var passwordHash = await db.Users
                 .AsNoTracking()
-                .AnyAsync(user => user.Id == userId && user.IsActive, cancellationToken);
+                .Where(user => user.Id == userId && user.IsActive)
+                .Select(user => user.PasswordHash)
+                .FirstOrDefaultAsync(cancellationToken);
 
-            if (!userIsActive)
+            if (passwordHash is null)
                 return (false, string.Empty, (HashSet<string>?)null);
 
             var activeRoles = await db.Roles
@@ -37,7 +39,7 @@ public sealed class ActiveRoleValidator(IApplicationDbContext db, IMemoryCache c
                 .ToListAsync(cancellationToken);
 
             var roleNames = activeRoles.Select(role => role.Name).ToHashSet(StringComparer.Ordinal);
-            var computedStamp = RoleAuthorizationStamp.Create(activeRoles);
+            var computedStamp = RoleAuthorizationStamp.Create(passwordHash, activeRoles);
 
             return (true, computedStamp, roleNames);
         });

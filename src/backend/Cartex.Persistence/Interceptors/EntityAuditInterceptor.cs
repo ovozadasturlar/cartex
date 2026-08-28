@@ -22,7 +22,8 @@ public sealed class EntityAuditInterceptor(ICurrentUser currentUser, AuditScopeS
         // Heartbeats and replay journals are high-volume operational records.
         // Claim/release and the replayed business command emit semantic audit events.
         typeof(OfflineAuthorityLease),
-        typeof(OfflineSyncEvent)
+        typeof(OfflineSyncEvent),
+        typeof(InventoryMovement)
     ];
 
     public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)

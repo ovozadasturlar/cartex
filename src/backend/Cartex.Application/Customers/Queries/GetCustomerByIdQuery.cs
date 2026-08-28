@@ -19,14 +19,14 @@ public sealed class GetCustomerByIdQueryHandler(IApplicationDbContext db, ICurre
         if (!currentUser.HasPermission(AppPermissions.Customers.ViewAll))
             customers = customers.Where(c => c.AssignedUserId == currentUser.UserId);
 
-        return await customers
+        var dto = await customers
             .Select(c => new CustomerDto(
                 c.Id,
-                c.FullName,
+                c.Party.FullName,
                 c.LastName,
-                c.Address,
-                c.Phone,
-                c.Email,
+                c.Party.Address,
+                c.Party.Phone,
+                c.Party.Email,
                 c.CardBarcode,
                 c.DiscountPct,
                 c.Accounts.Where(a => a.Type == AccountType.Bonus).Sum(a => a.Balance),
@@ -51,5 +51,12 @@ public sealed class GetCustomerByIdQueryHandler(IApplicationDbContext db, ICurre
                     .ToList()
             })
             .FirstOrDefaultAsync(cancellationToken);
+
+        // QARZ-24: boshlang'ich qoldiqni tuzatish faqat toza mijozda ochiq, shuning uchun
+        // klientga hozirgi qiymat bilan birga shu imkoniyat borligi ham aytiladi.
+        if (dto is null || !await CustomerOpeningBalance.IsUntouchedAsync(db, dto.Id, cancellationToken))
+            return dto;
+        var (amount, code) = await CustomerOpeningBalance.CurrentAsync(db, dto.Id, cancellationToken);
+        return dto with { IsUntouched = true, OpeningBalance = amount, OpeningCurrency = code };
     }
 }

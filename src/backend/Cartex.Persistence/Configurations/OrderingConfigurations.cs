@@ -88,5 +88,10 @@ public class CartItemConfiguration : IEntityTypeConfiguration<CartItem>
             .WithMany()
             .HasForeignKey(x => x.VariantId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(x => x.Prepack)
+            .WithMany()
+            .HasForeignKey(x => x.PrepackId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

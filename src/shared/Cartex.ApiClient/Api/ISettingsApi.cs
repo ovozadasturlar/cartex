@@ -1,19 +1,24 @@
 using Cartex.Shared.Models.Settings;
-using Cartex.Shared.Models.Products;
+using Cartex.Shared.Models.Catalog;
 using Refit;
 
 namespace Cartex.ApiClient.Api;
 
 public interface ISettingsApi
 {
-    [Get("/api/settings/product-reference")]
-    Task<ProductReferenceSettingsDto> GetProductReferenceAsync();
+    [Get("/api/settings/catalog")]
+    Task<CatalogSettingsDto> GetCatalogAsync();
 
-    [Put("/api/settings/product-reference")]
-    Task UpdateProductReferenceAsync([Body] ProductReferenceSettingsDto settings);
+    [Put("/api/settings/catalog")]
+    Task UpdateCatalogAsync([Body] CatalogSettingsDto settings);
 
-    [Post("/api/settings/product-reference/sync")]
-    Task<ProductReferenceSyncResultDto> SyncProductReferenceAsync();
+    [Multipart]
+    [Post("/api/settings/catalog/pack")]
+    Task<CatalogPackDto> UploadCatalogPackAsync(StreamPart pack, StreamPart manifest);
+
+    [Delete("/api/settings/catalog/pack")]
+    Task DeleteCatalogPackAsync();
+
     [Get("/api/settings")]
     Task<SettingsDto> GetAsync();
 

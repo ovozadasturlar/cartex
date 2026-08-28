@@ -31,7 +31,8 @@ public enum OperationType
     CashbackRecovery,
     PartnerRewardCash,
     PartnerRewardBonus,
-    DebtWriteOff
+    DebtWriteOff,
+    SupplierClaim
 }
 
 public enum CustomerPaymentAllocationKind
@@ -71,6 +72,14 @@ public enum InventoryDisposition
     SupplierClaim
 }
 
+public enum StockWriteOffReason
+{
+    Broken,
+    Expired,
+    Lost,
+    Stolen
+}
+
 public enum ReturnSettlementMethod
 {
     ReduceDebt,
@@ -94,11 +103,14 @@ public enum InventoryLocationKind
 public enum InventoryMovementKind
 {
     SaleIssue,
+    SaleVoid,
     SaleReturn,
     SupplyReceipt,
     Transfer,
     Adjustment,
-    PartnerReward
+    PartnerReward,
+    WriteOff,
+    Opening
 }
 
 public enum PartnerRewardMode

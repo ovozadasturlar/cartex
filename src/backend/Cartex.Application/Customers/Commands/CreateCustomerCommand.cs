@@ -14,8 +14,7 @@ public record CreateCustomerCommand(string FullName, string? Phone, string? Card
 
 public sealed class CreateCustomerCommandHandler(
     IApplicationDbContext db,
-    ILedgerService ledger,
-    ICurrencyService currency,
+    CustomerOpeningBalance opening,
     ICurrentUser currentUser) : IRequestHandler<CreateCustomerCommand, long>
 {
     public async Task<long> Handle(CreateCustomerCommand request, CancellationToken cancellationToken)
@@ -35,27 +34,19 @@ public sealed class CreateCustomerCommandHandler(
                 cancellationToken);
         if (party is not null && await db.Customers.AnyAsync(x => x.PartyId == party.Id, cancellationToken))
             throw new ConflictException("Bu telefon raqamli mijoz allaqachon mavjud.", "customer_already_exists");
-        party ??= new Party
-        {
-            BusinessId = businessId,
-            FullName = request.FullName.Trim(),
-            Phone = phone,
-            Email = NormalizeOptional(request.Email),
-            Address = NormalizeOptional(request.Address)
-        };
+        party ??= new Party { BusinessId = businessId, Phone = phone };
         if (party.Id == 0) db.Parties.Add(party);
-        // Izoh shaxsga tegishli (Party), mijoz yozuviga emas: bitta odam ham mijoz, ham hamkor
-        // bo'lishi mumkin va tavsif ikkalasida bir xil ko'rinishi kerak.
+        // Shaxsning o'zi haqidagi ma'lumot (ism, aloqa, izoh) faqat Party'da yashaydi: bitta odam
+        // ham mijoz, ham hamkor bo'lishi mumkin va u har ikkalasida bir xil ko'rinishi kerak.
+        party.FullName = request.FullName.Trim();
+        party.Email = NormalizeOptional(request.Email);
+        party.Address = NormalizeOptional(request.Address);
         if (!string.IsNullOrWhiteSpace(request.Note)) party.Note = request.Note.Trim();
 
         var customer = new Customer
         {
             Party = party,
-            FullName = request.FullName,
             LastName = string.IsNullOrWhiteSpace(request.LastName) ? null : request.LastName.Trim(),
-            Address = string.IsNullOrWhiteSpace(request.Address) ? null : request.Address.Trim(),
-            Phone = phone,
-            Email = request.Email,
             CardBarcode = request.CardBarcode,
             DiscountPct = request.DiscountPct,
             CreditLimit = request.CreditLimit,
@@ -77,24 +68,7 @@ public sealed class CreateCustomerCommandHandler(
         if (request.OpeningBalance != 0)
         {
             var userId = currentUser.UserId ?? throw new UnauthorizedAccessException("Not authenticated.");
-            var baseCode = await currency.BaseAsync(cancellationToken);
-            var code = string.IsNullOrWhiteSpace(request.OpeningCurrency) ? baseCode : request.OpeningCurrency.Trim().ToUpperInvariant();
-            await currency.EnsureSalesAllowedAsync(code, cancellationToken);
-
-            var rate = code == baseCode ? 1m : await currency.RateAsync(code, cancellationToken);
-            var amount = Math.Abs(request.OpeningBalance);
-            Transaction tx;
-            if (request.OpeningBalance > 0)
-            {
-                var debt = await ledger.CustomerAccountAsync(customer.Id, AccountType.Debt, cancellationToken, code);
-                tx = ledger.Post(OperationType.DebtCharge, amount, null, debt, userId, null, rate);
-            }
-            else
-            {
-                var advance = await ledger.CustomerAccountAsync(customer.Id, AccountType.CustomerAdvance, cancellationToken, code);
-                tx = ledger.Post(OperationType.CustomerAdvance, amount, null, advance, userId, null, rate);
-            }
-            tx.Description = "Boshlang'ich qoldiq";
+            await opening.PostAsync(customer.Id, request.OpeningBalance, request.OpeningCurrency, userId, cancellationToken);
             await db.SaveChangesAsync(cancellationToken);
         }
 

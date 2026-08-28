@@ -3,7 +3,7 @@ using Cartex.Shared.Models.Sales;
 
 namespace Cartex.Shared.Models.Ordering;
 
-public record SubmitCartItemRequest(long VariantId, decimal Quantity, decimal? UnitPrice = null);
+public record SubmitCartItemRequest(long VariantId, decimal Quantity, decimal? UnitPrice = null, long? PrepackId = null);
 
 public sealed record SubmitCartRequest(long WarehouseId, long? CustomerId, List<SubmitCartItemRequest> Items)
 {

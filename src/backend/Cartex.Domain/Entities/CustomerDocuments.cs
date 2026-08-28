@@ -1,4 +1,4 @@
-using Cartex.Domain.Common;
+﻿using Cartex.Domain.Common;
 using Cartex.Domain.Enums;
 
 namespace Cartex.Domain.Entities;
@@ -157,21 +157,15 @@ public class CustomerReturnSettlement : BaseEntity
     public decimal AmountBase { get; set; }
 }
 
-public class InventoryPosition : AuditableEntity, IBranchScoped
-{
-    public long BranchId { get; set; }
-    public InventoryLocationKind LocationKind { get; set; }
-    public long LocationId { get; set; }
-    public long VariantId { get; set; }
-    public ProductVariant Variant { get; set; } = null!;
-    public decimal Quantity { get; set; }
-}
-
 public class InventoryMovement : AuditableEntity, IBranchScoped
 {
     public long BranchId { get; set; }
+    public long WarehouseId { get; set; }
+    public Warehouse Warehouse { get; set; } = null!;
     public long VariantId { get; set; }
     public ProductVariant Variant { get; set; } = null!;
+    public long? StockId { get; set; }
+    public Stock? Stock { get; set; }
     public decimal Quantity { get; set; }
     public InventoryMovementKind Kind { get; set; }
     public InventoryLocationKind FromLocationKind { get; set; }
@@ -179,8 +173,8 @@ public class InventoryMovement : AuditableEntity, IBranchScoped
     public InventoryLocationKind ToLocationKind { get; set; }
     public long ToLocationId { get; set; }
     public string SourceType { get; set; } = null!;
-    public long SourceId { get; set; }
-    public long UserId { get; set; }
-    public User User { get; set; } = null!;
+    public long? SourceId { get; set; }
+    public long? UserId { get; set; }
+    public User? User { get; set; }
     public DateTime OccurredAt { get; set; } = DateTime.UtcNow;
 }

@@ -58,7 +58,7 @@ public sealed class GetSaleListQueryHandler(
                 s.Status.ToString(),
                 s.ReceiptToken,
                 s.CustomerId,
-                s.Customer != null ? s.Customer.FullName : null,
+                s.Customer != null ? s.Customer.Party.FullName : null,
                 s.User.FullName,
                 s.Items.Count,
                 s.Items.OrderBy(i => i.Id).Select(i => i.Variant.Product.Name).FirstOrDefault(),
@@ -66,8 +66,8 @@ public sealed class GetSaleListQueryHandler(
                 s.Customer != null &&
                 !s.Customer.NotificationsOptOut &&
                 ((telegram && s.Customer.TelegramChatId != null && s.Customer.TelegramChatId != "") ||
-                 (email && s.Customer.Email != null && s.Customer.Email != "") ||
-                 (sms && s.Customer.Phone != null && s.Customer.Phone != ""))),
+                 (email && s.Customer.Party.Email != null && s.Customer.Party.Email != "") ||
+                 (sms && s.Customer.Party.Phone != null && s.Customer.Party.Phone != ""))),
             writer,
             cancellationToken);
     }

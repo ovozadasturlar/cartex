@@ -54,7 +54,8 @@ public static class DependencyInjection
         RegisterAuthorized<IRolesApi>(services, settings, baseUrl, clientName, timeout);
         RegisterAuthorized<IPermissionsApi>(services, settings, baseUrl, clientName, timeout);
         RegisterAuthorized<IProductsApi>(services, settings, baseUrl, clientName, timeout);
-        RegisterAuthorized<IProductReferenceApi>(services, settings, baseUrl, clientName, timeout);
+        RegisterAuthorized<ICatalogApi>(services, settings, baseUrl, clientName, timeout);
+        RegisterAuthorized<IScanApi>(services, settings, baseUrl, clientName, timeout);
         RegisterAuthorized<IProductTypesApi>(services, settings, baseUrl, clientName, timeout);
         RegisterAuthorized<ICategoriesApi>(services, settings, baseUrl, clientName, timeout);
         RegisterAuthorized<IUnitsApi>(services, settings, baseUrl, clientName, timeout);
@@ -62,6 +63,7 @@ public static class DependencyInjection
         RegisterAuthorized<IWarehousesApi>(services, settings, baseUrl, clientName, timeout);
         RegisterAuthorized<IStocksApi>(services, settings, baseUrl, clientName, timeout);
         RegisterAuthorized<IStockTransfersApi>(services, settings, baseUrl, clientName, timeout);
+        RegisterAuthorized<IStockWriteOffsApi>(services, settings, baseUrl, clientName, timeout);
         RegisterAuthorized<ISalesApi>(services, settings, baseUrl, clientName, timeout);
         RegisterAuthorized<ISuppliesApi>(services, settings, baseUrl, clientName, timeout);
         RegisterAuthorized<ICustomersApi>(services, settings, baseUrl, clientName, timeout);

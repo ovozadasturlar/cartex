@@ -1,6 +1,5 @@
 ﻿using Cartex.Application.Common.Interfaces;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Cartex.Persistence;
 using Cartex.Domain.Entities;
 using Cartex.Application.Common.Catalog;
@@ -16,7 +15,6 @@ public record UpdateVariantCommand(long Id, string? Name, string? Code, string? 
 public sealed class UpdateVariantCommandHandler(
     IApplicationDbContext db,
     IObjectStorage storage,
-    ILogger<UpdateVariantCommandHandler> logger,
     IQuantityPolicyService quantityPolicy) : IRequestHandler<UpdateVariantCommand, Unit>
 {
     public async Task<Unit> Handle(UpdateVariantCommand request, CancellationToken cancellationToken)
@@ -85,17 +83,11 @@ public sealed class UpdateVariantCommandHandler(
         await db.SaveChangesAsync(cancellationToken);
 
         if (oldImageKey is not null && oldImageKey != request.ImageKey)
-        {
-            try
+            await db.RunAfterCommitAsync(async () =>
             {
                 await storage.DeleteAsync(oldImageKey, cancellationToken);
                 await storage.DeleteAsync($"t_{oldImageKey}", cancellationToken);
-            }
-            catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
-            {
-                logger.LogWarning(ex, "Could not delete replaced product variant image {ImageKey}", oldImageKey);
-            }
-        }
+            });
 
         return Unit.Value;
     }

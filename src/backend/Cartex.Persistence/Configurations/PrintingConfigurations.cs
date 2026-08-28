@@ -1,4 +1,5 @@
 using Cartex.Domain.Entities;
+using Cartex.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -13,11 +14,10 @@ public class PrintNodeConfiguration : IEntityTypeConfiguration<PrintNode>
         builder.Property(x => x.CredentialHash).HasMaxLength(128).IsRequired();
         builder.Property(x => x.Name).HasMaxLength(200).IsRequired();
         builder.Property(x => x.ClientVersion).HasMaxLength(40);
-        builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.LastClient).HasMaxLength(20);
         builder.Property(x => x.LastIpAddress).HasMaxLength(64);
         builder.HasIndex(x => x.DeviceId).IsUnique();
-        builder.HasIndex(x => new { x.BranchId, x.IsTrusted, x.Status });
+        builder.HasIndex(x => new { x.BranchId, x.IsTrusted });
         builder.HasOne(x => x.Branch).WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.LastUser).WithMany().HasForeignKey(x => x.LastUserId).OnDelete(DeleteBehavior.SetNull);
     }
@@ -41,11 +41,15 @@ public class PrinterEndpointConfiguration : IEntityTypeConfiguration<PrinterEndp
 
 public class PrintRoutingPolicyConfiguration : IEntityTypeConfiguration<PrintRoutingPolicy>
 {
+    private static PrintRoutingMode ParseRoutingMode(string value) =>
+        Enum.TryParse<PrintRoutingMode>(value, out var mode) ? mode : PrintRoutingMode.LocalFirst;
+
     public void Configure(EntityTypeBuilder<PrintRoutingPolicy> builder)
     {
         builder.ToTable("print_routing_policies");
         builder.Property(x => x.Kind).HasConversion<string>().HasMaxLength(30);
-        builder.Property(x => x.RoutingMode).HasConversion<string>().HasMaxLength(30);
+        builder.Property(x => x.RoutingMode).HasMaxLength(30)
+            .HasConversion(x => x.ToString(), x => ParseRoutingMode(x));
         builder.Property(x => x.StickyMode).HasConversion<string>().HasMaxLength(30);
         builder.Property(x => x.ReceiptSettingsOverrideJson).HasColumnType("jsonb");
         builder.Property(x => x.Revision).IsConcurrencyToken();
@@ -131,7 +135,6 @@ public class PrintAttemptConfiguration : IEntityTypeConfiguration<PrintAttempt>
         builder.Property(x => x.ErrorCode).HasMaxLength(80);
         builder.Property(x => x.ErrorMessage).HasMaxLength(1000);
         builder.HasIndex(x => new { x.PrintJobId, x.AttemptNumber }).IsUnique();
-        builder.HasIndex(x => new { x.PrinterEndpointId, x.Status, x.StartedAt });
         builder.HasOne(x => x.PrintJob).WithMany(x => x.Attempts).HasForeignKey(x => x.PrintJobId).OnDelete(DeleteBehavior.Cascade);
         builder.HasOne(x => x.PrintNode).WithMany().HasForeignKey(x => x.PrintNodeId).OnDelete(DeleteBehavior.SetNull);
         builder.HasOne(x => x.PrinterEndpoint).WithMany().HasForeignKey(x => x.PrinterEndpointId).OnDelete(DeleteBehavior.SetNull);

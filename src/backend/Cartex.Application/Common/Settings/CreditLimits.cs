@@ -9,12 +9,13 @@ public static class CreditLimits
 {
     public const string Warning = "credit_limit_exceeded";
 
-    /// Ogohlantirish bilan o'tkazilsa `true` qaytadi, aks holda rad etadi. `0` limit (`SOZ-02a`)
-    /// chegara emas, taqiq — u hech qanday rejimda ochilmaydi. Oflayn replay `OFF-22` bo'yicha
-    /// hech qachon rad etmaydi: tovar allaqachon berilgan, rad etish ma'lumotni yo'qotadi.
+    /// Ogohlantirish bilan o'tkazilsa `true` qaytadi, aks holda rad etadi. Oflayn replay
+    /// `OFF-22` bo'yicha hech qachon rad etmaydi — nol limitda ham: tovar allaqachon berilgan,
+    /// rad etish ma'lumotni yo'qotadi. Onlayn yo'lda `0` limit (`SOZ-02a`) chegara emas, taqiq —
+    /// u `Warn` rejimida ham ochilmaydi.
     public static bool WarnOrThrow(decimal creditLimit, SalesPolicySettings policy, string message, bool fromOfflineReplay = false)
     {
-        if (creditLimit > 0 && (fromOfflineReplay || policy.CreditLimitEnforcement == "Warn"))
+        if (fromOfflineReplay || (creditLimit > 0 && policy.CreditLimitEnforcement == "Warn"))
             return true;
         throw new BusinessRuleException(message, Warning);
     }

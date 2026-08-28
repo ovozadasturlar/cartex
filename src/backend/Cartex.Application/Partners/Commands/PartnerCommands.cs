@@ -122,7 +122,7 @@ public sealed class UpdatePartnerCommandHandler(
         if (!currentUser.HasPermission(AppPermissions.Partners.Edit))
             throw new ForbiddenException("Hamkorni o'zgartirishga ruxsat yo'q.");
         var businessId = currentUser.BusinessId ?? throw new BusinessRuleException("Business not found.");
-        var profile = await db.PartnerProfiles.Include(x => x.Party).ThenInclude(x => x.CustomerProfile)
+        var profile = await db.PartnerProfiles.Include(x => x.Party)
             .FirstOrDefaultAsync(x => x.Id == request.Id && x.Party.BusinessId == businessId, cancellationToken)
             ?? throw new NotFoundException("Partner not found.", "partner_not_found");
         var phone = Phones.Normalize(request.Phone);
@@ -136,13 +136,6 @@ public sealed class UpdatePartnerCommandHandler(
         profile.Party.Address = NormalizeOptional(request.Address);
         profile.IsEnabled = request.IsEnabled;
         profile.Note = NormalizeOptional(request.Note);
-        if (profile.Party.CustomerProfile is { } customer)
-        {
-            customer.FullName = profile.Party.FullName;
-            customer.Phone = profile.Party.Phone;
-            customer.Email = profile.Party.Email;
-            customer.Address = profile.Party.Address;
-        }
         await db.SaveChangesAsync(cancellationToken);
         audit.SetOutcome("partner.updated", "partner_profiles", profile.Id, new
         {

@@ -87,6 +87,8 @@ public sealed class SalesPolicySettings
     /// cheklanmagan bo'lib saqlanadi, aks holda "cheklanmagan" ni ifodalashning iloji qolmasdi.
     public decimal? DefaultCreditLimit { get; set; }
 
+    public bool TrackWriteOff { get; set; }
+
     /// Navbat ish uslubi yoqilganmi (NAVBAT-06). Bu tarif moduli emas — bir do'kon hamma
     /// narsani bitta kassada uradi, boshqasida yig'uvchi tayyorlab kassir pul oladi.
     public bool AllowSaleQueue { get; set; } = true;

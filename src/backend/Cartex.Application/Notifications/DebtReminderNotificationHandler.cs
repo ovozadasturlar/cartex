@@ -23,7 +23,7 @@ public sealed class DebtReminderNotificationHandler(
 
         var customer = await db.Customers
             .Where(c => c.Id == reminder.CustomerId)
-            .Select(c => new { c.Phone, c.Email, c.TelegramChatId })
+            .Select(c => new { c.Party.Phone, c.Party.Email, c.TelegramChatId })
             .FirstOrDefaultAsync(cancellationToken);
         if (customer is null)
             return;

@@ -155,7 +155,7 @@ public sealed class AuthTokenBuilder(
 
         var token = jwtTokenGenerator.GenerateToken(
             user.Id, user.Username, user.FullName, roleNames, startPage, permissions,
-            RoleAuthorizationStamp.Create(roles),
+            RoleAuthorizationStamp.Create(user.PasswordHash, roles),
             businessId, branchIds, user.DefaultBranchId, deviceId);
 
         return (token, roleNames.FirstOrDefault() ?? "");

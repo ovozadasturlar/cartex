@@ -7,11 +7,8 @@ namespace Cartex.Api.Hubs;
 public sealed class SignalRPrintJobNotifier(IHubContext<PrintingHub> hub) : IPrintJobNotifier
 {
     public Task NotifyJobAvailableAsync(string deviceId, long jobId, CancellationToken cancellationToken = default) =>
-        hub.Clients.Group(HostGroup(deviceId)).SendAsync("PrintJobAvailable", jobId, cancellationToken);
+        hub.Clients.Group(HubChannels.PrintHost(deviceId)).SendAsync("PrintJobAvailable", jobId, cancellationToken);
 
     public Task NotifyJobStatusChangedAsync(string deviceId, PrintJobStatusUpdate update, CancellationToken cancellationToken = default) =>
-        hub.Clients.Group(RequesterGroup(deviceId)).SendAsync("PrintJobStatusChanged", update, cancellationToken);
-
-    public static string HostGroup(string deviceId) => $"print-host:{deviceId}";
-    public static string RequesterGroup(string deviceId) => $"print-requester:{deviceId}";
+        hub.Clients.Group(HubChannels.PrintRequester(deviceId)).SendAsync("PrintJobStatusChanged", update, cancellationToken);
 }

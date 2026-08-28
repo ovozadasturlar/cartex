@@ -64,8 +64,8 @@ public sealed class VoidCustomerPaymentCommandHandler(
             var to = original.FromAccountId is { } fromId ? await ledger.AccountAsync(fromId, cancellationToken) : null;
             if (from is null && to is null) continue;
 
-            var reversal = ledger.Post(original.OperationType, original.Amount, from, to,
-                userId, original.ShiftId, original.Rate);
+            var reversal = await ledger.PostAsync(original.OperationType, original.Amount, from, to,
+                userId, cancellationToken, original.ShiftId, original.Rate);
             reversal.CustomerPaymentDocumentId = document.Id;
             reversal.BranchId = original.BranchId;
             reversal.Description = $"VOID {document.DocumentNumber}";

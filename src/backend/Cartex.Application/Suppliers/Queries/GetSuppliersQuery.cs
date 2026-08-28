@@ -27,7 +27,7 @@ public sealed class GetSuppliersQueryHandler(
             .ToPagedListAsync(request,
                 s => new
                 {
-                    Dto = new SupplierDto(s.Id, s.Name, s.Phone, 0m),
+                    Dto = new SupplierDto(s.Id, s.Name, s.Phone, 0m, s.AcceptsReturns),
                     Payables = db.Accounts
                         .Where(a => a.SupplierId == s.Id && a.Type == AccountType.Debt && a.Balance != 0)
                         .Select(a => new CurrencyAmountDto(a.Currency, -a.Balance))

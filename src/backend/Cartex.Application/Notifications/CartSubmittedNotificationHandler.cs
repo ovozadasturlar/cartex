@@ -22,7 +22,7 @@ public sealed class CartSubmittedNotificationHandler(
 
         var customerName = evt.CustomerId is null ? null : await db.Customers
             .Where(c => c.Id == evt.CustomerId)
-            .Select(c => c.FullName)
+            .Select(c => c.Party.FullName)
             .FirstOrDefaultAsync(cancellationToken);
 
         var text = $"🛒 Yangi onlayn buyurtma\nDo'kon: {evt.WarehouseName}\nMijoz: {customerName ?? "—"}\nMahsulot turlari: {evt.ItemCount}\nKod: {evt.AggregateCode}";

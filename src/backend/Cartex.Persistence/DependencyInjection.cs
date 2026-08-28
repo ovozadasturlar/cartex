@@ -12,9 +12,11 @@ public static class DependencyInjection
     {
         services.AddScoped<AuditScopeState>();
         services.AddScoped<IAuditService, AuditService>();
+        services.AddScoped<InventoryReasonState>();
 
         services.AddScoped<ISaveChangesInterceptor, SoftDeleteInterceptor>();
         services.AddScoped<ISaveChangesInterceptor, BranchStampingInterceptor>();
+        services.AddScoped<ISaveChangesInterceptor, InventoryJournalInterceptor>();
         services.AddScoped<ISaveChangesInterceptor, AuditableEntityInterceptor>();
         services.AddScoped<ISaveChangesInterceptor, EntityAuditInterceptor>();
         services.AddScoped<ISaveChangesInterceptor, SearchFoldInterceptor>();

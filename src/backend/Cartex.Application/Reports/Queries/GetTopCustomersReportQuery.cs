@@ -21,7 +21,7 @@ public sealed class GetTopCustomersReportQueryHandler(IApplicationDbContext db) 
             salesQuery = salesQuery.Where(s => s.WarehouseId == warehouseId);
 
         var sales = await salesQuery
-            .Select(s => new { s.Id, CustomerId = s.CustomerId!.Value, CustomerName = s.Customer!.FullName, s.CreatedAt, s.DiscountAmount })
+            .Select(s => new { s.Id, CustomerId = s.CustomerId!.Value, CustomerName = s.Customer!.Party.FullName, s.CreatedAt, s.DiscountAmount })
             .ToListAsync(cancellationToken);
 
         var itemsQuery = db.SaleItems.Where(i =>

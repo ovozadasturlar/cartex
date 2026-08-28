@@ -74,6 +74,7 @@ public sealed class RequeueCartCommandHandler(
             cart.Items.Add(new CartItem
             {
                 VariantId = row.VariantId,
+                PrepackId = row.PrepackId,
                 Quantity = row.Quantity,
                 UnitPriceOverride = row.UnitPriceOverride
             });
@@ -99,7 +100,7 @@ public sealed class RequeueCartCommandHandler(
             cart.CustomerId,
             items = cart.Items.Select(x => new { x.VariantId, x.Quantity })
         }, "Bekor qilingan savat yangi navbatga qaytarildi", cart.BranchId);
-        await notifier.CartsChangedAsync(cart.Kind.ToString(), cancellationToken);
+        await db.RunAfterCommitAsync(() => notifier.CartsChangedAsync(cart.BranchId, cart.Kind.ToString(), cancellationToken));
         return new RequeueCartResult(cart.AggregateCode, cart.Version);
     }
 }

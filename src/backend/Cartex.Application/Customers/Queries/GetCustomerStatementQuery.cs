@@ -61,7 +61,7 @@ public sealed class GetCustomerStatementQueryHandler(
         if (!currentUser.HasPermission(AppPermissions.Customers.ViewAll))
             customerQuery = customerQuery.Where(x => x.AssignedUserId == currentUser.UserId);
         var customer = await customerQuery
-            .Select(x => new { x.Id, x.FullName, x.Phone })
+            .Select(x => new { x.Id, x.Party.FullName, x.Party.Phone })
             .FirstOrDefaultAsync(cancellationToken)
             ?? throw new NotFoundException("Customer not found.", "customer_not_found");
 

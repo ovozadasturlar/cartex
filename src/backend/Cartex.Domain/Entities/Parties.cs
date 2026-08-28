@@ -8,6 +8,7 @@ public sealed class Party : SoftDeleteEntity
     public long BusinessId { get; set; }
     public Business Business { get; set; } = null!;
     public string FullName { get; set; } = null!;
+    public string? SearchFold { get; set; }
     public string? Phone { get; set; }
     public string? Email { get; set; }
     public string? Address { get; set; }

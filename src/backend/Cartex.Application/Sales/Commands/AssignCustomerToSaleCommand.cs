@@ -41,7 +41,7 @@ public sealed class AssignCustomerToSaleCommandHandler(
         if (sale.CustomerId is not null && (sale.PaidBonus > 0 || sale.DebtAmount > 0 || sale.RefundedBonus > 0 || sale.RefundedDebt > 0))
             throw new BusinessRuleException("Bonus yoki qarz bog'langan savdoni boshqa mijozga o'tkazib bo'lmaydi.", "sale_customer_locked");
 
-        var customer = await db.Customers
+        var customer = await db.Customers.Include(x => x.Party)
             .SingleOrDefaultAsync(x => x.Id == request.CustomerId, cancellationToken)
             ?? throw new NotFoundException("Customer not found.", "customer_not_found");
 
@@ -56,7 +56,7 @@ public sealed class AssignCustomerToSaleCommandHandler(
             sale.ReceiptToken,
             previousCustomerId,
             newCustomerId = customer.Id,
-            customerName = $"{customer.FullName} {customer.LastName}".Trim()
+            customerName = $"{customer.Party.FullName} {customer.LastName}".Trim()
         }, "Savdoga mijoz biriktirildi", sale.BranchId);
 
         return Unit.Value;

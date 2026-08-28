@@ -1,5 +1,6 @@
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
+using Cartex.Persistence.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Persistence.Seed;
@@ -13,16 +14,17 @@ public sealed record DemoCatalog(
 
 public static class DemoDataSeeder
 {
-    public static async Task SeedAsync(ApplicationDbContext context)
+    public static async Task SeedAsync(ApplicationDbContext context, InventoryReasonState reasons)
     {
-        var catalog = await SeedCatalogAsync(context);
+        var catalog = await SeedCatalogAsync(context, reasons);
         if (catalog is null)
             return;
-        await SeedTransactionsAsync(context, catalog);
+        await SeedTransactionsAsync(context, catalog, reasons);
     }
 
-    public static async Task<DemoCatalog?> SeedCatalogAsync(ApplicationDbContext context)
+    public static async Task<DemoCatalog?> SeedCatalogAsync(ApplicationDbContext context, InventoryReasonState reasons)
     {
+        reasons.Declare(new(InventoryMovementKind.Adjustment, "DemoSeed", null, InventoryLocation.External()));
         if (await context.BusinessSettings.AnyAsync(s => s.Key == "demo_seeded" && s.Value == "true"))
             return null;
         if (await context.Products.AnyAsync())
@@ -235,8 +237,6 @@ public static class DemoDataSeeder
                 Phone = c.Phone,
                 CreatedAt = openingDate
             },
-            FullName = c.Full,
-            Phone = c.Phone,
             CardBarcode = c.Card,
             DiscountPct = c.Disc,
             CreditLimit = c.Limit,
@@ -248,10 +248,12 @@ public static class DemoDataSeeder
         return new DemoCatalog(branch1, wh1, wh2, admin, seller, cash, card, variants, sellingPrices, stocks, suppliers, customers, openingDate, today0, now);
     }
 
-    public static async Task SeedTransactionsAsync(ApplicationDbContext context, DemoCatalog cat)
+    public static async Task SeedTransactionsAsync(ApplicationDbContext context, DemoCatalog cat, InventoryReasonState reasons)
     {
         if (await context.Sales.AnyAsync())
             return;
+
+        reasons.Declare(new(InventoryMovementKind.Adjustment, "DemoSeed", null, InventoryLocation.External()));
 
         var rnd = new Random(0xCA27EC);
         var openingDate = cat.OpeningDate;
@@ -375,10 +377,11 @@ public static class DemoDataSeeder
             var open = Day(d).AddHours(9);
             var sh = new Shift
             {
-                BranchId = branch1.Id, UserId = seller.Id, OpeningFloat = 200_000m,
+                BranchId = branch1.Id, UserId = seller.Id,
                 OpenedAt = open, CreatedAt = open,
                 Status = d == 0 ? ShiftStatus.Open : ShiftStatus.Closed,
-                ClosedAt = d == 0 ? null : Day(d).AddHours(21).AddMinutes(30)
+                ClosedAt = d == 0 ? null : Day(d).AddHours(21).AddMinutes(30),
+                CashRows = { new ShiftCash { Currency = cash.Currency, OpeningFloat = 200_000m } }
             };
             context.Shifts.Add(sh);
             dayShift[d] = sh;
@@ -617,9 +620,9 @@ public static class DemoDataSeeder
 
         for (var d = -29; d <= -1; d++)
         {
-            var sh = dayShift[d];
+            var row = dayShift[d].CashRows.First(x => x.Currency == cash.Currency);
             var variance = rnd.Next(10) == 0 ? rnd.Next(-15, 16) * 1000m : 0m;
-            sh.CountedCash = sh.OpeningFloat + cashByDay.GetValueOrDefault(d) + variance;
+            row.CountedCash = row.OpeningFloat + cashByDay.GetValueOrDefault(d) + variance;
         }
 
         context.StockTransfers.AddRange(

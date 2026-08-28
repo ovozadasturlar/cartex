@@ -2,6 +2,7 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Application.Common.Models;
+using Cartex.Application.Common.Shifts;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
@@ -14,13 +15,13 @@ namespace Cartex.Application.Shifts.Commands;
 
 public record CloseShiftCommand(long ShiftId, decimal CountedCash, List<CurrencyAmountDto>? Counted = null) : ICommand<ZReportDto>;
 
-public sealed class CloseShiftCommandHandler(IApplicationDbContext db, ICurrentUser currentUser, ICurrencyService currency, IAuditService audit) : IRequestHandler<CloseShiftCommand, ZReportDto>
+public sealed class CloseShiftCommandHandler(IApplicationDbContext db, ICurrentUser currentUser, ICurrencyService currency, IShiftLock shiftLock, IAuditService audit) : IRequestHandler<CloseShiftCommand, ZReportDto>
 {
     public async Task<ZReportDto> Handle(CloseShiftCommand request, CancellationToken cancellationToken)
     {
-        var shift = await db.Shifts.FirstOrDefaultAsync(
-            s => s.Id == request.ShiftId && s.BranchId == currentUser.DefaultBranchId, cancellationToken)
-            ?? throw new NotFoundException("Shift not found.");
+        var shift = await shiftLock.ByIdAsync(request.ShiftId, cancellationToken);
+        if (shift is null || shift.BranchId != currentUser.DefaultBranchId)
+            throw new NotFoundException("Shift not found.");
 
         if (shift.UserId != currentUser.UserId && !currentUser.HasPermission(AppPermissions.Shifts.CloseAll))
             throw new ForbiddenException("Boshqa kassirning smenasini yopishga ruxsat yo'q.");
@@ -44,11 +45,17 @@ public sealed class CloseShiftCommandHandler(IApplicationDbContext db, ICurrentU
             }
             row.CountedCash = counted.Amount;
         }
+        var baseRow = cashRows.FirstOrDefault(c => c.Currency == baseCode);
+        if (baseRow is null)
+        {
+            baseRow = new ShiftCash { ShiftId = shift.Id, Currency = baseCode };
+            db.ShiftCashes.Add(baseRow);
+        }
+        baseRow.CountedCash = request.CountedCash;
         await db.SaveChangesAsync(cancellationToken);
 
         var report = await ShiftCalculator.ComputeAsync(db, shift, request.CountedCash, cancellationToken);
 
-        shift.CountedCash = request.CountedCash;
         shift.ClosedAt = DateTime.UtcNow;
         shift.Status = ShiftStatus.Closed;
 

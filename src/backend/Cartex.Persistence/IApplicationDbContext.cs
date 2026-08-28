@@ -1,4 +1,5 @@
-﻿using Cartex.Domain.Entities;
+﻿using Cartex.Domain.Common;
+using Cartex.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Persistence;
@@ -17,7 +18,6 @@ public interface IApplicationDbContext
     DbSet<Unit> Units { get; }
     DbSet<ProductType> ProductTypes { get; }
     DbSet<Product> Products { get; }
-    DbSet<ProductReference> ProductReferences { get; }
     DbSet<ProductVariant> ProductVariants { get; }
     DbSet<Barcode> Barcodes { get; }
     DbSet<ProductPack> ProductPacks { get; }
@@ -60,8 +60,6 @@ public interface IApplicationDbContext
     DbSet<CustomerSession> CustomerSessions { get; }
     DbSet<NotificationDelivery> NotificationDeliveries { get; }
     DbSet<NotificationDeliveryAttempt> NotificationDeliveryAttempts { get; }
-    [Obsolete("Legacy SMS journal retained to preserve historical production data.")]
-    DbSet<SmsMessage> SmsMessages { get; }
     DbSet<Prepack> Prepacks { get; }
     DbSet<HardwareKey> HardwareKeys { get; }
     DbSet<PrintNode> PrintNodes { get; }
@@ -82,8 +80,9 @@ public interface IApplicationDbContext
     DbSet<CustomerReturnDocument> CustomerReturnDocuments { get; }
     DbSet<CustomerReturnLine> CustomerReturnLines { get; }
     DbSet<CustomerReturnSettlement> CustomerReturnSettlements { get; }
-    DbSet<InventoryPosition> InventoryPositions { get; }
     DbSet<InventoryMovement> InventoryMovements { get; }
+    DbSet<StockWriteOffDocument> StockWriteOffDocuments { get; }
+    DbSet<StockWriteOffLine> StockWriteOffLines { get; }
     DbSet<Party> Parties { get; }
     DbSet<PartnerProfile> PartnerProfiles { get; }
     DbSet<ParticipantRoleDefinition> ParticipantRoleDefinitions { get; }
@@ -96,30 +95,20 @@ public interface IApplicationDbContext
     DbSet<OfflineAuthorityLease> OfflineAuthorityLeases { get; }
     DbSet<OfflineSyncEvent> OfflineSyncEvents { get; }
 
+    long TransactionGeneration { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
     Task<T> ExecuteInTransactionAsync<T>(Func<Task<T>> action, CancellationToken cancellationToken = default);
 
     Task ReloadAsync(object entity, CancellationToken cancellationToken = default);
 
+    Task<List<TEntity>> LockAsync<TEntity>(FormattableString sql, CancellationToken cancellationToken = default)
+        where TEntity : BaseEntity;
+
     Task<long> NextDocumentSequenceAsync(CancellationToken cancellationToken = default);
 
-    Task UpsertInventoryPositionAsync(
-        long branchId,
-        Cartex.Domain.Enums.InventoryLocationKind locationKind,
-        long locationId,
-        long variantId,
-        decimal quantity,
-        long? userId,
-        CancellationToken cancellationToken = default);
-    Task<bool> AdjustInventoryPositionAsync(
-        long branchId,
-        Cartex.Domain.Enums.InventoryLocationKind locationKind,
-        long locationId,
-        long variantId,
-        decimal delta,
-        long? userId,
-        CancellationToken cancellationToken = default);
-
     void RunAfterCommit(Action action);
+
+    Task RunAfterCommitAsync(Func<Task> action);
 }

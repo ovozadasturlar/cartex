@@ -16,12 +16,13 @@ public sealed class GetCustomerTotalsQueryHandler(IApplicationDbContext db, ICur
     public async Task<CustomerTotalsDto> Handle(GetCustomerTotalsQuery request, CancellationToken cancellationToken)
     {
         var baseCode = await db.Businesses.Select(b => b.Currency).FirstAsync(cancellationToken);
-        var query = db.Customers.AsFilterable(request);
+        var customers = db.Customers.AsQueryable();
         if (!currentUser.HasPermission(AppPermissions.Customers.ViewAll))
-            query = query.Where(c => c.AssignedUserId == currentUser.UserId);
+            customers = customers.Where(c => c.AssignedUserId == currentUser.UserId);
+        var query = customers.AsRows().AsFilterable(request);
         var count = await query.CountAsync(cancellationToken);
         var sums = await query
-            .SelectMany(c => c.Accounts)
+            .SelectMany(c => db.Accounts.Where(a => a.CustomerId == c.Id))
             .Where(a => a.Type == AccountType.Debt || a.Type == AccountType.Bonus || a.Type == AccountType.CustomerAdvance)
             .GroupBy(a => new { a.Type, a.Currency })
             .Select(g => new

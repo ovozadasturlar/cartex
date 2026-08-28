@@ -75,9 +75,13 @@ public sealed class CreateProductCommandHandler(IApplicationDbContext db, ICurre
         {
             await quantityPolicy.ValidateAsync(inputs.Select(x => (variant.Id, x.PackQty > 0 ? x.PackQty : 1m)), cancellationToken);
             var codes = inputs.Select(b => b.Code).ToList();
-            var existing = await db.Barcodes.Where(b => codes.Contains(b.Code)).Select(b => b.Code).FirstOrDefaultAsync(cancellationToken);
+            var existing = await db.Barcodes
+                .Where(b => codes.Contains(b.Code))
+                .Select(b => new { b.Code, Product = b.Variant.Product.Name })
+                .FirstOrDefaultAsync(cancellationToken);
             if (existing is not null)
-                throw new BusinessRuleException($"Bu barkod allaqachon mavjud: {existing}");
+                throw new BusinessRuleException(
+                    $"Bu barkod «{existing.Product}» mahsulotiga tegishli: {existing.Code}", "barcode_taken");
 
             foreach (var input in inputs)
             {

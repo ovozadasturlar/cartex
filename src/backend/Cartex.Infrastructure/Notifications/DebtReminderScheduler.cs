@@ -1,8 +1,6 @@
 using System.Text.Json;
 using Cartex.Application.Common.Interfaces;
-using Cartex.Application.Common.Messaging;
 using Cartex.Application.Common.Settings;
-using Cartex.Application.ProductReference.Commands;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
 using Cartex.Domain.Events;
@@ -35,8 +33,6 @@ public sealed class DebtReminderScheduler(IServiceProvider services, ILogger<Deb
                     if (enqueued > 0)
                         logger.LogInformation("Enqueued {Count} debt reminders", enqueued);
                 }
-
-                await SyncProductReferenceIfDueAsync(scope.ServiceProvider, settings, stoppingToken);
             }
             catch (Exception ex)
             {
@@ -48,25 +44,6 @@ public sealed class DebtReminderScheduler(IServiceProvider services, ILogger<Deb
         }
     }
 
-    private async Task SyncProductReferenceIfDueAsync(
-        IServiceProvider serviceProvider,
-        ISettingsService settings,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var config = await settings.GetAsync<ProductReferenceSettings>(SettingKeys.ProductReference, cancellationToken);
-            if (config is { IsEnabled: true, SyncSchedule: "Daily" }
-                && config.LastSyncedAt?.ToLocalTime().Date != DateTime.Today)
-                await serviceProvider.GetRequiredService<ISender>().Send(new SyncProductReferenceCommand(true), cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Product reference synchronization failed");
-        }
-    }
-
     public static bool IsInWindow(int hourLocal, int sendHour) =>
         hourLocal >= sendHour && hourLocal < sendHour + 2;
 
@@ -74,7 +51,7 @@ public sealed class DebtReminderScheduler(IServiceProvider services, ILogger<Deb
     {
         var accounts = await db.Accounts
             .Where(a => a.Type == AccountType.Debt && a.CustomerId != null && a.Balance > 0 && !a.Customer!.NotificationsOptOut)
-            .Select(a => new { a.Id, CustomerId = a.CustomerId!.Value, CustomerName = a.Customer!.FullName, a.Balance, a.Currency })
+            .Select(a => new { a.Id, CustomerId = a.CustomerId!.Value, CustomerName = a.Customer!.Party.FullName, a.Balance, a.Currency })
             .ToListAsync(cancellationToken);
 
         if (accounts.Count == 0)

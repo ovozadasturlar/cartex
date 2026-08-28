@@ -3,6 +3,7 @@ using Cartex.Application.Common.Finance;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Settings;
 using Cartex.Application.Common.Partners;
+using Cartex.Application.Common.Shifts;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
@@ -42,6 +43,7 @@ public sealed class CreateCustomerPaymentCommandHandler(
     ICurrencyService currency,
     ISettingsService settings,
     IPartnerRewardService partnerRewards,
+    IShiftLock shiftLock,
     IAuditService audit) : IRequestHandler<CreateCustomerPaymentCommand, CustomerPaymentCreatedDto>
 {
     public async Task<CustomerPaymentCreatedDto> Handle(CreateCustomerPaymentCommand request, CancellationToken cancellationToken)
@@ -121,10 +123,7 @@ public sealed class CreateCustomerPaymentCommandHandler(
         if (totalBase <= 0 && writeOffBase <= 0)
             throw new BusinessRuleException("To'lov summasi 0 dan katta bo'lishi kerak.");
 
-        var shiftId = await db.Shifts
-            .Where(x => x.UserId == userId && x.BranchId == branchId && x.Status == ShiftStatus.Open)
-            .Select(x => (long?)x.Id)
-            .FirstOrDefaultAsync(cancellationToken);
+        var shiftId = (await shiftLock.OpenAsync(userId, branchId, cancellationToken))?.Id;
         var policy = await settings.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken)
             ?? new SalesPolicySettings();
         if (tenderRows.Any(x => x.Method == PaymentMethod.Cash) && shiftId is null && policy.ShiftPolicy != "Off"
@@ -270,7 +269,7 @@ public sealed class CreateCustomerPaymentCommandHandler(
         foreach (var tender in tenderRows)
         {
             var account = await ledger.BranchAccountAsync(branchId, AccountTypeFor(tender.Method), cancellationToken, tender.Currency);
-            var transaction = ledger.Post(OperationType.CustomerPayment, tender.Amount, null, account, userId, shiftId, tender.Rate);
+            var transaction = await ledger.PostAsync(OperationType.CustomerPayment, tender.Amount, null, account, userId, cancellationToken, shiftId, tender.Rate);
             transaction.CustomerPaymentDocument = document;
             transaction.Description = document.DocumentNumber;
         }
@@ -300,7 +299,7 @@ public sealed class CreateCustomerPaymentCommandHandler(
             var operation = allocation.Kind == CustomerPaymentAllocationKind.WriteOff
                 ? OperationType.DebtWriteOff
                 : OperationType.DebtPay;
-            var transaction = ledger.Post(operation, allocation.Amount, debt, null, userId, shiftId, rate);
+            var transaction = await ledger.PostAsync(operation, allocation.Amount, debt, null, userId, cancellationToken, shiftId, rate);
             transaction.CustomerPaymentDocument = document;
             transaction.SaleId = allocation.SaleId;
             transaction.Description = document.DocumentNumber;
@@ -330,8 +329,8 @@ public sealed class CreateCustomerPaymentCommandHandler(
         {
             var advance = await ledger.CustomerAccountAsync(
                 request.CustomerId, AccountType.CustomerAdvance, cancellationToken, baseCode);
-            var transaction = ledger.Post(
-                OperationType.CustomerAdvance, document.AdvanceBaseAmount, null, advance, userId, shiftId);
+            var transaction = await ledger.PostAsync(
+                OperationType.CustomerAdvance, document.AdvanceBaseAmount, null, advance, userId, cancellationToken, shiftId);
             transaction.CustomerPaymentDocument = document;
             transaction.Description = document.DocumentNumber;
         }

@@ -55,7 +55,7 @@ public sealed class UpdateCartStatusCommandHandler(
             audit.SetOutcome("cart.claimed", "carts", cart.Id,
                 new { cart.AggregateCode, from = previousStatus, to = request.Status, ClaimedByUserId = userId },
                 "Savat kassaga olindi", cart.BranchId);
-            await notifier.CartsChangedAsync(cart.Kind.ToString(), cancellationToken);
+            await db.RunAfterCommitAsync(() => notifier.CartsChangedAsync(cart.BranchId, cart.Kind.ToString(), cancellationToken));
             return Unit.Value;
         }
 
@@ -84,7 +84,7 @@ public sealed class UpdateCartStatusCommandHandler(
         audit.SetOutcome(request.Status == CartStatus.Cancelled ? "cart.cancelled" : "cart.status_changed", "carts", cart.Id,
             new { cart.AggregateCode, from = fromStatus, to = request.Status, cart.CancellationReason },
             request.Status == CartStatus.Cancelled ? "Savat bekor qilindi" : "Savat holati o'zgartirildi", cart.BranchId);
-        await notifier.CartsChangedAsync(cart.Kind.ToString(), cancellationToken);
+        await db.RunAfterCommitAsync(() => notifier.CartsChangedAsync(cart.BranchId, cart.Kind.ToString(), cancellationToken));
         return Unit.Value;
     }
 }

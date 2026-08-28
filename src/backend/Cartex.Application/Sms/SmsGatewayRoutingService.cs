@@ -10,7 +10,8 @@ namespace Cartex.Application.Sms;
 public sealed class SmsGatewayRoutingService(
     IApplicationDbContext db,
     ISettingsService settingsService,
-    ISmsGatewayNotifier notifier)
+    ISmsGatewayNotifier notifier,
+    IHubPresence presence)
 {
     public async Task<bool> AssignAsync(SmsGatewayJob job, CancellationToken cancellationToken)
     {
@@ -46,7 +47,7 @@ public sealed class SmsGatewayRoutingService(
             : null;
         var stickyId = job.StickyDeviceId ?? route?.LastDeviceId;
         var sticky = stickyId is long id ? devices.FirstOrDefault(x => x.Id == id) : null;
-        if (sticky is not null && CanSend(sticky, job, sentCounts.GetValueOrDefault(sticky.Id), now))
+        if (sticky is not null && CanSend(sticky, job, sentCounts.GetValueOrDefault(sticky.Id), now, presence))
             return await AssignAsync(job, sticky, now, cancellationToken);
 
         var stickyWait = StickyWaitMinutes(settings, job.Kind);
@@ -65,7 +66,7 @@ public sealed class SmsGatewayRoutingService(
         }
 
         var candidates = devices
-            .Where(x => CanSend(x, job, sentCounts.GetValueOrDefault(x.Id), now))
+            .Where(x => CanSend(x, job, sentCounts.GetValueOrDefault(x.Id), now, presence))
             .OrderBy(x => x.MonthlyQuota is null)
             .ThenByDescending(RemainingQuotaRatio)
             .ThenBy(x => x.Priority)
@@ -74,7 +75,7 @@ public sealed class SmsGatewayRoutingService(
         if (candidates.Count > 0)
             return await AssignAsync(job, candidates[0], now, cancellationToken);
 
-        var active = devices.Where(x => IsActive(x, now)).ToList();
+        var active = devices.Where(x => IsActive(x, presence)).ToList();
         job.WaitingReason = active.Count == 0
             ? "no_device"
             : active.All(x => !HasQuota(x, job))
@@ -96,7 +97,7 @@ public sealed class SmsGatewayRoutingService(
         var sentLastHour = await db.SmsGatewayJobs.AsNoTracking()
             .Where(x => x.AssignedDeviceId == device.Id && x.SentAt >= now.AddHours(-1))
             .SumAsync(x => (int?)x.SegmentCount, cancellationToken) ?? 0;
-        return CanSend(device, job, sentLastHour, now)
+        return CanSend(device, job, sentLastHour, now, presence)
             && await AssignAsync(job, device, now, cancellationToken);
     }
 
@@ -117,19 +118,20 @@ public sealed class SmsGatewayRoutingService(
         job.WaitingReason = null;
         job.AvailableAt = null;
         await db.SaveChangesAsync(cancellationToken);
-        await notifier.NotifyJobAvailableAsync(device.DeviceId, device.SimSlot, job.Id, cancellationToken);
+        await db.RunAfterCommitAsync(() => notifier.NotifyJobAvailableAsync(device.DeviceId, device.SimSlot, job.Id, cancellationToken));
         return true;
     }
 
-    private static bool CanSend(SmsGatewayDevice device, SmsGatewayJob job, int sentLastHour, DateTime now) =>
-        IsActive(device, now)
+    private static bool CanSend(
+        SmsGatewayDevice device, SmsGatewayJob job, int sentLastHour, DateTime now, IHubPresence presence) =>
+        IsActive(device, presence)
         && HasQuota(device, job)
         && (device.LastSentAt is not DateTime lastSent || lastSent.AddSeconds(device.MinIntervalSeconds) <= now)
         && sentLastHour + job.SegmentCount <= device.MaxPerHour;
 
-    private static bool IsActive(SmsGatewayDevice device, DateTime now) =>
+    private static bool IsActive(SmsGatewayDevice device, IHubPresence presence) =>
         device.IsTrusted && device.IsConsented && device.IsEnabled && device.PausedAt is null
-        && device.LastSeenAt >= now.AddSeconds(-90);
+        && presence.IsOnline(HubChannels.SmsGateway(device.DeviceId, device.SimSlot));
 
     private static bool HasQuota(SmsGatewayDevice device, SmsGatewayJob job) =>
         device.MonthlyQuota is not int quota || device.SentThisPeriod + job.SegmentCount <= quota;

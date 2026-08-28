@@ -46,14 +46,14 @@ public sealed class GetCustomerReturnsQueryHandler(
         {
             var search = request.Search.Trim();
             query = query.Where(x => EF.Functions.ILike(x.DocumentNumber, $"%{search}%")
-                                     || (x.Customer != null && EF.Functions.ILike(x.Customer.FullName, $"%{search}%")));
+                                     || (x.Customer != null && EF.Functions.ILike(x.Customer.Party.FullName, $"%{search}%")));
         }
 
         return await query.ToPagedListAsync(request, x => new CustomerReturnListDto(
             x.Id,
             x.DocumentNumber,
             x.CustomerId,
-            x.Customer == null ? null : x.Customer.FullName,
+            x.Customer == null ? null : x.Customer.Party.FullName,
             x.BusinessDate,
             x.CreatedAt,
             x.Status.ToString(),
@@ -81,7 +81,7 @@ public sealed class GetCustomerReturnByIdQueryHandler(
             query = query.Where(x => x.Customer == null || x.Customer.AssignedUserId == currentUser.UserId);
 
         var document = await query
-            .Include(x => x.Customer)
+            .Include(x => x.Customer).ThenInclude(x => x!.Party)
             .Include(x => x.Warehouse)
             .Include(x => x.User)
             .Include(x => x.Lines).ThenInclude(x => x.Variant).ThenInclude(x => x.Product).ThenInclude(x => x.Unit)
@@ -97,7 +97,7 @@ public sealed class GetCustomerReturnByIdQueryHandler(
             document.WarehouseId,
             document.Warehouse.Name,
             document.CustomerId,
-            document.Customer?.FullName,
+            document.Customer?.Party.FullName,
             document.UserId,
             document.User.FullName,
             document.BusinessDate,

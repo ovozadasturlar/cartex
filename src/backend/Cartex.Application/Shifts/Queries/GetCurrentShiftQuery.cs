@@ -23,7 +23,7 @@ public sealed class GetCurrentShiftQueryHandler(IApplicationDbContext db, ICurre
             return null;
 
         var report = await ShiftCalculator.ComputeAsync(db, shift, 0, cancellationToken);
-        return new CurrentShiftDto(shift.Id, shift.OpenedAt, shift.OpeningFloat,
+        return new CurrentShiftDto(shift.Id, shift.OpenedAt, report.OpeningFloat,
             report.CashSales, report.CashReturns, report.PayIn, report.PayOut, report.DebtPayIn, report.SupplyPayOut, report.ExpectedCash)
         {
             CardSales = report.CardSales,

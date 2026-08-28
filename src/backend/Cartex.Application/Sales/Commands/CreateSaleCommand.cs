@@ -3,6 +3,7 @@ using Cartex.Application.Common.Settings;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
+using Cartex.Persistence.Services;
 using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
@@ -15,6 +16,7 @@ using Cartex.Application.Common.Inventory;
 using Cartex.Application.Common.Loyalty;
 using Cartex.Application.Common.Participants;
 using Cartex.Application.Common.Partners;
+using Cartex.Application.Common.Shifts;
 using System.Text.Json.Serialization;
 using Cartex.Application.Printing;
 using Cartex.Application.OfflineCache;
@@ -104,7 +106,9 @@ public sealed class CreateSaleCommandHandler(
     IPartnerRewardService partnerRewards,
     ReceiptPrintPolicyService receiptPrinting,
     IOfflineAuthorityGuard offlineAuthority,
-    IAuditService audit) : IRequestHandler<CreateSaleCommand, CreateSaleResult>
+    IShiftLock shiftLock,
+    IAuditService audit,
+    InventoryReasonState inventoryReason) : IRequestHandler<CreateSaleCommand, CreateSaleResult>
 {
     public Task<CreateSaleResult> Handle(CreateSaleCommand request, CancellationToken cancellationToken) =>
         db.ExecuteInTransactionAsync(() => HandleCoreAsync(request, cancellationToken), cancellationToken);
@@ -202,10 +206,7 @@ public sealed class CreateSaleCommandHandler(
                 throw new BusinessRuleException("Qadoq allaqachon sotilgan yoki muddati o'tgan.");
         }
 
-        var shiftId = await db.Shifts
-            .Where(s => s.UserId == userId && s.BranchId == warehouse.BranchId && s.Status == ShiftStatus.Open)
-            .Select(s => (long?)s.Id)
-            .FirstOrDefaultAsync(cancellationToken);
+        var shiftId = (await shiftLock.OpenAsync(userId, warehouse.BranchId, cancellationToken))?.Id;
 
         var prices = await db.ProductPrices
             .Where(p => variantIds.Contains(p.VariantId) && (p.WarehouseId == warehouse.Id || p.WarehouseId == null))
@@ -293,6 +294,33 @@ public sealed class CreateSaleCommandHandler(
         var priceDrifts = new List<PriceChangeDto>();
         var priceIncreases = new Dictionary<ProductPrice, CatalogPrice>();
 
+        // NARX-06/OFF-11: katalog savdodan yangilanadimi. Narxsiz mahsulotning `0` li qatori
+        // faqat shu yo'lda yoziladi — aks holda u katalogda qolib, keyingi savdoni jimgina
+        // nolda o'tkazib yuborardi (`NARX-05`).
+        var updatesCatalog = policy.UpdateCatalogPriceOnSale && !request.FromOfflineSync;
+
+        async Task<ProductPrice> PriceAnchorAsync(long variantId)
+        {
+            if (!updatesCatalog)
+                return new ProductPrice { VariantId = variantId, Currency = baseCode };
+
+            var row = await db.ProductPrices.IgnoreQueryFilters()
+                .FirstOrDefaultAsync(p => p.VariantId == variantId && p.WarehouseId == null, cancellationToken);
+            if (row is null)
+            {
+                row = new ProductPrice { VariantId = variantId, SellingPrice = 0, Currency = baseCode };
+                db.ProductPrices.Add(row);
+            }
+            else
+            {
+                row.IsDeleted = false;
+                row.SellingPrice = 0;
+                row.Currency = baseCode;
+            }
+            prices.Add(row);
+            return row;
+        }
+
         foreach (var item in request.Items)
         {
             if (item.PrepackId is { } prepackId)
@@ -303,27 +331,16 @@ public sealed class CreateSaleCommandHandler(
                 continue;
             }
 
+            // NARX-05: narxi belgilanmagan mahsulot narx kiritmasdan sotilmaydi. Katalogdagi `0`
+            // ham narx emas — u eski savdodan qolgan bo'sh qator.
             var catalogPrice = PriceOf(item.VariantId);
-            if (catalogPrice is null)
+            if (catalogPrice is null or { Amount: <= 0 })
             {
                 if (item.UnitPrice is null)
-                    throw new BusinessRuleException($"Mahsulot narxi belgilanmagan (VariantId={item.VariantId}).");
+                    throw new BusinessRuleException(
+                        $"Mahsulot narxi belgilanmagan (VariantId={item.VariantId}).", "price_not_set");
 
-                var newPrice = await db.ProductPrices.IgnoreQueryFilters()
-                    .FirstOrDefaultAsync(p => p.VariantId == item.VariantId && p.WarehouseId == null, cancellationToken);
-                if (newPrice is null)
-                {
-                    newPrice = new ProductPrice { VariantId = item.VariantId, SellingPrice = 0, Currency = baseCode };
-                    db.ProductPrices.Add(newPrice);
-                }
-                else
-                {
-                    newPrice.IsDeleted = false;
-                    newPrice.SellingPrice = 0;
-                    newPrice.Currency = baseCode;
-                }
-                prices.Add(newPrice);
-                catalogPrice = new CatalogPrice(newPrice, 0, baseCode, 1m);
+                catalogPrice ??= new CatalogPrice(await PriceAnchorAsync(item.VariantId), 0, baseCode, 1m);
             }
 
             // NARX-09/NARX-10: kassir ko'rgan narx savdo narxi bo'ladi — lekin faqat u yaqinda
@@ -414,7 +431,6 @@ public sealed class CreateSaleCommandHandler(
             foreach (var allocation in allocations)
             {
                 saleRows.Add(new SaleRow(index, allocation.Batch, allocation.Quantity, line));
-                allocation.Batch.Quantity -= allocation.Quantity;
             }
         }
 
@@ -652,9 +668,10 @@ public sealed class CreateSaleCommandHandler(
                 ?? throw new NotFoundException("Customer not found.");
             if (!policy.AllowDebtSales || customer.CreditLimit is not null)
             {
-                var debtAccounts = await db.Accounts
-                    .Where(a => a.CustomerId == request.CustomerId.Value && a.Type == AccountType.Debt)
-                    .ToListAsync(cancellationToken);
+                // QARZ-22: chegara qulflangan qoldiqdan o'lchanadi — ikki parallel qarz savdosi
+                // bir xil eski qoldiqni o'qib, ikkalasi ham limitdan o'tib ketmasin.
+                var debtAccounts = (await CustomerAccounts.LockAsync(db, ledger, request.CustomerId.Value, cancellationToken))
+                    .Where(a => a.Type == AccountType.Debt);
                 decimal currentDebt = 0;
                 foreach (var account in debtAccounts)
                     currentDebt += account.Balance * (account.Currency == baseCode ? 1m : await currency.RateAsync(account.Currency, cancellationToken));
@@ -688,7 +705,7 @@ public sealed class CreateSaleCommandHandler(
             Status = SaleStatus.Completed,
             DocumentNumber = await Cartex.Application.Common.Documents.DocumentNumbers.NextAsync(
                 db, "SAL", DateOnly.FromDateTime(DateTime.UtcNow), cancellationToken),
-            ReceiptToken = Guid.NewGuid().ToString("N"),
+            ReceiptToken = ReceiptTokens.Issue(),
             ShiftId = shiftId,
             Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim(),
             IdempotencyKey = idempotencyKey,
@@ -727,7 +744,7 @@ public sealed class CreateSaleCommandHandler(
         // sale either — the customer is standing at the till.
         // OFF-11: oflayn replay katalogni yangilamaydi — kesh narxi operator kiritgan yangi narx emas.
         var skippedIncreases = new List<CatalogPrice>();
-        if (!policy.UpdateCatalogPriceOnSale || request.FromOfflineSync)
+        if (!updatesCatalog)
         {
             skippedIncreases.AddRange(priceIncreases.Values);
             priceIncreases.Clear();
@@ -786,6 +803,11 @@ public sealed class CreateSaleCommandHandler(
 
         await db.SaveChangesAsync(cancellationToken);
 
+        inventoryReason.Declare(new(InventoryMovementKind.SaleIssue, "Sale", sale.Id,
+            InventoryLocation.Customer(sale.CustomerId ?? 0)));
+        stockAllocator.Apply();
+        await db.SaveChangesAsync(cancellationToken);
+
         audit.SetOutcome("sale.completed", "sales", sale.Id, new
         {
             sale.ReceiptToken,
@@ -809,10 +831,6 @@ public sealed class CreateSaleCommandHandler(
             items = resolvedItems.Select(x => new { x.Item.VariantId, x.Quantity, x.UnitPrice, x.Currency, x.Rate })
         }, "Savdo amalga oshirildi", sale.BranchId, request.OfflineActorUserId);
 
-        if (prepackIds.Count > 0)
-            await db.Prepacks.Where(p => prepackIds.Contains(p.Id))
-                .ExecuteUpdateAsync(s => s.SetProperty(x => x.SoldSaleId, sale.Id), cancellationToken);
-
         List<string>? warnings = null;
         if (offlineShortfalls.Count > 0) (warnings ??= []).Add("stock_negative_offline");
         if (creditLimitExceeded) (warnings ??= []).Add("credit_limit_exceeded");
@@ -829,9 +847,9 @@ public sealed class CreateSaleCommandHandler(
         long? shiftId,
         CancellationToken cancellationToken)
     {
-        void Post(OperationType type, decimal amount, Account? from, Account? to, decimal rate = 1m)
+        async Task Post(OperationType type, decimal amount, Account? from, Account? to, decimal rate = 1m)
         {
-            var transaction = ledger.Post(type, amount, from, to, userId, shiftId, rate);
+            var transaction = await ledger.PostAsync(type, amount, from, to, userId, cancellationToken, shiftId, rate);
             transaction.Sale = sale;
         }
 
@@ -848,13 +866,13 @@ public sealed class CreateSaleCommandHandler(
                     _ => throw new BusinessRuleException("Qo'llab-quvvatlanmaydigan to'lov turi.", "unsupported_payment_method")
                 };
                 var account = await ledger.BranchAccountAsync(branchId, type, cancellationToken, payment.Currency);
-                Post(OperationType.Sale, payment.Amount, null, account, payment.Rate);
+                await Post(OperationType.Sale, payment.Amount, null, account, payment.Rate);
             }
 
             if (sale.ChangeAmount > 0)
             {
                 var cash = await ledger.BranchAccountAsync(branchId, AccountType.Cash, cancellationToken);
-                Post(OperationType.Change, sale.ChangeAmount, cash, null);
+                await Post(OperationType.Change, sale.ChangeAmount, cash, null);
             }
         }
         else
@@ -862,13 +880,13 @@ public sealed class CreateSaleCommandHandler(
             if (sale.PaidCash > 0)
             {
                 var cash = await ledger.BranchAccountAsync(branchId, AccountType.Cash, cancellationToken);
-                Post(OperationType.Sale, sale.PaidCash, null, cash);
+                await Post(OperationType.Sale, sale.PaidCash, null, cash);
             }
 
             if (sale.PaidCard > 0)
             {
                 var card = await ledger.BranchAccountAsync(branchId, AccountType.Card, cancellationToken);
-                Post(OperationType.Sale, sale.PaidCard, null, card);
+                await Post(OperationType.Sale, sale.PaidCard, null, card);
             }
         }
 
@@ -880,23 +898,23 @@ public sealed class CreateSaleCommandHandler(
         if (sale.PaidBonus > 0)
         {
             var bonus = await ledger.CustomerAccountAsync(customerId, AccountType.Bonus, cancellationToken);
-            Post(OperationType.BonusSpend, sale.PaidBonus, bonus, null);
+            await Post(OperationType.BonusSpend, sale.PaidBonus, bonus, null);
         }
 
         foreach (var advanceUse in advanceUses)
-            Post(OperationType.CustomerAdvance, advanceUse.Amount, advanceUse.Account, null, advanceUse.Rate);
+            await Post(OperationType.CustomerAdvance, advanceUse.Amount, advanceUse.Account, null, advanceUse.Rate);
 
         if (debtAmount > 0)
         {
             var debt = await ledger.CustomerAccountAsync(customerId, AccountType.Debt, cancellationToken, sale.DebtCurrency);
-            var debtInCurrency = sale.DebtRate == 1m ? debtAmount : Math.Round(debtAmount / sale.DebtRate, 2);
-            Post(OperationType.DebtCharge, debtInCurrency, null, debt, sale.DebtRate);
+            var debtInCurrency = sale.DebtRate == 1m ? debtAmount : Math.Round(debtAmount / sale.DebtRate, 4);
+            await Post(OperationType.DebtCharge, debtInCurrency, null, debt, sale.DebtRate);
         }
 
         if (sale.CreditAmount > 0)
         {
             var advance = await ledger.CustomerAccountAsync(customerId, AccountType.CustomerAdvance, cancellationToken);
-            Post(OperationType.CustomerAdvance, sale.CreditAmount, null, advance);
+            await Post(OperationType.CustomerAdvance, sale.CreditAmount, null, advance);
         }
 
         var saleItems = sale.Items.ToList();
@@ -913,13 +931,13 @@ public sealed class CreateSaleCommandHandler(
             if (recovery is { Balance: > 0 })
             {
                 var recovered = Math.Min(recovery.Balance, remainingCashback);
-                Post(OperationType.CashbackRecovery, recovered, recovery, null);
+                await Post(OperationType.CashbackRecovery, recovered, recovery, null);
                 remainingCashback -= recovered;
             }
             if (remainingCashback > 0)
             {
                 var bonus = await ledger.CustomerAccountAsync(customerId, AccountType.Bonus, cancellationToken);
-                Post(OperationType.Cashback, remainingCashback, null, bonus);
+                await Post(OperationType.Cashback, remainingCashback, null, bonus);
             }
             sale.CashbackEarned = cashback.Total;
         }

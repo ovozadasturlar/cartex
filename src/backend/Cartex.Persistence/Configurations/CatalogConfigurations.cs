@@ -122,11 +122,6 @@ public class BarcodeConfiguration : IEntityTypeConfiguration<Barcode>
             .WithMany(v => v.Barcodes)
             .HasForeignKey(x => x.VariantId)
             .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasOne(x => x.Pack)
-            .WithMany()
-            .HasForeignKey(x => x.PackId)
-            .OnDelete(DeleteBehavior.SetNull);
     }
 }
 

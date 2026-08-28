@@ -23,7 +23,7 @@ public sealed class SaleCompletedNotificationHandler(
 
         var customer = sale.CustomerId is null ? null : await db.Customers
             .Where(c => c.Id == sale.CustomerId)
-            .Select(c => new { c.Phone, c.Email, c.TelegramChatId, c.NotificationsOptOut, c.PreferredLanguage })
+            .Select(c => new { c.Party.Phone, c.Party.Email, c.TelegramChatId, c.NotificationsOptOut, c.PreferredLanguage })
             .FirstOrDefaultAsync(cancellationToken);
         if (customer is { NotificationsOptOut: true })
             customer = null;

@@ -21,7 +21,7 @@ public sealed class SearchFoldBackfillService(
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
             await FillAsync(db.Products.Where(x => x.SearchFold == null), x => x.Name, (x, value) => x.SearchFold = value, db, stoppingToken);
-            await FillAsync(db.Customers.Where(x => x.SearchFold == null), x => x.FullName, (x, value) => x.SearchFold = value, db, stoppingToken);
+            await FillAsync(db.Parties.Where(x => x.SearchFold == null), x => x.FullName, (x, value) => x.SearchFold = value, db, stoppingToken);
             await FillAsync(db.Suppliers.Where(x => x.SearchFold == null), x => x.Name, (x, value) => x.SearchFold = value, db, stoppingToken);
             await FillAsync(db.Categories.Where(x => x.SearchFold == null), x => x.Name, (x, value) => x.SearchFold = value, db, stoppingToken);
             await FillAsync(db.Manufacturers.Where(x => x.SearchFold == null), x => x.Name, (x, value) => x.SearchFold = value, db, stoppingToken);

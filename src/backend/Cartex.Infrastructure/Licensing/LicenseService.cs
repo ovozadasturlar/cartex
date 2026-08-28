@@ -18,7 +18,7 @@ public sealed class LicenseService(IApplicationDbContext db, IMemoryCache cache)
         if (cache.TryGetValue<LicenseStatus>(CacheKey, out var cached) && cached is not null)
             return cached;
 
-        var license = await db.LicenseStates.AsNoTracking().FirstOrDefaultAsync(cancellationToken);
+        var license = await db.LicenseStates.AsNoTracking().SingleOrDefaultAsync(cancellationToken);
         var enabled = Parse(license?.EnabledFeatures);
         var status = license is null
             ? new LicenseStatus(false, TariffCatalog.Free, null, [])
@@ -40,7 +40,7 @@ public sealed class LicenseService(IApplicationDbContext db, IMemoryCache cache)
         if (cache.TryGetValue<IReadOnlySet<string>>(FeaturesCacheKey, out var cached) && cached is not null)
             return cached;
 
-        var license = await db.LicenseStates.AsNoTracking().FirstOrDefaultAsync(cancellationToken);
+        var license = await db.LicenseStates.AsNoTracking().SingleOrDefaultAsync(cancellationToken);
         var features = Resolve(license);
 
         cache.Set(FeaturesCacheKey, features, TimeSpan.FromSeconds(60));

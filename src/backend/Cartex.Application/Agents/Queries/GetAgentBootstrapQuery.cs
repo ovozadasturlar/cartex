@@ -26,12 +26,12 @@ public sealed class GetAgentBootstrapQueryHandler(IApplicationDbContext db, ICur
 
         var customers = await db.Customers
             .Where(c => c.AssignedUserId == userId)
-            .OrderBy(c => c.FullName)
+            .OrderBy(c => c.Party.FullName)
             .Select(c => new AgentCustomerDto(
                 c.Id,
-                c.FullName,
-                c.Phone,
-                c.Address,
+                c.Party.FullName,
+                c.Party.Phone,
+                c.Party.Address,
                 c.Accounts.Where(a => a.Type == AccountType.Debt).Sum(a => a.Balance * (a.Currency == baseCode ? 1m
                     : db.ExchangeRates.Where(r => r.Code == a.Currency).OrderByDescending(r => r.EffectiveAt).Select(r => r.Rate).FirstOrDefault())),
                 c.CreditLimit,

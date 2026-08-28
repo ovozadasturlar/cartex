@@ -1,6 +1,5 @@
 ﻿using Cartex.Application.Customers.Commands;
 using Cartex.Application.Customers.Queries;
-using Cartex.Application.Notifications.Queries;
 using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
 using Cartex.Shared.Models.Customers;
@@ -60,14 +59,8 @@ public class CustomersController(ISender sender) : ControllerBase
     [HasPermission(AppPermissions.Customers.View)]
     public async Task<ActionResult<IReadOnlyCollection<NotificationDeliveryDto>>> GetMessages(long id)
     {
-        var result = await sender.Send(new GetNotificationJournalQuery
-        {
-            CustomerId = id,
-            Channel = "Sms",
-            Page = 1,
-            PageSize = 100
-        });
-        return Ok(result);
+        var result = await sender.Send(new GetCustomerMessagesQuery(id));
+        return result is null ? NotFound() : Ok(result);
     }
 
     [HttpGet("{id}/ledger")]

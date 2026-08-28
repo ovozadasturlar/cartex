@@ -166,36 +166,24 @@ public class CustomerReturnSettlementConfiguration : IEntityTypeConfiguration<Cu
     }
 }
 
-public class InventoryPositionConfiguration : IEntityTypeConfiguration<InventoryPosition>
-{
-    public void Configure(EntityTypeBuilder<InventoryPosition> builder)
-    {
-        builder.ToTable("inventory_positions", t =>
-            t.HasCheckConstraint("ck_inventory_positions_quantity", "\"quantity\" >= 0"));
-        builder.Property(x => x.LocationKind).HasConversion<string>().HasMaxLength(20);
-        builder.Property(x => x.Quantity).HasPrecision(12, 3);
-        builder.HasIndex(x => new { x.BranchId, x.LocationKind, x.LocationId, x.VariantId }).IsUnique();
-        builder.HasOne<Branch>().WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
-        builder.HasOne(x => x.Variant).WithMany().HasForeignKey(x => x.VariantId).OnDelete(DeleteBehavior.Restrict);
-    }
-}
-
 public class InventoryMovementConfiguration : IEntityTypeConfiguration<InventoryMovement>
 {
     public void Configure(EntityTypeBuilder<InventoryMovement> builder)
     {
         builder.ToTable("inventory_movements", t =>
-            t.HasCheckConstraint("ck_inventory_movements_quantity", "\"quantity\" > 0"));
+            t.HasCheckConstraint("ck_inventory_movements_quantity", "\"quantity\" <> 0"));
         builder.Property(x => x.Quantity).HasPrecision(12, 3);
         builder.Property(x => x.Kind).HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.FromLocationKind).HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.ToLocationKind).HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.SourceType).HasMaxLength(40);
         builder.HasIndex(x => new { x.SourceType, x.SourceId });
-        builder.HasIndex(x => new { x.BranchId, x.OccurredAt });
+        builder.HasIndex(x => new { x.BranchId, x.VariantId, x.WarehouseId, x.OccurredAt });
         builder.HasIndex(x => new { x.ToLocationKind, x.ToLocationId, x.VariantId });
         builder.HasOne<Branch>().WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(x => x.Warehouse).WithMany().HasForeignKey(x => x.WarehouseId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.Variant).WithMany().HasForeignKey(x => x.VariantId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(x => x.Stock).WithMany().HasForeignKey(x => x.StockId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
     }
 }

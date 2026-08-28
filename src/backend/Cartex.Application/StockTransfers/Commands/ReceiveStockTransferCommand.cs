@@ -5,6 +5,7 @@ using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
+using Cartex.Persistence.Services;
 
 using Unit = Cartex.Application.Common.Messaging.Unit;
 
@@ -12,12 +13,17 @@ namespace Cartex.Application.StockTransfers.Commands;
 
 public record ReceiveStockTransferCommand(long Id) : ICommand<Unit>;
 
-public sealed class ReceiveStockTransferCommandHandler(IApplicationDbContext db, ICurrentUser currentUser, IBranchCatalogService branchCatalog) : IRequestHandler<ReceiveStockTransferCommand, Unit>
+public sealed class ReceiveStockTransferCommandHandler(
+    IApplicationDbContext db,
+    ICurrentUser currentUser,
+    IBranchCatalogService branchCatalog,
+    InventoryReasonState inventoryReason) : IRequestHandler<ReceiveStockTransferCommand, Unit>
 {
     public async Task<Unit> Handle(ReceiveStockTransferCommand request, CancellationToken cancellationToken)
     {
-        var transfer = await db.StockTransfers
-            .FirstOrDefaultAsync(t => t.Id == request.Id, cancellationToken)
+        var transfer = (await db.LockAsync<StockTransfer>(
+                $"SELECT * FROM stock_transfers WHERE id = {request.Id} AND is_deleted = false FOR UPDATE",
+                cancellationToken)).FirstOrDefault()
             ?? throw new NotFoundException("Transfer not found.");
 
         if (transfer.Status != TransferStatus.Sent)
@@ -32,10 +38,17 @@ public sealed class ReceiveStockTransferCommandHandler(IApplicationDbContext db,
 
         transfer.Status = TransferStatus.Received;
 
-        var sourceStocks = await db.Stocks
-            .Where(s => s.WarehouseId == transfer.FromWarehouseId && s.VariantId == transfer.VariantId && s.Quantity > 0)
-            .OrderBy(s => s.Id)
-            .ToListAsync(cancellationToken);
+        inventoryReason.Declare(new(InventoryMovementKind.Transfer, "StockTransfer", transfer.Id,
+            InventoryLocation.Warehouse(transfer.FromWarehouseId),
+            InventoryLocation.Warehouse(transfer.ToWarehouseId)));
+
+        long[] warehouseIds = [transfer.FromWarehouseId, transfer.ToWarehouseId];
+        var batches = await db.LockAsync<Stock>(
+            $"SELECT * FROM stocks WHERE warehouse_id = ANY({warehouseIds}) AND variant_id = {transfer.VariantId} AND is_deleted = false ORDER BY id FOR UPDATE",
+            cancellationToken);
+
+        var sourceStocks = batches.Where(s => s.WarehouseId == transfer.FromWarehouseId && s.Quantity > 0).ToList();
+        var targetStocks = batches.Where(s => s.WarehouseId == transfer.ToWarehouseId).ToList();
 
         var available = sourceStocks.Sum(s => s.Quantity);
         if (available < transfer.Quantity)
@@ -51,12 +64,8 @@ public sealed class ReceiveStockTransferCommandHandler(IApplicationDbContext db,
             stock.Quantity -= deduct;
             remaining -= deduct;
 
-            var targetStock = await db.Stocks
-                .FirstOrDefaultAsync(s =>
-                    s.WarehouseId == transfer.ToWarehouseId &&
-                    s.VariantId == transfer.VariantId &&
-                    s.PurchasePrice == stock.PurchasePrice &&
-                    s.ExpiredAt == stock.ExpiredAt, cancellationToken);
+            var targetStock = targetStocks.FirstOrDefault(s =>
+                s.PurchasePrice == stock.PurchasePrice && s.ExpiredAt == stock.ExpiredAt);
 
             if (targetStock is not null)
             {
@@ -64,7 +73,7 @@ public sealed class ReceiveStockTransferCommandHandler(IApplicationDbContext db,
             }
             else
             {
-                db.Stocks.Add(new Stock
+                targetStock = new Stock
                 {
                     BranchId = toWarehouse.BranchId,
                     VariantId = transfer.VariantId,
@@ -72,7 +81,9 @@ public sealed class ReceiveStockTransferCommandHandler(IApplicationDbContext db,
                     Quantity = deduct,
                     PurchasePrice = stock.PurchasePrice,
                     ExpiredAt = stock.ExpiredAt
-                });
+                };
+                db.Stocks.Add(targetStock);
+                targetStocks.Add(targetStock);
             }
         }
 

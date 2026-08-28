@@ -45,11 +45,11 @@ public sealed class UpdateCartItemsCommandHandler(
             await db.SaveChangesAsync(cancellationToken);
             audit.SetOutcome("cart.cancelled", "carts", cart.Id,
                 new { cart.AggregateCode, reason = "empty_cart" }, "Bo'sh savat bekor qilindi", cart.BranchId);
-            await notifier.CartsChangedAsync(cart.Kind.ToString(), cancellationToken);
+            await db.RunAfterCommitAsync(() => notifier.CartsChangedAsync(cart.BranchId, cart.Kind.ToString(), cancellationToken));
             return Unit.Value;
         }
 
-        if (request.Items.Select(x => x.VariantId).Distinct().Count() != request.Items.Count)
+        if (request.Items.Select(x => (x.VariantId, x.PrepackId)).Distinct().Count() != request.Items.Count)
             throw new BusinessRuleException("Bir mahsulot varianti savatda takrorlanmasligi kerak.", "duplicate_cart_item");
 
         // Savatda avvaldan (ruxsatli foydalanuvchi tomonidan) saqlangan override'ni har kim
@@ -63,7 +63,7 @@ public sealed class UpdateCartItemsCommandHandler(
             throw new ForbiddenException("Savdoda narxni o'zgartirishga ruxsat yo'q.");
 
         await quantityPolicy.ValidateAsync(
-            request.Items.Select(x => (x.VariantId, x.Quantity)), cancellationToken);
+            request.Items.Where(x => x.PrepackId is null).Select(x => (x.VariantId, x.Quantity)), cancellationToken);
 
         cart.Items.Clear();
         foreach (var item in request.Items)
@@ -71,6 +71,7 @@ public sealed class UpdateCartItemsCommandHandler(
             cart.Items.Add(new CartItem
             {
                 VariantId = item.VariantId,
+                PrepackId = item.PrepackId,
                 Quantity = item.Quantity,
                 UnitPriceOverride = item.UnitPrice
             });
@@ -80,7 +81,7 @@ public sealed class UpdateCartItemsCommandHandler(
         await db.SaveChangesAsync(cancellationToken);
         audit.SetOutcome("cart.items_updated", "carts", cart.Id,
             new { cart.AggregateCode, items = request.Items }, "Savatdagi mahsulotlar o'zgartirildi", cart.BranchId);
-        await notifier.CartsChangedAsync(cart.Kind.ToString(), cancellationToken);
+        await db.RunAfterCommitAsync(() => notifier.CartsChangedAsync(cart.BranchId, cart.Kind.ToString(), cancellationToken));
         return Unit.Value;
     }
 }

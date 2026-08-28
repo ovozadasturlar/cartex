@@ -2,7 +2,7 @@
 
 namespace Cartex.Shared.Models.Ordering;
 
-public record CheckoutCartItemDto(long VariantId, decimal Quantity, decimal? UnitPrice = null)
+public record CheckoutCartItemDto(long VariantId, decimal Quantity, decimal? UnitPrice = null, long? PrepackId = null)
 {
     /// NARX-09: yakunlash ekranida ko'rsatilgan katalog narxi — savdo shu narxda yakunlanadi.
     public decimal? ExpectedUnitPrice { get; init; }

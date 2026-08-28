@@ -27,7 +27,7 @@ public sealed class GetCustomersQueryHandler(
         if (!currentUser.HasPermission(AppPermissions.Customers.ViewAll))
             customers = customers.Where(c => c.AssignedUserId == currentUser.UserId);
 
-        var items = await customers
+        var items = await customers.AsRows()
             .ToPagedListAsync(request,
                 c => new
                 {
@@ -46,10 +46,10 @@ public sealed class GetCustomersQueryHandler(
                         0m,
                         c.CreditLimit,
                         c.NotificationsOptOut,
-                        c.TelegramChatId != null,
+                        c.HasTelegram,
                         c.PreferredLanguage,
                         0m,
-                        c.Party.Note,
+                        db.Parties.Where(p => p.Id == c.PartyId).Select(p => p.Note).FirstOrDefault(),
                         c.AllowMarketingSms),
                     Debts = db.Accounts
                         .Where(a => a.CustomerId == c.Id && a.Type == AccountType.Debt && a.Balance != 0)

@@ -5,11 +5,13 @@ using Cartex.Application.Common.Inventory;
 using Cartex.Application.Common.Measurement;
 using Cartex.Application.Common.Partners;
 using Cartex.Application.Common.Settings;
+using Cartex.Application.Common.Shifts;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
+using Cartex.Persistence.Services;
 using Cartex.Shared.Models.Sales;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -63,7 +65,9 @@ public sealed class CreateCustomerReturnCommandHandler(
     IQuantityPolicyService quantityPolicy,
     IStockAllocator stockAllocator,
     IPartnerRewardService partnerRewards,
-    IAuditService audit) : IRequestHandler<CreateCustomerReturnCommand, CustomerReturnCreatedDto>
+    IShiftLock shiftLock,
+    IAuditService audit,
+    InventoryReasonState inventoryReason) : IRequestHandler<CreateCustomerReturnCommand, CustomerReturnCreatedDto>
 {
     public async Task<CustomerReturnCreatedDto> Handle(CreateCustomerReturnCommand request, CancellationToken cancellationToken)
     {
@@ -93,6 +97,8 @@ public sealed class CreateCustomerReturnCommandHandler(
             ?? throw new NotFoundException("Warehouse not found.", "warehouse_not_found");
         if (!currentUser.CanAccessAllBranches && !currentUser.BranchIds.Contains(warehouse.BranchId))
             throw new NotFoundException("Warehouse not found.", "warehouse_not_found");
+
+        var shiftId = (await shiftLock.OpenAsync(userId, warehouse.BranchId, cancellationToken))?.Id;
 
         var idempotencyKey = NormalizeOptional(request.IdempotencyKey);
         if (idempotencyKey is not null)
@@ -228,7 +234,7 @@ public sealed class CreateCustomerReturnCommandHandler(
                 ? await BuildAutomaticSettlementsAsync(document, sales, cancellationToken)
                 : throw new BusinessRuleException("Qaytaruv hisob-kitobi tanlanishi kerak.", "return_settlement_required");
 
-        await ApplySettlementsAsync(document, sales, resolvedSettlements, userId, cancellationToken);
+        await ApplySettlementsAsync(document, sales, resolvedSettlements, userId, shiftId, cancellationToken);
         await ReverseCashbackAsync(document, userId, cancellationToken);
         await partnerRewards.ReverseReturnAsync(document, cancellationToken);
 
@@ -303,30 +309,56 @@ public sealed class CreateCustomerReturnCommandHandler(
         long userId,
         CancellationToken cancellationToken)
     {
+        inventoryReason.Declare(new(InventoryMovementKind.SaleReturn, "CustomerReturn", document.Id,
+            document.CustomerId.HasValue
+                ? InventoryLocation.Customer(document.CustomerId.Value)
+                : InventoryLocation.External()));
+
         var restockLines = document.Lines
             .Where(x => x.Disposition == InventoryDisposition.SellableRestock)
             .ToList();
         if (restockLines.Count > 0)
         {
             var knownIds = restockLines.Where(x => x.StockId is not null)
-                .Select(x => x.StockId!.Value).Distinct().ToList();
-            var stocks = knownIds.Count == 0
+                .Select(x => x.StockId!.Value).Distinct().Order().ToArray();
+            var stocks = knownIds.Length == 0
                 ? []
-                : await db.Stocks.Where(x => knownIds.Contains(x.Id)).ToDictionaryAsync(x => x.Id, cancellationToken);
+                : (await db.LockAsync<Stock>(
+                    $"SELECT * FROM stocks WHERE id = ANY({knownIds}) AND is_deleted = false ORDER BY id FOR UPDATE",
+                    cancellationToken)).ToDictionary(x => x.Id);
+            var relocated = new Dictionary<(long VariantId, decimal PurchasePrice, DateOnly? ExpiredAt), Stock>();
             foreach (var line in restockLines)
             {
-                Stock batch;
-                if (line.StockId is { } stockId && stocks.TryGetValue(stockId, out var known))
+                var origin = line.StockId is { } stockId ? stocks.GetValueOrDefault(stockId) : null;
+                if (origin is not null && origin.WarehouseId == document.WarehouseId)
                 {
-                    batch = known;
+                    origin.Quantity += line.Quantity;
+                    continue;
                 }
-                else
-                {
-                    batch = await stockAllocator.ResolveRestockBatchAsync(
-                        document.WarehouseId, line.VariantId, cancellationToken);
-                    line.Stock = batch;
-                }
+
+                var batch = origin is null
+                    ? await stockAllocator.ResolveRestockBatchAsync(document.WarehouseId, line.VariantId, cancellationToken)
+                    : Relocate(line.VariantId, origin);
+                line.Stock = batch;
                 batch.Quantity += line.Quantity;
+            }
+
+            Stock Relocate(long variantId, Stock origin)
+            {
+                var key = (variantId, origin.PurchasePrice, origin.ExpiredAt);
+                if (relocated.TryGetValue(key, out var batch))
+                    return batch;
+                batch = new Stock
+                {
+                    BranchId = document.BranchId,
+                    WarehouseId = document.WarehouseId,
+                    VariantId = variantId,
+                    PurchasePrice = origin.PurchasePrice,
+                    ExpiredAt = origin.ExpiredAt
+                };
+                db.Stocks.Add(batch);
+                relocated[key] = batch;
+                return batch;
             }
         }
 
@@ -334,36 +366,32 @@ public sealed class CreateCustomerReturnCommandHandler(
                      .Where(x => x.Disposition != InventoryDisposition.SellableRestock)
                      .GroupBy(x => new { x.VariantId, x.Disposition }))
         {
-            await db.UpsertInventoryPositionAsync(
-                document.BranchId,
-                LocationFor(group.Key.Disposition),
-                document.WarehouseId,
-                group.Key.VariantId,
-                group.Sum(x => x.Quantity),
-                userId,
-                cancellationToken);
+            var quantity = group.Sum(x => x.Quantity);
+            AddMovement(group.Key.VariantId, quantity,
+                document.CustomerId.HasValue ? InventoryLocationKind.Customer : InventoryLocationKind.External,
+                document.CustomerId ?? 0, InventoryLocationKind.Warehouse);
+            AddMovement(group.Key.VariantId, -quantity, InventoryLocationKind.Warehouse, document.WarehouseId,
+                InventoryLocation.Of(group.Key.Disposition, document.WarehouseId).Kind);
         }
 
-        foreach (var line in document.Lines)
-        {
+        void AddMovement(long variantId, decimal quantity,
+            InventoryLocationKind fromKind, long fromId, InventoryLocationKind toKind) =>
             db.InventoryMovements.Add(new InventoryMovement
             {
                 BranchId = document.BranchId,
-                VariantId = line.VariantId,
-                Quantity = line.Quantity,
+                WarehouseId = document.WarehouseId,
+                VariantId = variantId,
+                Quantity = quantity,
                 Kind = InventoryMovementKind.SaleReturn,
-                FromLocationKind = document.CustomerId.HasValue ? InventoryLocationKind.Customer : InventoryLocationKind.External,
-                FromLocationId = document.CustomerId ?? 0,
-                ToLocationKind = line.Disposition == InventoryDisposition.SellableRestock
-                    ? InventoryLocationKind.Warehouse
-                    : LocationFor(line.Disposition),
+                FromLocationKind = fromKind,
+                FromLocationId = fromId,
+                ToLocationKind = toKind,
                 ToLocationId = document.WarehouseId,
                 SourceType = "CustomerReturn",
                 SourceId = document.Id,
                 UserId = userId,
                 OccurredAt = DateTime.UtcNow
             });
-        }
     }
 
     private async Task<List<ResolvedSettlement>> ResolveExplicitSettlementsAsync(
@@ -464,12 +492,9 @@ public sealed class CreateCustomerReturnCommandHandler(
         IReadOnlyDictionary<long, Sale> sales,
         IReadOnlyCollection<ResolvedSettlement> settlements,
         long userId,
+        long? shiftId,
         CancellationToken cancellationToken)
     {
-        var shiftId = await db.Shifts
-            .Where(x => x.UserId == userId && x.BranchId == document.BranchId && x.Status == ShiftStatus.Open)
-            .Select(x => (long?)x.Id)
-            .FirstOrDefaultAsync(cancellationToken);
         var policy = await settings.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken)
             ?? new SalesPolicySettings();
         if (settlements.Any(x => x.Method == ReturnSettlementMethod.Cash) && shiftId is null && policy.ShiftPolicy != "Off")
@@ -498,7 +523,7 @@ public sealed class CreateCustomerReturnCommandHandler(
                         ?? throw new BusinessRuleException("Mijoz qarzi mavjud emas.");
                     if (settlement.Amount > debt.Balance)
                         throw new BusinessRuleException("Qaytaruv mijozning mavjud qarzidan oshib ketdi.");
-                    transaction = ledger.Post(OperationType.SaleReturn, settlement.Amount, debt, null, userId, shiftId, settlement.Rate);
+                    transaction = await ledger.PostAsync(OperationType.SaleReturn, settlement.Amount, debt, null, userId, cancellationToken, shiftId, settlement.Rate);
                     if (sale is not null) sale.RefundedDebt += settlement.AmountBase;
                     break;
                 }
@@ -509,7 +534,7 @@ public sealed class CreateCustomerReturnCommandHandler(
                     var account = await ledger.BranchAccountAsync(document.BranchId, accountType, cancellationToken, settlement.Currency);
                     if (account.Balance < settlement.Amount)
                         throw new BusinessRuleException("Qaytaruv uchun kassadagi mablag' yetarli emas.", "insufficient_refund_funds");
-                    transaction = ledger.Post(OperationType.CustomerRefund, settlement.Amount, account, null, userId, shiftId, settlement.Rate);
+                    transaction = await ledger.PostAsync(OperationType.CustomerRefund, settlement.Amount, account, null, userId, cancellationToken, shiftId, settlement.Rate);
                     if (sale is not null)
                     {
                         if (settlement.Method == ReturnSettlementMethod.Cash) sale.RefundedCash += settlement.AmountBase;
@@ -522,7 +547,7 @@ public sealed class CreateCustomerReturnCommandHandler(
                     var customerId = sale?.CustomerId ?? document.CustomerId
                         ?? throw new BusinessRuleException("Bonusga qaytarish uchun mijoz kerak.");
                     var bonus = await ledger.CustomerAccountAsync(customerId, AccountType.Bonus, cancellationToken, settlement.Currency);
-                    transaction = ledger.Post(OperationType.SaleReturn, settlement.Amount, null, bonus, userId, shiftId, settlement.Rate);
+                    transaction = await ledger.PostAsync(OperationType.SaleReturn, settlement.Amount, null, bonus, userId, cancellationToken, shiftId, settlement.Rate);
                     if (sale is not null) sale.RefundedBonus += settlement.AmountBase;
                     break;
                 }
@@ -531,7 +556,7 @@ public sealed class CreateCustomerReturnCommandHandler(
                     var customerId = sale?.CustomerId ?? document.CustomerId
                         ?? throw new BusinessRuleException("Avansga qaytarish uchun mijoz kerak.");
                     var advance = await ledger.CustomerAccountAsync(customerId, AccountType.CustomerAdvance, cancellationToken, settlement.Currency);
-                    transaction = ledger.Post(OperationType.CustomerAdvance, settlement.Amount, null, advance, userId, shiftId, settlement.Rate);
+                    transaction = await ledger.PostAsync(OperationType.CustomerAdvance, settlement.Amount, null, advance, userId, cancellationToken, shiftId, settlement.Rate);
                     if (sale is not null) sale.RefundedAdvance += settlement.AmountBase;
                     break;
                 }
@@ -563,7 +588,7 @@ public sealed class CreateCustomerReturnCommandHandler(
         var fromBonus = Math.Min(amount, Math.Max(0, bonus.Balance));
         if (fromBonus > 0)
         {
-            var transaction = ledger.Post(OperationType.Cashback, fromBonus, bonus, null, userId);
+            var transaction = await ledger.PostAsync(OperationType.Cashback, fromBonus, bonus, null, userId, cancellationToken);
             transaction.CustomerReturnDocument = document;
             transaction.Description = document.DocumentNumber;
         }
@@ -572,21 +597,13 @@ public sealed class CreateCustomerReturnCommandHandler(
         if (recoveryAmount > 0)
         {
             var recovery = await ledger.CustomerAccountAsync(customerId, AccountType.RewardRecovery, cancellationToken);
-            var transaction = ledger.Post(OperationType.CashbackRecovery, recoveryAmount, null, recovery, userId);
+            var transaction = await ledger.PostAsync(OperationType.CashbackRecovery, recoveryAmount, null, recovery, userId, cancellationToken);
             transaction.CustomerReturnDocument = document;
             transaction.Description = document.DocumentNumber;
         }
 
         document.CashbackReversed = amount;
     }
-
-    private static InventoryLocationKind LocationFor(InventoryDisposition disposition) => disposition switch
-    {
-        InventoryDisposition.Quarantine => InventoryLocationKind.Quarantine,
-        InventoryDisposition.Scrap => InventoryLocationKind.Scrap,
-        InventoryDisposition.SupplierClaim => InventoryLocationKind.SupplierClaim,
-        _ => InventoryLocationKind.Warehouse
-    };
 
     private static string? NormalizeOptional(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();

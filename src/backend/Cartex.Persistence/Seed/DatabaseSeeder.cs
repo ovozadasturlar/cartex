@@ -449,7 +449,7 @@ public static class DatabaseSeeder
         await context.Permissions.AddRangeAsync(permissions);
         await context.Features.AddRangeAsync(FeatureCatalog.Names
             .Select(kv => new Feature { Code = kv.Key, Name = kv.Value, IsEnabled = !FeatureCatalog.DefaultDisabled.Contains(kv.Key) }));
-        await context.LicenseStates.AddAsync(new LicenseState { Tariff = "pro", ExpiresAt = null });
+        await context.LicenseStates.AddAsync(new LicenseState { Id = LicenseState.SingletonId, Tariff = "pro", ExpiresAt = null });
         await context.SaveChangesAsync();
 
         var developerRole = new Role { Name = AppRoles.Developer, Description = "Vendor / tizim ishlab chiquvchi", StartPage = "dashboard", Priority = AppRoles.DeveloperLevel, Level = AppRoles.DeveloperLevel, IsSystem = true, AccessAll = true };

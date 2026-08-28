@@ -41,7 +41,7 @@ public sealed class GetCustomerPaymentsQueryHandler(
             x.Id,
             x.DocumentNumber,
             x.CustomerId,
-            x.Customer.FullName,
+            x.Customer.Party.FullName,
             x.BusinessDate,
             x.CreatedAt,
             x.Status.ToString(),
@@ -69,7 +69,7 @@ public sealed class GetCustomerPaymentByIdQueryHandler(
         var document = await query
             .Include(x => x.Tenders)
             .Include(x => x.Allocations)
-            .Include(x => x.Customer)
+            .Include(x => x.Customer).ThenInclude(x => x.Party)
             .Include(x => x.User)
             .AsSplitQuery()
             .FirstOrDefaultAsync(cancellationToken)
@@ -80,7 +80,7 @@ public sealed class GetCustomerPaymentByIdQueryHandler(
             document.DocumentNumber,
             document.BranchId,
             document.CustomerId,
-            document.Customer.FullName,
+            document.Customer.Party.FullName,
             document.UserId,
             document.User.FullName,
             document.BusinessDate,

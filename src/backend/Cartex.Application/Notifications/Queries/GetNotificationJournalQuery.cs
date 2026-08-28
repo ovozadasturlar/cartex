@@ -41,7 +41,7 @@ public sealed class GetNotificationJournalQueryHandler(
                 d => new NotificationDeliveryDto(
                     d.Id,
                     d.CustomerId,
-                    d.Customer != null ? d.Customer.FullName : null,
+                    d.Customer != null ? d.Customer.Party.FullName : null,
                     d.Channel.ToString(),
                     d.Purpose,
                     sensitive ? d.Recipient : "••••",

@@ -10,6 +10,9 @@ public static class DynamicOrderingExtensions
     public static IQueryable<T> OrderByDescendingDynamic<T>(this IQueryable<T> source, string propertyName)
         => ApplyOrder(source, propertyName, "OrderByDescending");
 
+    public static IQueryable<T> ThenByDescendingDynamic<T>(this IQueryable<T> source, string propertyName)
+        => ApplyOrder(source, propertyName, "ThenByDescending");
+
     private static IQueryable<T> ApplyOrder<T>(IQueryable<T> source, string propertyName, string methodName)
     {
         var param = Expression.Parameter(typeof(T), "x");

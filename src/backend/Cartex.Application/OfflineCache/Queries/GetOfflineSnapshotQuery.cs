@@ -103,11 +103,11 @@ public sealed class GetOfflineSnapshotQueryHandler(
                 if (changed is not null)
                     rows = rows.Where(x => changed.Contains(x.Id));
                 customers = await rows
-                    .OrderBy(x => x.FullName)
+                    .OrderBy(x => x.Party.FullName)
                     .Select(x => new OfflineCustomerDto(
                         x.Id,
-                        x.FullName,
-                        x.Phone,
+                        x.Party.FullName,
+                        x.Party.Phone,
                         x.CardBarcode,
                         x.DiscountPct,
                         x.Accounts.Where(a => a.Type == AccountType.Debt).Sum(a =>
@@ -245,6 +245,11 @@ public sealed class GetOfflineSnapshotQueryHandler(
     {
         var ids = new HashSet<long>(await ChangedSince(db.Customers, threshold)
             .Select(x => x.Id).ToListAsync(cancellationToken));
+        // OFF-53: ism va telefon Party'da yashaydi, ya'ni ularning tahriri customers qatoriga
+        // tegmaydi — o'zgargan shaxsni ham deltaga qo'shmasak, qurilmada eski ism qolib ketardi.
+        ids.UnionWith(await ChangedSince(db.Parties, threshold)
+            .Where(x => x.CustomerProfile != null)
+            .Select(x => x.CustomerProfile!.Id).ToListAsync(cancellationToken));
         ids.UnionWith(await ChangedSince(db.Accounts, threshold)
             .Where(x => x.CustomerId != null && x.Type == AccountType.Debt)
             .Select(x => x.CustomerId!.Value).ToListAsync(cancellationToken));

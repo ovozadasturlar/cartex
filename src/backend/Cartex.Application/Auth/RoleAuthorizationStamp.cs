@@ -6,7 +6,7 @@ namespace Cartex.Application.Auth;
 
 internal static class RoleAuthorizationStamp
 {
-    public static string Create(IEnumerable<Role> roles)
+    public static string Create(string passwordHash, IEnumerable<Role> roles)
     {
         var parts = roles
             .OrderBy(role => role.Id)
@@ -19,11 +19,14 @@ internal static class RoleAuthorizationStamp
                     .Select(rolePermission =>
                         $"p:{rolePermission.PermissionId}:{Timestamp(rolePermission.Permission)}");
                 return new[] { rolePart }.Concat(permissionParts);
-            });
+            })
+            .Prepend($"pw:{Hash(passwordHash)}");
 
-        return Convert.ToHexString(
-            SHA256.HashData(Encoding.UTF8.GetBytes(string.Join('|', parts))));
+        return Hash(string.Join('|', parts));
     }
+
+    private static string Hash(string value) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
 
     private static long Timestamp(Cartex.Domain.Common.AuditableEntity entity) =>
         (entity.UpdatedAt ?? entity.CreatedAt).Ticks;

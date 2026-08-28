@@ -354,7 +354,9 @@ public sealed class GetSmsGatewayJobsQueryHandler(IApplicationDbContext db, ICur
     {
         SmsGatewayAccess.EnsureManage(currentUser);
         SmsGatewayAccess.EnsureBranch(currentUser, query.BranchId);
-        var jobs = await db.SmsGatewayJobs.AsNoTracking().Include(x => x.Customer).Include(x => x.AssignedDevice)
+        var jobs = await db.SmsGatewayJobs.AsNoTracking()
+            .Include(x => x.Customer).ThenInclude(x => x!.Party)
+            .Include(x => x.AssignedDevice)
             .Where(x => x.BranchId == query.BranchId)
             .OrderByDescending(x => x.CreatedAt).Take(Math.Clamp(query.Take, 1, 500)).ToListAsync(cancellationToken);
         return jobs.Select(x => SmsGatewayMapping.Job(x)).ToList();
@@ -682,7 +684,7 @@ internal static class SmsGatewayMapping
         x.MonthlyQuota is int quota && x.SentThisPeriod > quota, x.LastSentAt, linkedCustomers);
 
     public static SmsGatewayJobDto Job(SmsGatewayJob x, bool sensitive = false) => new(x.Id, x.BranchId, (SharedKind)x.Kind,
-        MaskPhone(x.Phone), sensitive ? x.Phone : null, x.Text, x.CustomerId, x.Customer?.FullName,
+        MaskPhone(x.Phone), sensitive ? x.Phone : null, x.Text, x.CustomerId, x.Customer?.Party.FullName,
         (SharedStatus)x.Status, x.AssignedDeviceId,
         x.AssignedDevice is null ? null : $"{x.AssignedDevice.PhoneLabel ?? x.AssignedDevice.SimOperator} · SIM {x.AssignedDevice.SimSlot + 1}",
         x.AssignedDevice?.SimSlot, x.SegmentCount, x.AttemptCount, x.ErrorCode, x.ErrorMessage,

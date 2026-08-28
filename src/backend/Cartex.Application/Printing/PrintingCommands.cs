@@ -15,7 +15,6 @@ using DomainCapability = Cartex.Domain.Enums.PrintCapability;
 using DomainEndpointStatus = Cartex.Domain.Enums.PrinterEndpointStatus;
 using DomainJobKind = Cartex.Domain.Enums.PrintJobKind;
 using DomainJobStatus = Cartex.Domain.Enums.PrintJobStatus;
-using DomainNodeStatus = Cartex.Domain.Enums.PrintNodeStatus;
 using DomainAttemptStatus = Cartex.Domain.Enums.PrintAttemptStatus;
 using DomainStickyMode = Cartex.Domain.Enums.PrintStickyMode;
 using Unit = Cartex.Application.Common.Messaging.Unit;
@@ -51,11 +50,10 @@ public sealed class RegisterPrintNodeCommandValidator : AbstractValidator<Regist
 /// whatever trust the administrator gave it. When the machine identity itself changes but
 /// the old credential is still presented, the existing record is renamed instead of a
 /// duplicate appearing. Every such transition is written to the audit log.
-public sealed class RegisterPrintNodeCommandHandler(IApplicationDbContext db, ICurrentUser currentUser, IAuditService audit)
+public sealed class RegisterPrintNodeCommandHandler(
+    IApplicationDbContext db, ICurrentUser currentUser, IAuditService audit, IHubPresence presence)
     : IRequestHandler<RegisterPrintNodeCommand, RegisterPrintNodeResult>
 {
-    private static readonly TimeSpan ActiveHolderWindow = TimeSpan.FromSeconds(90);
-
     public async Task<RegisterPrintNodeResult> Handle(RegisterPrintNodeCommand command, CancellationToken cancellationToken)
     {
         var request = command.Request;
@@ -125,7 +123,7 @@ public sealed class RegisterPrintNodeCommandHandler(IApplicationDbContext db, IC
         {
             // A machine that is alive right now still owns the credential; a second machine
             // claiming the same identity must not be able to steal it from under it.
-            if (node.LastSeenAt > now - ActiveHolderWindow)
+            if (presence.IsOnline(HubChannels.PrintHost(request.DeviceId)))
                 throw new BusinessRuleException("Bu qurilma nomi hozir boshqa faol kompyuter tomonidan ishlatilmoqda.");
             issuedToken = PrintingCredential.Issue();
             node.CredentialHash = PrintingCredential.Hash(issuedToken);
@@ -138,16 +136,14 @@ public sealed class RegisterPrintNodeCommandHandler(IApplicationDbContext db, IC
         node.Name = request.DeviceName.Trim();
         node.ClientVersion = request.ClientVersion;
         node.HostEnabled = request.HostEnabled;
-        node.Status = DomainNodeStatus.Online;
         node.LastSeenAt = now;
-        node.LastConnectedAt = now;
         node.LastUserId = currentUser.UserId;
         node.LastClient = currentUser.Client;
         node.LastIpAddress = currentUser.IpAddress;
 
         PrintingNodeUpdater.UpdateEndpoints(node, request.Endpoints, now);
         await db.SaveChangesAsync(cancellationToken);
-        return new RegisterPrintNodeResult(PrintingMapper.Node(node), issuedToken);
+        return new RegisterPrintNodeResult(PrintingMapper.Node(node, presence.IsOnline(HubChannels.PrintHost(node.DeviceId))), issuedToken);
     }
 }
 
@@ -184,7 +180,6 @@ public sealed class HeartbeatPrintNodeCommandHandler(IApplicationDbContext db, I
         PrintingCredential.Ensure(node, command.Request.HostToken);
         PrintingGuard.EnsureBranch(currentUser, node.BranchId);
         var now = DateTime.UtcNow;
-        node.Status = DomainNodeStatus.Online;
         node.LastSeenAt = now;
         node.LastUserId = currentUser.UserId;
         node.LastClient = currentUser.Client;
@@ -675,7 +670,7 @@ public sealed class CreatePrintJobCommandHandler(
         {
             var targetDeviceId = await db.PrintNodes.Where(x => x.Id == job.AssignedNodeId)
                 .Select(x => x.DeviceId).FirstAsync(cancellationToken);
-            await notifier.NotifyJobAvailableAsync(targetDeviceId, job.Id, cancellationToken);
+            await db.RunAfterCommitAsync(() => notifier.NotifyJobAvailableAsync(targetDeviceId, job.Id, cancellationToken));
         }
         return PrintingMapper.Job(job);
     }
@@ -925,8 +920,7 @@ public sealed class SubmitPrintJobCommandHandler(IApplicationDbContext db, ICurr
 public sealed class CompletePrintJobCommandHandler(
     IApplicationDbContext db,
     ICurrentUser currentUser,
-    IPrintJobNotifier notifier,
-    ILogger<CompletePrintJobCommandHandler> logger)
+    IPrintJobNotifier notifier)
     : IRequestHandler<CompletePrintJobCommand, Unit>
 {
     public async Task<Unit> Handle(CompletePrintJobCommand command, CancellationToken cancellationToken)
@@ -950,21 +944,12 @@ public sealed class CompletePrintJobCommandHandler(
         }
         await db.SaveChangesAsync(cancellationToken);
         if (!string.IsNullOrWhiteSpace(job.RequestedDeviceId))
-        {
-            try
-            {
-                await notifier.NotifyJobStatusChangedAsync(job.RequestedDeviceId, new PrintJobStatusUpdate(
-                    job.Id,
-                    (Cartex.Shared.Models.Printing.PrintJobKind)job.Kind,
-                    Cartex.Shared.Models.Printing.PrintJobStatus.Completed,
-                    endpoint.DisplayName,
-                    null), cancellationToken);
-            }
-            catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
-            {
-                logger.LogWarning(ex, "Could not notify device {DeviceId} that print job {JobId} completed", job.RequestedDeviceId, job.Id);
-            }
-        }
+            await db.RunAfterCommitAsync(() => notifier.NotifyJobStatusChangedAsync(job.RequestedDeviceId, new PrintJobStatusUpdate(
+                job.Id,
+                (Cartex.Shared.Models.Printing.PrintJobKind)job.Kind,
+                Cartex.Shared.Models.Printing.PrintJobStatus.Completed,
+                endpoint.DisplayName,
+                null), cancellationToken));
         return Unit.Value;
     }
 }
@@ -973,8 +958,7 @@ public sealed class FailPrintJobCommandHandler(
     IApplicationDbContext db,
     ICurrentUser currentUser,
     PrintRoutingService routing,
-    IPrintJobNotifier notifier,
-    ILogger<FailPrintJobCommandHandler> logger) : IRequestHandler<FailPrintJobCommand, Unit>
+    IPrintJobNotifier notifier) : IRequestHandler<FailPrintJobCommand, Unit>
 {
     public async Task<Unit> Handle(FailPrintJobCommand command, CancellationToken cancellationToken)
     {
@@ -994,21 +978,12 @@ public sealed class FailPrintJobCommandHandler(
             job.Status = DomainJobStatus.ManualReview;
             await db.SaveChangesAsync(cancellationToken);
             if (!string.IsNullOrWhiteSpace(job.RequestedDeviceId))
-            {
-                try
-                {
-                    await notifier.NotifyJobStatusChangedAsync(job.RequestedDeviceId, new PrintJobStatusUpdate(
-                        job.Id,
-                        (Cartex.Shared.Models.Printing.PrintJobKind)job.Kind,
-                        Cartex.Shared.Models.Printing.PrintJobStatus.ManualReview,
-                        endpoint.DisplayName,
-                        job.ErrorMessage), cancellationToken);
-                }
-                catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
-                {
-                    logger.LogWarning(ex, "Could not notify device {DeviceId} that print job {JobId} requires manual review", job.RequestedDeviceId, job.Id);
-                }
-            }
+                await db.RunAfterCommitAsync(() => notifier.NotifyJobStatusChangedAsync(job.RequestedDeviceId, new PrintJobStatusUpdate(
+                    job.Id,
+                    (Cartex.Shared.Models.Printing.PrintJobKind)job.Kind,
+                    Cartex.Shared.Models.Printing.PrintJobStatus.ManualReview,
+                    endpoint.DisplayName,
+                    job.ErrorMessage), cancellationToken));
             return Unit.Value;
         }
 
@@ -1026,7 +1001,7 @@ public sealed class FailPrintJobCommandHandler(
         if (await routing.AssignAsync(job, cancellationToken) && job.AssignedNodeId is not null)
         {
             var deviceId = await db.PrintNodes.Where(x => x.Id == job.AssignedNodeId).Select(x => x.DeviceId).FirstAsync(cancellationToken);
-            await notifier.NotifyJobAvailableAsync(deviceId, job.Id, cancellationToken);
+            await db.RunAfterCommitAsync(() => notifier.NotifyJobAvailableAsync(deviceId, job.Id, cancellationToken));
         }
         return Unit.Value;
     }
@@ -1157,9 +1132,10 @@ public static class PrintingCredential
 
 internal static class PrintingMapper
 {
-    public static PrintNodeDto Node(PrintNode node) => new(
+    public static PrintNodeDto Node(PrintNode node, bool isOnline) => new(
         node.Id, node.BranchId, node.DeviceId, node.Name, node.ClientVersion,
-        node.IsTrusted, node.HostEnabled, (Cartex.Shared.Models.Printing.PrintNodeStatus)node.Status,
+        node.IsTrusted, node.HostEnabled,
+        isOnline ? Cartex.Shared.Models.Printing.PrintNodeStatus.Online : Cartex.Shared.Models.Printing.PrintNodeStatus.Offline,
         node.LastSeenAt, node.LastClient, node.Endpoints.OrderBy(x => x.DisplayName).Select(Endpoint).ToList());
 
     public static PrinterEndpointDto Endpoint(PrinterEndpoint endpoint) => new(

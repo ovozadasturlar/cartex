@@ -12,6 +12,7 @@ using Cartex.Infrastructure;
 using Cartex.Infrastructure.Web;
 using Cartex.Persistence;
 using Cartex.Persistence.Seed;
+using Cartex.Persistence.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Scalar.AspNetCore;
@@ -44,6 +45,8 @@ builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddScoped<ICurrentCustomer, CurrentCustomer>();
 builder.Services.AddScoped<IPagingMetadataWriter, HttpPagingMetadataWriter>();
 builder.Services.AddSingleton<ICartNotifier, SignalRCartNotifier>();
+builder.Services.AddSingleton<HubPresence>();
+builder.Services.AddSingleton<IHubPresence>(x => x.GetRequiredService<HubPresence>());
 builder.Services.AddSingleton<IPrintJobNotifier, SignalRPrintJobNotifier>();
 builder.Services.AddSingleton<ISmsGatewayNotifier, SignalRSmsGatewayNotifier>();
 builder.Services.AddHostedService<TelegramUpdatePoller>();
@@ -77,8 +80,18 @@ if (trustProxyHeaders)
         options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor
             | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto;
         options.ForwardLimit = builder.Configuration.GetValue("ForwardedHeaders:ForwardLimit", 1);
+        var knownProxies = builder.Configuration.GetSection("ForwardedHeaders:KnownProxies").Get<string[]>() ?? [];
+        var knownNetworks = builder.Configuration.GetSection("ForwardedHeaders:KnownNetworks").Get<string[]>() ?? [];
+        if (knownProxies.Length == 0 && knownNetworks.Length == 0)
+            throw new InvalidOperationException(
+                "ForwardedHeaders:Enabled is true but no KnownProxies/KnownNetworks are configured. "
+                + "Clearing them trusts client-supplied X-Forwarded-For; set the real proxy address(es).");
         options.KnownIPNetworks.Clear();
         options.KnownProxies.Clear();
+        foreach (var proxy in knownProxies)
+            options.KnownProxies.Add(System.Net.IPAddress.Parse(proxy));
+        foreach (var network in knownNetworks)
+            options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse(network));
     });
 
 var authPerMinute = builder.Configuration.GetValue("RateLimiting:AuthPerMinute", 10);
@@ -153,10 +166,11 @@ using (var scope = app.Services.CreateScope())
     await DatabaseSeeder.EnsureDeveloperPasswordAsync(db, hasher.Verify, hasher.Hash, developerPassword);
     await DatabaseSeeder.EnsureAdminPasswordAsync(db, hasher.Verify, hasher.Hash, adminPassword);
 
+    var inventoryReason = scope.ServiceProvider.GetRequiredService<InventoryReasonState>();
     if (app.Environment.IsDevelopment() && builder.Configuration.GetValue<bool>("Seed:Demo"))
-        await DemoDataSeeder.SeedAsync(db);
+        await DemoDataSeeder.SeedAsync(db, inventoryReason);
     else if (app.Environment.IsDevelopment() && builder.Configuration.GetValue<bool>("Seed:Catalog"))
-        await DemoDataSeeder.SeedCatalogAsync(db);
+        await DemoDataSeeder.SeedCatalogAsync(db, inventoryReason);
 }
 
 if (trustProxyHeaders)

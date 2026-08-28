@@ -35,7 +35,8 @@ public sealed class TelegramStoreLoginCommandHandler(
         var fields = ValidateInitData(request.InitData, protector.Unprotect(cfg.BotToken));
         var telegramId = ExtractUserId(fields);
 
-        var customer = await db.Customers.FirstOrDefaultAsync(c => c.TelegramChatId == telegramId, cancellationToken)
+        var customer = await db.Customers.Include(c => c.Party)
+            .FirstOrDefaultAsync(c => c.TelegramChatId == telegramId, cancellationToken)
             ?? throw new UnauthorizedAccessException("Telegram hisobi bog'lanmagan.");
 
         return await tokenBuilder.IssueAsync(customer, request.DeviceName, cancellationToken);

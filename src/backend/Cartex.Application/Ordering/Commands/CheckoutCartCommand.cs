@@ -74,9 +74,9 @@ public sealed class CheckoutCartCommandHandler(
 
             cart.CustomerId = request.CustomerId ?? cart.CustomerId;
             var saleItems = request.Items is { Count: > 0 }
-                ? request.Items.Select(i => new CreateSaleItemDto(i.VariantId, i.Quantity, i.UnitPrice)
+                ? request.Items.Select(i => new CreateSaleItemDto(i.VariantId, i.Quantity, i.UnitPrice, i.PrepackId)
                     { ExpectedUnitPrice = i.ExpectedUnitPrice }).ToList()
-                : cart.Items.Select(i => new CreateSaleItemDto(i.VariantId, i.Quantity, i.UnitPriceOverride)).ToList();
+                : cart.Items.Select(i => new CreateSaleItemDto(i.VariantId, i.Quantity, i.UnitPriceOverride, i.PrepackId)).ToList();
             var preauthorizedPrices = cart.Items
                 .Where(i => i.UnitPriceOverride != null)
                 .ToDictionary(i => i.VariantId, i => i.UnitPriceOverride!.Value);
@@ -131,8 +131,8 @@ public sealed class CheckoutCartCommandHandler(
                 payments = request.Payments,
                 items = request.Items
             }, "Savat savdo sifatida yakunlandi", completed.BranchId);
-        if (completed.CartKind is not null)
-            await notifier.CartsChangedAsync(completed.CartKind, cancellationToken);
+        if (completed.CartKind is not null && completed.BranchId is long notifyBranchId)
+            await db.RunAfterCommitAsync(() => notifier.CartsChangedAsync(notifyBranchId, completed.CartKind, cancellationToken));
         return completed.Sale;
     }
 }

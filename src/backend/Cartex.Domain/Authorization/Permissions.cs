@@ -108,6 +108,8 @@ public static class AppPermissions
     {
         public const string View = "stocks.view";
         public const string Adjust = "stocks.adjust";
+        public const string Reconcile = "stocks.reconcile";
+        public const string WriteOff = "stocks.writeOff";
     }
 
     public static class StockTransfers
@@ -383,6 +385,8 @@ public static class AppPermissions
             P(Warehouses.Edit, "Edit warehouses", false, Warehouses.View, Branches.View),
             P(Stocks.View, "View stock", true, Products.View, Warehouses.View, Categories.View),
             P(Stocks.Adjust, "Adjust stock", true, Stocks.View),
+            P(Stocks.Reconcile, "Reconcile the stock movement journal", true, Stocks.Adjust),
+            P(Stocks.WriteOff, "Write off broken, expired, lost or stolen stock", true, Stocks.Adjust),
             P(StockTransfers.View, "View stock transfers", true, Warehouses.View),
             P(StockTransfers.Create, "Create stock transfers", true, StockTransfers.View, Products.View),
             P(StockTransfers.Receive, "Receive stock transfers", true, StockTransfers.View),

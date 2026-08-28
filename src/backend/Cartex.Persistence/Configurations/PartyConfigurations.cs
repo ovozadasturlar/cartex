@@ -10,6 +10,7 @@ public sealed class PartyConfiguration : IEntityTypeConfiguration<Party>
     {
         builder.ToTable("parties");
         builder.Property(x => x.FullName).HasMaxLength(200).IsRequired();
+        builder.HasIndex(x => x.SearchFold, "ix_parties_search_fold_trgm").HasDatabaseName("ix_parties_search_fold_trgm").HasMethod("gin").HasOperators("gin_trgm_ops");
         builder.Property(x => x.Phone).HasMaxLength(20);
         builder.Property(x => x.Email).HasMaxLength(120);
         builder.Property(x => x.Address).HasMaxLength(300);

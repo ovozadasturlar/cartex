@@ -1,8 +1,8 @@
-using Cartex.Shared.Models.Common;
+﻿using Cartex.Shared.Models.Common;
 
 namespace Cartex.Shared.Models.Suppliers;
 
-public record SupplierDto(long Id, string Name, string? Phone, decimal Payable)
+public record SupplierDto(long Id, string Name, string? Phone, decimal Payable, bool AcceptsReturns = false)
 {
     public IReadOnlyList<CurrencyAmountDto> PayableBalances { get; init; } = [];
 }

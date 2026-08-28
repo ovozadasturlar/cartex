@@ -31,7 +31,7 @@ public sealed class RequestStoreOtpCommandHandler(
             throw new ForbiddenException("Onlayn buyurtma o'chirilgan.");
 
         var phone = Phones.Normalize(request.Phone);
-        var customer = phone is null ? null : await db.Customers.FirstOrDefaultAsync(c => c.Phone == phone, cancellationToken);
+        var customer = phone is null ? null : await db.Customers.Include(c => c.Party).FirstOrDefaultAsync(c => c.Party.Phone == phone, cancellationToken);
 
         // Uniform response regardless of whether the phone is a registered customer (no enumeration).
         if (customer is null)
@@ -51,8 +51,8 @@ public sealed class RequestStoreOtpCommandHandler(
             ExpiresAt = now.AddMinutes(5)
         });
 
-        await TrySendAsync(customer, $"Cartex: tasdiqlash kodi {code}. 5 daqiqa amal qiladi.", cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
+        await TrySendAsync(customer, $"Cartex: tasdiqlash kodi {code}. 5 daqiqa amal qiladi.", cancellationToken);
         return new RequestOtpResponse(true);
     }
 
@@ -69,12 +69,12 @@ public sealed class RequestStoreOtpCommandHandler(
         }
 
         var sm = await settings.GetAsync<SmsSettings>(SettingKeys.Sms, cancellationToken);
-        if (sm is { Enabled: true } && !string.IsNullOrWhiteSpace(customer.Phone))
+        if (sm is { Enabled: true } && !string.IsNullOrWhiteSpace(customer.Party.Phone))
         {
             var branchId = await db.Accounts.Where(x => x.CustomerId == customer.Id && x.BranchId != null)
                 .Select(x => x.BranchId).FirstOrDefaultAsync(cancellationToken);
             branchId ??= await db.Branches.Select(x => (long?)x.Id).FirstOrDefaultAsync(cancellationToken);
-            await sms.SendAsync(customer.Phone, text,
+            await sms.SendAsync(customer.Party.Phone, text,
                 new SmsSendContext(branchId, SmsGatewayJobKind.Manual, customer.Id, $"otp:{customer.Id}:{DateTime.UtcNow:yyyyMMddHHmm}"), cancellationToken);
         }
     }

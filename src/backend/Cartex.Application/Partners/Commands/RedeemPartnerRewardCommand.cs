@@ -4,11 +4,13 @@ using Cartex.Application.Common.Finance;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Inventory;
 using Cartex.Application.Common.Measurement;
+using Cartex.Application.Common.Shifts;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
+using Cartex.Persistence.Services;
 using Cartex.Shared.Models.Partners;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -33,7 +35,9 @@ public sealed class RedeemPartnerRewardCommandHandler(
     ILedgerService ledger,
     IStockAllocator stockAllocator,
     IQuantityPolicyService quantityPolicy,
-    IAuditService audit) : IRequestHandler<RedeemPartnerRewardCommand, PartnerRedemptionCreatedDto>
+    IShiftLock shiftLock,
+    IAuditService audit,
+    InventoryReasonState inventoryReason) : IRequestHandler<RedeemPartnerRewardCommand, PartnerRedemptionCreatedDto>
 {
     public async Task<PartnerRedemptionCreatedDto> Handle(
         RedeemPartnerRewardCommand request,
@@ -154,14 +158,11 @@ public sealed class RedeemPartnerRewardCommandHandler(
         {
             case PartnerRewardMode.Cash:
             {
-                var shift = await db.Shifts.FirstOrDefaultAsync(x => x.UserId == userId
-                    && x.BranchId == document.BranchId && x.Status == ShiftStatus.Open, cancellationToken)
+                var shift = await shiftLock.OpenAsync(userId, document.BranchId, cancellationToken)
                     ?? throw new BusinessRuleException("Naqd mukofot uchun ochiq smena kerak.", "open_shift_required");
-                var cash = await ledger.BranchAccountAsync(document.BranchId, AccountType.Cash, cancellationToken);
-                if (cash.Balance < document.Amount)
-                    throw new BusinessRuleException("Kassada mukofot uchun yetarli mablag' yo'q.", "cash_balance_insufficient");
-                var transaction = ledger.Post(OperationType.PartnerRewardCash, document.Amount,
-                    cash, null, userId, shift.Id);
+                var cash = await CashPayout.AccountAsync(ledger, document.BranchId, document.Amount, cancellationToken);
+                var transaction = await ledger.PostAsync(OperationType.PartnerRewardCash, document.Amount,
+                    cash, null, userId, cancellationToken, shift.Id);
                 transaction.PartnerRedemptionDocumentId = document.Id;
                 transaction.Description = $"Hamkor mukofoti {document.DocumentNumber}";
                 break;
@@ -172,8 +173,8 @@ public sealed class RedeemPartnerRewardCommandHandler(
                     ?? throw new BusinessRuleException(
                         "Bonus berish uchun hamkor mijoz profiliga ham ega bo'lishi kerak.", "partner_customer_profile_required");
                 var bonus = await ledger.CustomerAccountAsync(customerId, AccountType.Bonus, cancellationToken);
-                var transaction = ledger.Post(OperationType.PartnerRewardBonus, document.Amount,
-                    null, bonus, userId);
+                var transaction = await ledger.PostAsync(OperationType.PartnerRewardBonus, document.Amount,
+                    null, bonus, userId, cancellationToken);
                 transaction.PartnerRedemptionDocumentId = document.Id;
                 transaction.Description = $"Hamkor bonusi {document.DocumentNumber}";
                 break;
@@ -190,26 +191,12 @@ public sealed class RedeemPartnerRewardCommandHandler(
                     x.Id == warehouseId && x.BranchId == document.BranchId, cancellationToken)
                     ?? throw new BusinessRuleException("Ombor mukofot filiali bilan mos emas.", "warehouse_branch_mismatch");
                 await quantityPolicy.ValidateAsync([(variantId, quantity)], cancellationToken);
+                inventoryReason.Declare(new(InventoryMovementKind.PartnerReward, "PartnerRedemptionDocument",
+                    document.Id, InventoryLocation.External(partner.PartyId)));
                 await stockAllocator.PreloadAsync(warehouse.Id, [variantId], cancellationToken);
-                var allocations = await stockAllocator.AllocateAsync(
+                await stockAllocator.AllocateAsync(
                     warehouse.Id, variantId, quantity, allowInsufficientStock: false, cancellationToken);
-                foreach (var allocation in allocations)
-                    allocation.Batch.Quantity -= allocation.Quantity;
-                db.InventoryMovements.Add(new InventoryMovement
-                {
-                    BranchId = document.BranchId,
-                    VariantId = variantId,
-                    Quantity = quantity,
-                    Kind = InventoryMovementKind.PartnerReward,
-                    FromLocationKind = InventoryLocationKind.Warehouse,
-                    FromLocationId = warehouse.Id,
-                    ToLocationKind = InventoryLocationKind.External,
-                    ToLocationId = partner.PartyId,
-                    SourceType = "PartnerRedemptionDocument",
-                    SourceId = document.Id,
-                    UserId = userId,
-                    OccurredAt = DateTime.UtcNow
-                });
+                stockAllocator.Apply();
                 break;
             }
             case PartnerRewardMode.Points:

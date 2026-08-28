@@ -41,6 +41,9 @@ public class AccountConfiguration : IEntityTypeConfiguration<Account>
             .IsUnique()
             .HasFilter("\"supplier_id\" IS NOT NULL");
 
+        builder.HasIndex(x => new { x.Type, x.Balance })
+            .HasFilter("\"customer_id\" IS NOT NULL");
+
         builder.HasIndex(x => x.CreatedAt);
     }
 }
@@ -57,6 +60,8 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
         builder.Property(x => x.IdempotencyKey).HasMaxLength(64);
         builder.HasIndex(x => new { x.UserId, x.IdempotencyKey }).IsUnique().HasFilter("\"idempotency_key\" IS NOT NULL");
         builder.HasIndex(x => x.CreatedAt);
+        builder.HasIndex(x => new { x.BranchId, x.CreatedAt });
+        builder.HasIndex(x => new { x.OperationType, x.CreatedAt });
 
         builder.HasOne(x => x.FromAccount)
             .WithMany()
@@ -96,6 +101,11 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
             .WithMany(x => x.Transactions)
             .HasForeignKey(x => x.PartnerRedemptionDocumentId)
             .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(x => x.StockWriteOffDocument)
+            .WithMany(x => x.Transactions)
+            .HasForeignKey(x => x.StockWriteOffDocumentId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(x => x.StockWriteOffDocumentId);
         builder.HasIndex(x => x.CustomerPaymentDocumentId);
         builder.HasIndex(x => x.CustomerReturnDocumentId);
         builder.HasIndex(x => x.CustomerRefundDocumentId);
@@ -160,8 +170,6 @@ public class ShiftConfiguration : IEntityTypeConfiguration<Shift>
     public void Configure(EntityTypeBuilder<Shift> builder)
     {
         builder.ToTable("shifts");
-        builder.Property(x => x.OpeningFloat).HasPrecision(18, 2);
-        builder.Property(x => x.CountedCash).HasPrecision(18, 2);
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(15);
         builder.HasIndex(x => new { x.UserId, x.BranchId, x.Status });
         builder.HasIndex(x => new { x.UserId, x.BranchId })

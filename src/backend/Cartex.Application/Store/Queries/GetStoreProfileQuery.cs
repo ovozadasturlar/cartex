@@ -16,7 +16,7 @@ public sealed class GetStoreProfileQueryHandler(IApplicationDbContext db, ICurre
         var customerId = currentCustomer.CustomerId ?? throw new UnauthorizedAccessException("Not authenticated.");
         return await db.Customers
             .Where(c => c.Id == customerId)
-            .Select(c => new StoreProfileDto(c.Id, c.FullName, c.Phone, c.PreferredLanguage))
+            .Select(c => new StoreProfileDto(c.Id, c.Party.FullName, c.Party.Phone, c.PreferredLanguage))
             .FirstOrDefaultAsync(cancellationToken)
             ?? throw new UnauthorizedAccessException("Not authenticated.");
     }

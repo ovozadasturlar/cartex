@@ -12,7 +12,8 @@ public record CartItemDto(
     string UnitName = "",
     bool AllowsFractional = false,
     string? ImageKey = null,
-    decimal? OriginalUnitPrice = null);
+    decimal? OriginalUnitPrice = null,
+    long? PrepackId = null);
 
 public sealed record CartParticipantDto(
     long RoleDefinitionId,

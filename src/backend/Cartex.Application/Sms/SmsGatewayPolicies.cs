@@ -78,7 +78,7 @@ public sealed class SmsQuotaWarningService(
         var telegram = await settings.GetAsync<TelegramSettings>(SettingKeys.Telegram, cancellationToken);
         if (telegram is not { Enabled: true } || string.IsNullOrWhiteSpace(telegram.ChatId))
             return;
-        await notifications.SendAsync(new NotificationMessage(
+        var message = new NotificationMessage(
             Cartex.Domain.Enums.NotificationChannel.Telegram,
             telegram.ChatId,
             "sms_quota_low",
@@ -87,8 +87,9 @@ public sealed class SmsQuotaWarningService(
                 ["device"] = device.DeviceName,
                 ["remaining"] = Math.Max(0, quota - device.SentThisPeriod).ToString(),
                 ["limit"] = quota.ToString()
-            }), cancellationToken);
+            });
         device.LowQuotaWarnedPeriodStartedAt = device.PeriodStartedAt;
         await db.SaveChangesAsync(cancellationToken);
+        await db.RunAfterCommitAsync(() => notifications.SendAsync(message, cancellationToken));
     }
 }

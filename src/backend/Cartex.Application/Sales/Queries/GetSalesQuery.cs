@@ -53,7 +53,7 @@ public sealed class GetSalesQueryHandler(
                     s.CreditAmount,
                     s.Status.ToString(),
                     s.ReceiptToken,
-                    s.Customer != null ? s.Customer.FullName : null,
+                    s.Customer != null ? s.Customer.Party.FullName : null,
                     s.User.FullName,
                     s.Items.Select(i => new SaleLineDto(
                         i.Id,
@@ -64,8 +64,8 @@ public sealed class GetSalesQueryHandler(
                     s.Customer != null &&
                     !s.Customer.NotificationsOptOut &&
                     ((canSendTelegram && s.Customer.TelegramChatId != null && s.Customer.TelegramChatId != "") ||
-                     (canSendEmail && s.Customer.Email != null && s.Customer.Email != "") ||
-                     (canSendSms && s.Customer.Phone != null && s.Customer.Phone != "")),
+                     (canSendEmail && s.Customer.Party.Email != null && s.Customer.Party.Email != "") ||
+                     (canSendSms && s.Customer.Party.Phone != null && s.Customer.Party.Phone != "")),
                     s.PaidAdvance),
                 writer, cancellationToken);
     }

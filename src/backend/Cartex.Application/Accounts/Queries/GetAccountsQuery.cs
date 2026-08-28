@@ -33,7 +33,7 @@ public sealed class GetAccountsQueryHandler(
                     a.Type.ToString(),
                     a.Currency,
                     a.Balance,
-                    a.Customer != null ? a.Customer.FullName
+                    a.Customer != null ? a.Customer.Party.FullName
                         : a.Branch != null ? a.Branch.Name
                         : a.Supplier != null ? a.Supplier.Name
                         : null),

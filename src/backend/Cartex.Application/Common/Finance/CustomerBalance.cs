@@ -12,15 +12,19 @@ public static class CustomerBalance
     public static async Task<decimal> NetAsync(
         IApplicationDbContext db, ICurrencyService currency, long customerId, CancellationToken cancellationToken)
     {
-        // Reads the tracked entities, so postings made in this unit of work are already counted.
+        // Postings made in this unit of work count too, so the rows the ledger has only just
+        // created are merged in: they are not in the database yet and no query would see them.
         var accounts = await db.Accounts
             .Where(x => x.CustomerId == customerId
-                && (x.Type == AccountType.Debt || x.Type == AccountType.CustomerAdvance)
-                && x.Balance != 0)
+                && (x.Type == AccountType.Debt || x.Type == AccountType.CustomerAdvance))
             .ToListAsync(cancellationToken);
+        accounts.AddRange(db.Accounts.Local
+            .Where(x => x.CustomerId == customerId
+                && (x.Type == AccountType.Debt || x.Type == AccountType.CustomerAdvance))
+            .Except(accounts));
 
         var net = 0m;
-        foreach (var account in accounts)
+        foreach (var account in accounts.Where(x => x.Balance != 0))
         {
             var rate = await currency.RateAsync(account.Currency, cancellationToken);
             var amount = Math.Round(account.Balance * rate, 2);

@@ -174,6 +174,7 @@ public sealed record SalesPolicyDto
     public bool AllowReturnOnVoidedSale { get; init; }
     public bool AllowFreeReturnLines { get; init; } = true;
     public bool RequireReturnReason { get; init; }
+    public bool TrackWriteOff { get; init; }
     public bool AllowSaleQueue { get; init; } = true;
 
     /// QARZ-22: "Block" (standart) — limitdan oshiradigan qarz rad etiladi, "Warn" — savdo

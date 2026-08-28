@@ -51,7 +51,7 @@ public class OrderingController(ISender sender) : ControllerBase
     public async Task<IActionResult> UpdateItems(string code, UpdateCartItemsRequest request)
     {
         await sender.Send(new UpdateCartItemsCommand(code,
-            request.Items.Select(x => new SubmitCartItemDto(x.VariantId, x.Quantity, x.UnitPrice)).ToList(),
+            request.Items.Select(x => new SubmitCartItemDto(x.VariantId, x.Quantity, x.UnitPrice, x.PrepackId)).ToList(),
             request.ExpectedVersion));
         return NoContent();
     }
@@ -63,7 +63,7 @@ public class OrderingController(ISender sender) : ControllerBase
         await sender.Send(new UpdateCartCommand(
             code,
             request.CustomerId,
-            request.Items.Select(x => new SubmitCartItemDto(x.VariantId, x.Quantity, x.UnitPrice)).ToList())
+            request.Items.Select(x => new SubmitCartItemDto(x.VariantId, x.Quantity, x.UnitPrice, x.PrepackId)).ToList())
         {
             Note = request.Note,
             Participants = request.Participants?.Select(x => new ParticipantInput(x.RoleDefinitionId, x.PartyId)).ToList(),
@@ -99,7 +99,7 @@ public class OrderingController(ISender sender) : ControllerBase
     [HasPermission(AppPermissions.Sales.Checkout)]
     public async Task<ActionResult<CreateSaleResult>> Checkout(string code, CheckoutCartRequest request)
     {
-        var items = request.Items?.Select(x => new CheckoutCartItemDto(x.VariantId, x.Quantity, x.UnitPrice)
+        var items = request.Items?.Select(x => new CheckoutCartItemDto(x.VariantId, x.Quantity, x.UnitPrice, x.PrepackId)
             { ExpectedUnitPrice = x.ExpectedUnitPrice }).ToList();
         var payments = request.Payments?.Select(x => new SalePaymentDto(
             ParsePaymentMethod(x.Method), x.Currency, x.Amount)).ToList();

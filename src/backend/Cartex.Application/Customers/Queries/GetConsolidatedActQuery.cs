@@ -38,7 +38,7 @@ public sealed class GetConsolidatedActQueryHandler(
 
         var customer = await db.Customers
             .Where(x => x.Id == request.CustomerId)
-            .Select(x => new { x.Id, x.FullName, x.AssignedUserId })
+            .Select(x => new { x.Id, x.Party.FullName, x.AssignedUserId })
             .FirstOrDefaultAsync(cancellationToken)
             ?? throw new NotFoundException("Customer not found.", "customer_not_found");
         if (!currentUser.HasPermission(AppPermissions.Customers.ViewAll)

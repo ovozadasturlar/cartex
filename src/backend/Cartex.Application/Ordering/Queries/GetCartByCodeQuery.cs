@@ -14,8 +14,9 @@ public sealed class GetCartByCodeQueryHandler(IApplicationDbContext db, ICurrent
     public async Task<CartDto?> Handle(GetCartByCodeQuery request, CancellationToken cancellationToken)
     {
         var cart = await db.Carts
-            .Include(c => c.Customer)
+            .Include(c => c.Customer).ThenInclude(c => c!.Party)
             .Include(c => c.Items).ThenInclude(i => i.Variant).ThenInclude(v => v.Product).ThenInclude(p => p.Unit)
+            .Include(c => c.Items).ThenInclude(i => i.Prepack)
             .Include(c => c.Participants)
             .Include(c => c.Payments)
             .Include(c => c.ClaimedByUser)
@@ -59,12 +60,12 @@ public sealed class GetCartByCodeQueryHandler(IApplicationDbContext db, ICurrent
 
         var items = cart.Items.Select(i =>
         {
-            var catalogPrice = PriceOf(i.VariantId);
+            var catalogPrice = i.Prepack?.UnitPrice ?? PriceOf(i.VariantId);
             var unitPrice = i.UnitPriceOverride ?? catalogPrice;
             var allowsFractional = i.Variant.Product.FractionalOverride ?? i.Variant.Product.Unit.AllowFractional;
             return new CartItemDto(i.VariantId, i.Variant.Product.Name, i.Quantity, unitPrice, unitPrice * i.Quantity,
                 i.Variant.Product.Unit.ShortName, allowsFractional,
-                i.Variant.Product.ImageKey, catalogPrice);
+                i.Variant.Product.ImageKey, catalogPrice, i.PrepackId);
         }).ToList();
 
         var actions = new List<string>();
@@ -95,7 +96,7 @@ public sealed class GetCartByCodeQueryHandler(IApplicationDbContext db, ICurrent
             actions.Add("requeue");
 
         return new CartDto(cart.AggregateCode, cart.Status.ToString(), cart.WarehouseId, cart.CustomerId,
-            cart.Customer != null ? cart.Customer.FullName : null, items.Sum(i => i.LineTotal), items, cart.Note,
+            cart.Customer != null ? cart.Customer.Party.FullName : null, items.Sum(i => i.LineTotal), items, cart.Note,
             cart.PaidCash, cart.PaidCard, cart.PaidBonus,
             cart.Participants.OrderBy(x => x.Id).Select(x => new CartParticipantDto(
                 x.RoleDefinitionId, x.PartyId, x.PartyNameSnapshot,

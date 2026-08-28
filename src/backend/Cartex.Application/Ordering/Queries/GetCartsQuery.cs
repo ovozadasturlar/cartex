@@ -32,7 +32,7 @@ public sealed class GetCartsQueryHandler(IApplicationDbContext db, ICurrentUser 
                 c.Id,
                 c.AggregateCode,
                 Status = c.Status.ToString(),
-                CustomerName = c.Customer != null ? c.Customer.FullName : null,
+                CustomerName = c.Customer != null ? c.Customer.Party.FullName : null,
                 WarehouseName = c.Warehouse.Name,
                 c.WarehouseId,
                 ItemCount = c.Items.Count,
@@ -46,7 +46,13 @@ public sealed class GetCartsQueryHandler(IApplicationDbContext db, ICurrentUser 
                 c.SaleId,
                 c.CancellationReason,
                 c.Note,
-                Items = c.Items.Select(i => new { i.VariantId, i.Quantity, i.UnitPriceOverride }).ToList()
+                Items = c.Items.Select(i => new
+                {
+                    i.VariantId,
+                    i.Quantity,
+                    i.UnitPriceOverride,
+                    PrepackPrice = i.Prepack != null ? i.Prepack.UnitPrice : (decimal?)null
+                }).ToList()
             })
             .ToListAsync(cancellationToken);
 
@@ -81,8 +87,8 @@ public sealed class GetCartsQueryHandler(IApplicationDbContext db, ICurrentUser 
         {
             var estTotal = c.Items.Sum(i =>
             {
-                if (i.UnitPriceOverride is { } overridden)
-                    return i.Quantity * overridden;
+                if ((i.UnitPriceOverride ?? i.PrepackPrice) is { } frozen)
+                    return i.Quantity * frozen;
                 var p = prices.FirstOrDefault(pp => pp.VariantId == i.VariantId && pp.WarehouseId == c.WarehouseId)
                      ?? prices.FirstOrDefault(pp => pp.VariantId == i.VariantId && pp.WarehouseId == null);
                 var unitPrice = p is null ? 0 : ConvertPrice(p.SellingPrice, p.Currency);

@@ -2,6 +2,7 @@ using Cartex.Application.Common.Documents;
 using Cartex.Application.Common.Finance;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Settings;
+using Cartex.Application.Common.Shifts;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
@@ -29,6 +30,7 @@ public sealed class CreateCustomerRefundCommandHandler(
     ILedgerService ledger,
     ICurrencyService currency,
     ISettingsService settings,
+    IShiftLock shiftLock,
     IAuditService audit) : IRequestHandler<CreateCustomerRefundCommand, CustomerRefundCreatedDto>
 {
     public async Task<CustomerRefundCreatedDto> Handle(
@@ -116,10 +118,8 @@ public sealed class CreateCustomerRefundCommandHandler(
             // QARZ-18: savdodagi qarz bilan bir xil yo'l — ikkalasi ham serverda, bir sozlama bilan.
             if (customer.CreditLimit is { } creditLimit)
             {
-                var debts = await db.Accounts
-                    .Where(x => x.CustomerId == request.CustomerId && x.Type == AccountType.Debt && x.Balance > 0)
-                    .Select(x => new { x.Currency, x.Balance })
-                    .ToListAsync(cancellationToken);
+                var debts = (await CustomerAccounts.LockAsync(db, ledger, request.CustomerId, cancellationToken))
+                    .Where(x => x.Type == AccountType.Debt && x.Balance > 0);
                 var debtBase = 0m;
                 foreach (var debt in debts)
                     debtBase += Math.Round(debt.Balance * await currency.RateAsync(debt.Currency, cancellationToken), 2);
@@ -129,10 +129,7 @@ public sealed class CreateCustomerRefundCommandHandler(
             }
         }
 
-        var shiftId = await db.Shifts
-            .Where(x => x.UserId == userId && x.BranchId == branchId && x.Status == ShiftStatus.Open)
-            .Select(x => (long?)x.Id)
-            .FirstOrDefaultAsync(cancellationToken);
+        var shiftId = (await shiftLock.OpenAsync(userId, branchId, cancellationToken))?.Id;
         if (normalized.Any(x => x.Method == PaymentMethod.Cash) && shiftId is null && policy.ShiftPolicy != "Off")
             throw new BusinessRuleException("Naqd qaytarish uchun ochiq smena talab qilinadi.");
 
@@ -170,8 +167,8 @@ public sealed class CreateCustomerRefundCommandHandler(
                     $"{input.Currency} bo'yicha qaytarish uchun mablag' yetarli emas.",
                     "insufficient_refund_funds");
 
-            var payout = ledger.Post(OperationType.CustomerRefund, input.Amount,
-                payoutAccount, null, userId, shiftId, rate);
+            var payout = await ledger.PostAsync(OperationType.CustomerRefund, input.Amount,
+                payoutAccount, null, userId, cancellationToken, shiftId, rate);
             payout.CustomerRefundDocument = document;
             payout.Description = document.DocumentNumber;
 
@@ -183,8 +180,8 @@ public sealed class CreateCustomerRefundCommandHandler(
             {
                 fromAdvance[input.Currency] = advanceLeft - takenFromAdvance;
                 document.AdvanceBaseAmount += Math.Round(takenFromAdvance * rate, 2);
-                var advanceDebit = ledger.Post(OperationType.CustomerRefund, takenFromAdvance,
-                    advances[input.Currency]!, null, userId, shiftId, rate);
+                var advanceDebit = await ledger.PostAsync(OperationType.CustomerRefund, takenFromAdvance,
+                    advances[input.Currency]!, null, userId, cancellationToken, shiftId, rate);
                 advanceDebit.CustomerRefundDocument = document;
                 advanceDebit.Description = document.DocumentNumber;
             }
@@ -195,8 +192,8 @@ public sealed class CreateCustomerRefundCommandHandler(
                 document.LoanBaseAmount += Math.Round(lent * rate, 2);
                 var debt = await ledger.CustomerAccountAsync(
                     request.CustomerId, AccountType.Debt, cancellationToken, input.Currency);
-                var loanCharge = ledger.Post(OperationType.CustomerLoan, lent,
-                    null, debt, userId, shiftId, rate);
+                var loanCharge = await ledger.PostAsync(OperationType.CustomerLoan, lent,
+                    null, debt, userId, cancellationToken, shiftId, rate);
                 loanCharge.CustomerRefundDocument = document;
                 loanCharge.Description = document.DocumentNumber;
             }

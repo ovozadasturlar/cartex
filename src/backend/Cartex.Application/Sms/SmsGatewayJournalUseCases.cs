@@ -37,7 +37,7 @@ public sealed class GetSmsGatewayJournalQueryHandler(IApplicationDbContext db, I
         var baseQuery = db.SmsGatewayJobs.AsNoTracking().Where(x => x.BranchId == request.BranchId);
         var filtered = Apply(baseQuery, request);
         var sensitive = currentUser.HasPermission(AppPermissions.Notifications.JournalSensitive);
-        var jobs = await filtered.Include(x => x.Customer).Include(x => x.AssignedDevice)
+        var jobs = await filtered.Include(x => x.Customer).ThenInclude(x => x!.Party).Include(x => x.AssignedDevice)
             .OrderByDescending(x => x.CreatedAt).Take(Math.Clamp(request.Take, 1, 500))
             .ToListAsync(cancellationToken);
         var localToday = DateTime.Today;

@@ -3,9 +3,11 @@ using Cartex.Application.Settings.Queries;
 using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
 using Cartex.Shared.Models.Settings;
-using Cartex.Shared.Models.Products;
+using Cartex.Shared.Models.Catalog;
+using Cartex.Application.Catalog.Commands;
+using Cartex.Application.Catalog.Queries;
 using Cartex.Application.Common.Messaging;
-using Cartex.Application.ProductReference.Commands;
+using Cartex.Domain.Common.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -228,23 +230,39 @@ public class SettingsController(ISender sender) : ControllerBase
         return Ok(result);
     }
 
-    [HttpGet("product-reference")]
-    [HasPermission(AppPermissions.Settings.SalesPolicy)]
-    public async Task<ActionResult<ProductReferenceSettingsDto>> GetProductReferenceSettings() =>
-        Ok(await sender.Send(new GetProductReferenceSettingsQuery()));
+    [HttpGet("catalog")]
+    [HasPermission(AppPermissions.Settings.Integrations)]
+    public async Task<ActionResult<CatalogSettingsDto>> GetCatalogSettings() =>
+        Ok(await sender.Send(new GetCatalogSettingsQuery()));
 
-    [HttpPut("product-reference")]
-    [HasPermission(AppPermissions.Settings.SalesPolicy)]
-    public async Task<IActionResult> UpdateProductReferenceSettings(ProductReferenceSettingsDto settings)
+    [HttpPut("catalog")]
+    [HasPermission(AppPermissions.Settings.Integrations)]
+    public async Task<IActionResult> UpdateCatalogSettings(CatalogSettingsDto settings)
     {
-        await sender.Send(new UpdateProductReferenceSettingsCommand(settings));
+        await sender.Send(new UpdateCatalogSettingsCommand(settings));
         return NoContent();
     }
 
-    [HttpPost("product-reference/sync")]
-    [HasPermission(AppPermissions.Settings.SalesPolicy)]
-    public async Task<ActionResult<ProductReferenceSyncResultDto>> SyncProductReference() =>
-        Ok(await sender.Send(new SyncProductReferenceCommand()));
+    [HttpPost("catalog/pack")]
+    [HasPermission(AppPermissions.Settings.Integrations)]
+    [RequestSizeLimit(512L * 1024 * 1024)]
+    public async Task<ActionResult<CatalogPackDto>> UploadCatalogPack(IFormFile? pack, IFormFile? manifest)
+    {
+        if (pack is null || manifest is null)
+            throw new BusinessRuleException("Paket (.db) va manifest (.json) fayllari birga yuklanadi.", "catalog_pack_files_missing");
+
+        await using var packContent = pack.OpenReadStream();
+        await using var manifestContent = manifest.OpenReadStream();
+        return Ok(await sender.Send(new UploadCatalogPackCommand(packContent, manifestContent)));
+    }
+
+    [HttpDelete("catalog/pack")]
+    [HasPermission(AppPermissions.Settings.Integrations)]
+    public async Task<IActionResult> DeleteCatalogPack()
+    {
+        await sender.Send(new DeleteCatalogPackCommand());
+        return NoContent();
+    }
 
     [HttpPut("storage")]
     [HasPermission(AppPermissions.Settings.Integrations)]

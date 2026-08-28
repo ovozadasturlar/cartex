@@ -1,6 +1,7 @@
 using Cartex.Domain.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Cartex.Persistence;
 
@@ -16,6 +17,6 @@ public sealed class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<App
             .UseSnakeCaseNamingConvention()
             .Options;
 
-        return new ApplicationDbContext(options, new NullCurrentUser());
+        return new ApplicationDbContext(options, new NullCurrentUser(), NullLogger<ApplicationDbContext>.Instance);
     }
 }

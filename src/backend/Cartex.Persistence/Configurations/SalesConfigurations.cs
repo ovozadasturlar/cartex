@@ -9,20 +9,14 @@ public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
     public void Configure(EntityTypeBuilder<Customer> builder)
     {
         builder.ToTable("customers");
-        builder.Property(x => x.FullName).IsRequired();
-        builder.HasIndex(x => x.SearchFold, "ix_customers_search_fold_trgm").HasDatabaseName("ix_customers_search_fold_trgm").HasMethod("gin").HasOperators("gin_trgm_ops");
         builder.Property(x => x.LastName).HasMaxLength(120);
-        builder.Property(x => x.Address).HasMaxLength(250);
-        builder.Property(x => x.Phone).HasMaxLength(20);
-        builder.HasIndex(x => x.Phone).IsUnique().HasFilter("\"phone\" IS NOT NULL AND NOT \"is_deleted\"");
-        builder.Property(x => x.Email).HasMaxLength(120);
         builder.Property(x => x.PreferredLanguage).HasMaxLength(10);
         builder.Property(x => x.CardBarcode).HasMaxLength(60);
         builder.HasIndex(x => x.CardBarcode).IsUnique().HasFilter("\"card_barcode\" IS NOT NULL AND NOT \"is_deleted\"");
         builder.Property(x => x.DiscountPct).HasPrecision(5, 2);
         builder.Property(x => x.CreditLimit).HasPrecision(18, 2);
         builder.HasIndex(x => x.AssignedUserId);
-        builder.HasIndex(x => x.PartyId).IsUnique();
+        builder.HasIndex(x => x.PartyId).IsUnique().HasFilter("NOT \"is_deleted\"");
         builder.HasOne(x => x.Party).WithOne(x => x.CustomerProfile)
             .HasForeignKey<Customer>(x => x.PartyId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.AssignedUser).WithMany().HasForeignKey(x => x.AssignedUserId).OnDelete(DeleteBehavior.SetNull);
@@ -66,7 +60,7 @@ public class SaleConfiguration : IEntityTypeConfiguration<Sale>
         builder.HasIndex(x => x.ShiftId);
         builder.Property(x => x.IdempotencyKey).HasMaxLength(64);
         builder.HasIndex(x => new { x.UserId, x.IdempotencyKey }).IsUnique().HasFilter("\"idempotency_key\" IS NOT NULL");
-        builder.HasIndex(x => x.BranchId);
+        builder.HasIndex(x => new { x.BranchId, x.Status, x.CreatedAt });
         builder.HasIndex(x => x.CreatedAt);
 
         builder.HasOne<Branch>()
@@ -101,6 +95,7 @@ public class SaleItemConfiguration : IEntityTypeConfiguration<SaleItem>
         builder.Property(x => x.CashbackEarned).HasPrecision(18, 2);
         builder.Property(x => x.ReturnedQuantity).HasPrecision(12, 3);
         builder.Property(x => x.ReturnedCashback).HasPrecision(18, 2);
+        builder.HasIndex(x => new { x.SaleId, x.VariantId });
 
         builder.HasOne(x => x.Sale)
             .WithMany(s => s.Items)

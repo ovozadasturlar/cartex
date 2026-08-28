@@ -1,3 +1,4 @@
+using Cartex.Application.Catalog;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Messaging;
 using Cartex.Domain.Common;
@@ -12,7 +13,6 @@ using Cartex.Infrastructure.Notifications.Sms;
 using Cartex.Infrastructure.Notifications.Telegram;
 using Cartex.Infrastructure.Security;
 using Cartex.Infrastructure.Search;
-using Cartex.Infrastructure.ProductReference;
 using Cartex.Infrastructure.Settings;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
@@ -55,7 +55,11 @@ public static class DependencyInjection
         services.AddScoped<ISmsProvider, DeviceSmsProvider>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IProductCatalogProvider, OpenFoodFactsProvider>();
-        services.AddScoped<IProductReferenceSource, GoogleSheetsProductReferenceSource>();
+        services.AddScoped<IProductPopularity, ProductPopularityProvider>();
+        services.AddSingleton<CatalogPackStore>();
+        services.AddSingleton<ICatalogPackStore>(sp => sp.GetRequiredService<CatalogPackStore>());
+        services.AddScoped<ICatalogSource, OnlineCatalogSource>();
+        services.AddScoped<ICatalogSource, FileCatalogSource>();
         services.AddSingleton<ISpreadsheetService, Import.ClosedXmlSpreadsheetService>();
         services.AddScoped<Storage.LocalObjectStorage>();
         services.AddScoped<Storage.MinioObjectStorage>();

@@ -36,6 +36,9 @@ public class Transaction : AuditableEntity
     public long? PartnerRedemptionDocumentId { get; set; }
     public PartnerRedemptionDocument? PartnerRedemptionDocument { get; set; }
 
+    public long? StockWriteOffDocumentId { get; set; }
+    public StockWriteOffDocument? StockWriteOffDocument { get; set; }
+
     public long? SupplyId { get; set; }
     public Supply? Supply { get; set; }
 
