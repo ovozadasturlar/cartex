@@ -8,6 +8,7 @@ using Cartex.ApiClient.Api;
 using Cartex.ApiClient.Querying;
 using Cartex.ApiClient.Paging;
 using Refit;
+using Cartex.Shared.Models.Catalog;
 using Cartex.Shared.Models.Products;
 using Cartex.Shared.Models.Suppliers;
 using Cartex.Shared.Models.Supplies;
@@ -95,7 +96,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     private readonly ISuppliersApi _suppliersApi;
     private readonly IWarehousesApi _warehousesApi;
     private readonly IProductsApi _productsApi;
-    private readonly IProductReferenceApi _productReferenceApi;
+    private readonly ICatalogApi _catalogApi;
     private readonly IUnitsApi _unitsApi;
     private readonly IBarcodesApi _barcodesApi;
     private readonly IStorageApi _storageApi;
@@ -110,6 +111,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     private readonly IFilePickerService _filePicker;
 
     public QuickProductViewModel QuickProduct { get; }
+    public ScanIndicator ScanIndicator { get; } = new();
 
     public ObservableCollection<SupplyDto> Supplies { get; } = [];
     public ObservableCollection<IdOption> SupplierOptions { get; } = [];
@@ -713,7 +715,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         OnPropertyChanged(nameof(HasItems));
     }
 
-    public SuppliesViewModel(ISuppliesApi api, ISuppliersApi suppliersApi, IWarehousesApi warehousesApi, IProductsApi productsApi, IProductReferenceApi productReferenceApi,
+    public SuppliesViewModel(ISuppliesApi api, ISuppliersApi suppliersApi, IWarehousesApi warehousesApi, IProductsApi productsApi, ICatalogApi catalogApi,
         IUnitsApi unitsApi, IBarcodesApi barcodesApi, IStorageApi storageApi, IBarcodeLabelService labels, IPrinterService printer, QuickProductViewModel quickProduct, IToastService toast, IBusyService busy,
         IExportService export, AuthService auth, IBusinessApi businessApi, IRatesApi ratesApi, ISettingsApi settingsApi, ReferenceCache cache, IDialogService dialog, PrintDispatchService printDispatch,
         IFilePickerService filePicker)
@@ -728,7 +730,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         _suppliersApi = suppliersApi;
         _warehousesApi = warehousesApi;
         _productsApi = productsApi;
-        _productReferenceApi = productReferenceApi;
+        _catalogApi = catalogApi;
         _unitsApi = unitsApi;
         _barcodesApi = barcodesApi;
         _storageApi = storageApi;
@@ -1006,7 +1008,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     }
 
     private async Task OpenQuickProductAsync(string? name, string? barcode, decimal? sellingPrice, bool addAsLine,
-        ProductReferenceDto? reference = null)
+        CatalogProductDto? reference = null)
     {
         _addQuickProductAsLine = addAsLine;
         await QuickProduct.OpenCommand.ExecuteAsync(null);
@@ -1170,19 +1172,30 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         }
         catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
-            try
-            {
-                var reference = await _productReferenceApi.GetByBarcodeAsync(code);
-                await OpenQuickProductAsync(null, code, null, false, reference);
-            }
-            catch (ApiException referenceException) when (referenceException.StatusCode == System.Net.HttpStatusCode.NotFound)
-            {
-                _toast.Warning(L["barcode_not_found"]);
-                await OpenQuickProductAsync(null, code, null, false);
-            }
-            catch (Exception referenceException) { _toast.Error(ApiErrors.Describe(referenceException)); }
+            await ReceiveFromCatalogAsync(code, warehouseId);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    private async Task ReceiveFromCatalogAsync(string code, long warehouseId)
+    {
+        CatalogProductDto? reference;
+        try { reference = await ScanIndicator.TrackAsync(_catalogApi.GetByBarcodeAsync(code)); }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); return; }
+
+        if (reference is null)
+        {
+            _toast.Warning(L["barcode_not_found"]);
+            await OpenQuickProductAsync(null, code, null, false);
+            return;
+        }
+
+        var variantId = await QuickProduct.CreateFromReferenceAsync(reference, warehouseId);
+        if (variantId == 0) return;
+
+        await AddOrMergeAsync(variantId, reference.Name, reference.PackQty is > 1 ? reference.PackQty.Value : 1,
+            warehouseId, entry: null);
+        ResetLine();
     }
 
     private async Task AddOrMergeAsync(long variantId, string productName, decimal quantity, long warehouseId,

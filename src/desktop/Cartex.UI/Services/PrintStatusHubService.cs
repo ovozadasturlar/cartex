@@ -10,6 +10,7 @@ public sealed class PrintStatusHubService
     private readonly IToastService _toast;
     private readonly SemaphoreSlim _startLock = new(1, 1);
     private HubConnection? _connection;
+    private readonly HubSubscription _subscription = new();
 
     public PrintStatusHubService(AuthService auth, IToastService toast)
     {
@@ -26,15 +27,13 @@ public sealed class PrintStatusHubService
         await _startLock.WaitAsync();
         try
         {
-            _connection ??= Build();
-            if (_connection.State == HubConnectionState.Disconnected)
-            {
-                await _connection.StartAsync();
-                await _connection.InvokeAsync("SubscribeRequester", _auth.DeviceId);
-            }
+            var connection = _connection ??= Build();
+            await _subscription.EnsureAsync(connection, () =>
+                connection.InvokeAsync("SubscribeRequester", _auth.DeviceId));
         }
         catch
         {
+            _subscription.Invalidate();
         }
         finally
         {
@@ -44,21 +43,13 @@ public sealed class PrintStatusHubService
 
     private HubConnection Build()
     {
-        var connection = new HubConnectionBuilder()
-            .WithUrl(SettingsService.Instance.ApiBaseUrl.TrimEnd('/') + "/hubs/printing", options =>
-            {
-                options.AccessTokenProvider = () => _auth.EnsureFreshTokenAsync(CancellationToken.None);
-                options.Headers["X-Client"] = "desktop";
-                options.Headers["X-Device-Id"] = _auth.DeviceId;
-                options.Headers["X-Device-Name"] = _auth.DeviceName;
-            })
-            .WithAutomaticReconnect()
-            .Build();
+        var connection = HubConnections.Create("/hubs/printing", _auth);
         connection.On<PrintJobStatusUpdate>("PrintJobStatusChanged", update =>
             Dispatcher.UIThread.Post(() => Show(update)));
         connection.Reconnected += async _ =>
         {
-            await connection.InvokeAsync("SubscribeRequester", _auth.DeviceId);
+            _subscription.Invalidate();
+            await EnsureStartedAsync();
         };
         return connection;
     }
@@ -81,6 +72,7 @@ public sealed class PrintStatusHubService
     {
         var connection = _connection;
         _connection = null;
+        _subscription.Invalidate();
         if (connection is null) return;
         try
         {

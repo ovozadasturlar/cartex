@@ -1,57 +1,83 @@
 using System.Collections.ObjectModel;
 using Cartex.ApiClient.Api;
-using Cartex.Shared.Models.Products;
+using Cartex.Shared.Models.Catalog;
 using Cartex.UI.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Refit;
 
 namespace Cartex.UI.ViewModels;
 
-public partial class ProductReferenceSettingsViewModel : ViewModelBase, ILoadable
+public partial class CatalogSettingsViewModel : ViewModelBase, ILoadable
 {
+    private static readonly CatalogSourceMode[] Modes = [CatalogSourceMode.Online, CatalogSourceMode.File, CatalogSourceMode.Off];
+
     private readonly ISettingsApi _settingsApi;
+    private readonly IFilePickerService _filePicker;
+    private readonly IDialogService _dialog;
     private readonly IToastService _toast;
     private readonly IBusyService _busy;
 
-    public ObservableCollection<string> SyncSchedules { get; } = [];
+    public ObservableCollection<string> ModeNames { get; } = [];
 
-    [ObservableProperty] private bool _isEnabled;
-    [ObservableProperty] private string _spreadsheetId = string.Empty;
-    [ObservableProperty] private string _sheetName = string.Empty;
-    [ObservableProperty] private string _barcodeColumn = "barcode";
-    [ObservableProperty] private string _nameColumn = "name";
-    [ObservableProperty] private string _unitColumn = "unit";
-    [ObservableProperty] private string _categoryColumn = "category";
-    [ObservableProperty] private string _manufacturerColumn = "manufacturer";
-    [ObservableProperty] private string _packQtyColumn = "pack_qty";
-    [ObservableProperty] private string _priceColumn = "price";
-    [ObservableProperty] private bool _autoFillPrice;
-    [ObservableProperty] private int _syncScheduleIndex;
-    [ObservableProperty] private DateTime? _lastSyncedAt;
-    [ObservableProperty] private int _lastReadCount;
-    [ObservableProperty] private int _lastUpdatedCount;
-    [ObservableProperty] private int _lastErrorCount;
-    [ObservableProperty] private int _rowCount;
+    [ObservableProperty] private int _modeIndex;
+    [ObservableProperty] private string _endpointBaseUrl = string.Empty;
+    [ObservableProperty] private string _imageBaseUrl = string.Empty;
+    [ObservableProperty] private CatalogPackDto? _pack;
     [ObservableProperty] private string? _lastError;
 
-    public string LastSyncedText => LastSyncedAt?.ToLocalTime().ToString("g") ?? L["never"];
+    public bool IsFileMode => ModeIndex == 1;
+    public bool IsOnlineMode => ModeIndex == 0;
+    public bool IsOffMode => ModeIndex == 2;
+    public bool HasPack => Pack is not null;
+    public string PackUploadedText => Pack is null ? L["never"] : Pack.UploadedAt.ToLocalTime().ToString("g");
+    public string UploadButtonText => HasPack ? L["catalog_pack_replace"] : L["catalog_pack_upload"];
+    public string ModeHint => ModeIndex switch
+    {
+        0 => L["catalog_mode_online_hint"],
+        1 => L["catalog_mode_file_hint"],
+        _ => L["catalog_mode_off_hint"]
+    };
 
-    public ProductReferenceSettingsViewModel(ISettingsApi settingsApi, IToastService toast, IBusyService busy)
+    public CatalogSettingsViewModel(ISettingsApi settingsApi, IFilePickerService filePicker, IDialogService dialog,
+        IToastService toast, IBusyService busy)
     {
         _settingsApi = settingsApi;
+        _filePicker = filePicker;
+        _dialog = dialog;
         _toast = toast;
         _busy = busy;
-        SyncSchedules.Add(L["sync_manual"]);
-        SyncSchedules.Add(L["sync_daily"]);
+        ModeNames.Add(L["catalog_mode_online"]);
+        ModeNames.Add(L["catalog_mode_file"]);
+        ModeNames.Add(L["catalog_mode_off"]);
+    }
+
+    partial void OnModeIndexChanged(int value)
+    {
+        OnPropertyChanged(nameof(IsFileMode));
+        OnPropertyChanged(nameof(IsOnlineMode));
+        OnPropertyChanged(nameof(IsOffMode));
+        OnPropertyChanged(nameof(ModeHint));
+    }
+
+    partial void OnPackChanged(CatalogPackDto? value)
+    {
+        OnPropertyChanged(nameof(HasPack));
+        OnPropertyChanged(nameof(PackUploadedText));
+        OnPropertyChanged(nameof(UploadButtonText));
     }
 
     public async Task LoadAsync()
     {
         try
         {
-            ProductReferenceSettingsDto settings;
-            using (_busy.Begin(L["loading"])) settings = await _settingsApi.GetProductReferenceAsync();
-            Apply(settings);
+            CatalogSettingsDto settings;
+            using (_busy.Begin(L["loading"])) settings = await _settingsApi.GetCatalogAsync();
+            ModeIndex = Math.Max(0, Array.IndexOf(Modes, settings.Mode));
+            EndpointBaseUrl = settings.EndpointBaseUrl;
+            ImageBaseUrl = settings.ImageBaseUrl;
+            Pack = settings.Pack;
+            LastError = settings.LastError;
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
@@ -61,72 +87,62 @@ public partial class ProductReferenceSettingsViewModel : ViewModelBase, ILoadabl
     {
         try
         {
-            using (_busy.Begin(L["loading"])) await _settingsApi.UpdateProductReferenceAsync(ToDto());
+            using (_busy.Begin(L["loading"]))
+                await _settingsApi.UpdateCatalogAsync(new CatalogSettingsDto
+                {
+                    Mode = Modes[ModeIndex],
+                    EndpointBaseUrl = EndpointBaseUrl.Trim(),
+                    ImageBaseUrl = ImageBaseUrl.Trim()
+                });
             _toast.Success(L["success"]);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
     [RelayCommand]
-    private async Task SyncNowAsync()
+    private async Task UploadPackAsync()
     {
+        var pack = await _filePicker.PickCatalogPackAsync();
+        if (pack is null) return;
+        var manifest = await _filePicker.PickJsonAsync();
+        if (manifest is null)
+        {
+            await pack.Content.DisposeAsync();
+            return;
+        }
+
         try
         {
-            ProductReferenceSyncResultDto result;
-            using (_busy.Begin(L["loading"])) result = await _settingsApi.SyncProductReferenceAsync();
-            LastSyncedAt = result.SyncedAt;
-            LastReadCount = result.Read;
-            LastUpdatedCount = result.Updated;
-            LastErrorCount = result.Errors;
-            RowCount = result.Total;
+            using (_busy.Begin(L["loading"]))
+                Pack = await _settingsApi.UploadCatalogPackAsync(
+                    new StreamPart(pack.Content, pack.FileName, pack.ContentType),
+                    new StreamPart(manifest.Content, manifest.FileName, manifest.ContentType));
             LastError = null;
-            OnPropertyChanged(nameof(LastSyncedText));
-            _toast.Success(L["product_reference_sync_complete"]);
+            _toast.Success(L["catalog_pack_uploaded"]);
         }
         catch (Exception ex)
         {
-            _toast.Error(ApiErrors.Describe(ex));
-            await LoadAsync();
+            LastError = ApiErrors.Describe(ex);
+            _toast.Error(LastError);
+        }
+        finally
+        {
+            await pack.Content.DisposeAsync();
+            await manifest.Content.DisposeAsync();
         }
     }
 
-    private void Apply(ProductReferenceSettingsDto settings)
+    [RelayCommand]
+    private async Task DeletePackAsync()
     {
-        IsEnabled = settings.IsEnabled;
-        SpreadsheetId = settings.SpreadsheetId;
-        SheetName = settings.SheetName;
-        BarcodeColumn = settings.BarcodeColumn;
-        NameColumn = settings.NameColumn;
-        UnitColumn = settings.UnitColumn;
-        CategoryColumn = settings.CategoryColumn;
-        ManufacturerColumn = settings.ManufacturerColumn;
-        PackQtyColumn = settings.PackQtyColumn;
-        PriceColumn = settings.PriceColumn;
-        AutoFillPrice = settings.AutoFillPrice;
-        SyncScheduleIndex = string.Equals(settings.SyncSchedule, "Daily", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
-        LastSyncedAt = settings.LastSyncedAt;
-        LastReadCount = settings.LastReadCount;
-        LastUpdatedCount = settings.LastUpdatedCount;
-        LastErrorCount = settings.LastErrorCount;
-        RowCount = settings.RowCount;
-        LastError = settings.LastError;
-        OnPropertyChanged(nameof(LastSyncedText));
+        if (!await _dialog.ConfirmAsync(L["catalog_pack_delete_confirm"], L["catalog_pack"])) return;
+        try
+        {
+            using (_busy.Begin(L["loading"])) await _settingsApi.DeleteCatalogPackAsync();
+            Pack = null;
+            LastError = null;
+            _toast.Success(L["success"]);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
-
-    private ProductReferenceSettingsDto ToDto() => new()
-    {
-        IsEnabled = IsEnabled,
-        SourceType = "GoogleSheets",
-        SpreadsheetId = SpreadsheetId.Trim(),
-        SheetName = SheetName.Trim(),
-        BarcodeColumn = BarcodeColumn.Trim(),
-        NameColumn = NameColumn.Trim(),
-        UnitColumn = UnitColumn.Trim(),
-        CategoryColumn = CategoryColumn.Trim(),
-        ManufacturerColumn = ManufacturerColumn.Trim(),
-        PackQtyColumn = PackQtyColumn.Trim(),
-        PriceColumn = PriceColumn.Trim(),
-        AutoFillPrice = AutoFillPrice,
-        SyncSchedule = SyncScheduleIndex == 1 ? "Daily" : "Manual"
-    };
 }

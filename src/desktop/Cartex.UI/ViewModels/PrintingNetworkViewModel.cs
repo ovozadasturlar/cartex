@@ -152,7 +152,8 @@ public partial class PrintingViewModel
     public IReadOnlyList<PrintChoice> NetworkRoutingModes =>
     [
         new(nameof(PrintRoutingMode.LocalFirst), L["printing_routing_mode_local_first"]),
-        new(nameof(PrintRoutingMode.PriorityOnly), L["printing_routing_mode_priority_only"])
+        new(nameof(PrintRoutingMode.PriorityOnly), L["printing_routing_mode_priority_only"]),
+        new(nameof(PrintRoutingMode.LocalOnly), L["printing_routing_mode_local_only"])
     ];
     public IReadOnlyList<PrintStickyMode> NetworkStickyModes { get; } = Enum.GetValues<PrintStickyMode>();
     private List<PrintRoutingPolicyDto> _networkPolicies = [];

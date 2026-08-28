@@ -170,6 +170,14 @@ public sealed class SettingsService
         set { _data.EnabledFeatures = value; Save(); }
     }
 
+    /// BRAK-06: chiqim bo'limi do'kon siyosatiga bog'liq. Siyosat serverdan kelguncha menyu
+    /// oxirgi ma'lum holatdan quriladi — standart yopiq, ya'ni noma'lum holatda bo'lim ochilmaydi.
+    public bool TrackWriteOff
+    {
+        get => _data.TrackWriteOff;
+        set { _data.TrackWriteOff = value; Save(); }
+    }
+
     /// Ro'yxat hali ma'lum bo'lmasa modul yopiq deb qaralmaydi — aks holda aloqasiz
     /// ochilgan dastur yarmini yashirib qo'yardi. Ro'yxat kelgach holat aniqlashadi.
     public bool IsFeatureOn(string feature) =>
@@ -223,6 +231,7 @@ public sealed class SettingsService
         public bool HubEnabled { get; set; }
         public bool SettingsSidebarCollapsed { get; set; }
         public bool PosListMode { get; set; }
+        public bool TrackWriteOff { get; set; }
         public Dictionary<string, List<long>> ExpandedCategoryIds { get; set; } = [];
         public List<string> EnabledFeatures { get; set; } = ["loyalty", "reports", "stock_transfers", "supplies", "suppliers", "accounts", "partners"];
     }

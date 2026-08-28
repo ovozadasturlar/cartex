@@ -425,6 +425,16 @@
                                 <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowNegativeStockWhenOffline}" />
                             </Grid>
                         </Border>
+
+                        <Border Classes="row">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding L[track_write_off]}" Classes="field" />
+                                    <TextBlock Text="{Binding TrackWriteOffHint}" Classes="hint" TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding TrackWriteOff}" />
+                            </Grid>
+                        </Border>
                     </StackPanel>
                 </Border>
 

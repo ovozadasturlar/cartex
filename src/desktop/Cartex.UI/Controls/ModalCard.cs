@@ -1,6 +1,7 @@
 using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Threading;
 
 namespace Cartex.UI.Controls;
 
@@ -50,4 +51,13 @@ public class ModalCard : ContentControl
     public string? CancelText { get => GetValue(CancelTextProperty); set => SetValue(CancelTextProperty, value); }
     public object? Footer { get => GetValue(FooterProperty); set => SetValue(FooterProperty, value); }
     public bool ShowFooter { get => GetValue(ShowFooterProperty); set => SetValue(ShowFooterProperty, value); }
+
+    // Oyna ochilishi bilan kursor birinchi maydonda bo'ladi - foydalanuvchi darhol yozishni
+    // boshlaydi va sichqonchaga qo'l urmaydi.
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == IsOpenProperty && change.GetNewValue<bool>())
+            Dispatcher.UIThread.Post(() => FormBehaviors.FocusFirst(this), DispatcherPriority.Background);
+    }
 }

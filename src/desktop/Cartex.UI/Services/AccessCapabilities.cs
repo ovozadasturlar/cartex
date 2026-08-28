@@ -17,4 +17,7 @@ public static class AccessCapabilities
 
     public static bool CanReceiveStock(Func<string, bool> hasPermission) =>
         hasPermission("supplies.create") && FeatureEnabled("supplies");
+
+    /// BRAK-06: chiqim bo'limi siyosat bilan boshqariladi — ruxsat yetarli emas.
+    public static bool WriteOffTracked() => SettingsService.Instance.TrackWriteOff;
 }

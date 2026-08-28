@@ -5,14 +5,16 @@ namespace Cartex.UI.ViewModels;
 
 public static class NavRegistry
 {
-    public record NavDef(string SectionKey, string Key, MaterialIconKind Icon, Type VmType, string? Permission, string? Feature = null);
+    public record NavDef(string SectionKey, string Key, MaterialIconKind Icon, Type VmType, string? Permission, string? Feature = null, Func<bool>? Policy = null);
 
-    /// RUXSAT-04: sahifa ruxsat ham, moduli ham ochiq bo'lgandagina ko'rinadi. Barcha menyular
-    /// (asosiy, sozlamalar, buyruqlar paneli) shu yagona qoidani ishlatadi — aks holda biri
-    /// yashirgan sahifa boshqasidan ochilib qolardi.
+    /// RUXSAT-04: sahifa ruxsat ham, moduli ham ochiq bo'lgandagina ko'rinadi. Ba'zi bo'limlar
+    /// bundan tashqari do'kon siyosatiga bog'liq (BRAK-06). Barcha menyular (asosiy, sozlamalar,
+    /// buyruqlar paneli) shu yagona qoidani ishlatadi — aks holda biri yashirgan sahifa
+    /// boshqasidan ochilib qolardi.
     public static bool IsAvailable(this NavDef def, Func<string, bool> hasPermission) =>
         (def.Permission is null || hasPermission(def.Permission))
-        && (def.Feature is null || AccessCapabilities.FeatureEnabled(def.Feature));
+        && (def.Feature is null || AccessCapabilities.FeatureEnabled(def.Feature))
+        && (def.Policy is null || def.Policy());
 
     public static bool IsFeatureOn(string feature) => AccessCapabilities.FeatureEnabled(feature);
 
@@ -39,6 +41,7 @@ public static class NavRegistry
         new("inventory", "suppliers", MaterialIconKind.TruckOutline, typeof(SuppliersViewModel), "suppliers.view", "suppliers"),
         new("inventory", "barcode_print", MaterialIconKind.BarcodeScan, typeof(BarcodePrintViewModel), "products.printBarcode"),
         new("inventory", "transfers", MaterialIconKind.SwapHorizontal, typeof(TransfersViewModel), "stock_transfers.view", "stock_transfers"),
+        new("inventory", "write_offs", MaterialIconKind.PackageVariantRemove, typeof(StockWriteOffsViewModel), "stocks.view|stocks.writeOff", null, AccessCapabilities.WriteOffTracked),
         new("finance", "accounts", MaterialIconKind.WalletOutline, typeof(AccountsViewModel), "accounts.view", "accounts"),
         new("finance", "transactions", MaterialIconKind.SwapHorizontal, typeof(TransactionsViewModel), "transactions.view", "accounts"),
         new("finance", "reports", MaterialIconKind.ChartBar, typeof(ReportsViewModel), "reports.view", "reports"),
@@ -59,7 +62,7 @@ public static class NavRegistry
         new("catalog", "units", MaterialIconKind.RulerSquare, typeof(UnitsViewModel), "units.view"),
         new("catalog", "product_types", MaterialIconKind.TagOutline, typeof(ProductTypesViewModel), "product_types.view"),
         new("catalog", "manufacturers", MaterialIconKind.Factory, typeof(ManufacturersViewModel), "manufacturers.view"),
-        new("catalog", "product_reference", MaterialIconKind.BookSearchOutline, typeof(ProductReferenceSettingsViewModel), "settings.salesPolicy"),
+        new("catalog", "product_reference", MaterialIconKind.BookSearchOutline, typeof(CatalogSettingsViewModel), "settings.integrations"),
         new("organization", "business", MaterialIconKind.Domain, typeof(BusinessSettingsViewModel), "business.edit"),
         new("organization", "sales_policy", MaterialIconKind.ScaleBalance, typeof(SalesPolicyViewModel), "settings.salesPolicy"),
         new("organization", "modules", MaterialIconKind.ToggleSwitchOutline, typeof(ModulesViewModel), "business.edit"),

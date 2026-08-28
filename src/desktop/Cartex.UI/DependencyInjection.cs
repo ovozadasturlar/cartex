@@ -53,7 +53,6 @@ public static class DependencyInjection
         services.AddSingleton<IHeldSaleStore, HeldSaleStore>();
         services.AddSingleton<IPrinterService, PrinterService>();
         services.AddSingleton<IBarcodeLabelService, BarcodeLabelService>();
-        services.AddSingleton<IScannedCodeParser, ScannedCodeParser>();
         services.AddSingleton<IScanFeedbackService, ScanFeedbackService>();
         services.AddSingleton<ShortcutService>();
         services.AddSingleton<ReferenceCache>(sp =>
@@ -101,6 +100,7 @@ public static class DependencyInjection
         services.AddTransient<LoyaltyViewModel>();
         services.AddSingleton<SuppliesViewModel>();
         services.AddSingleton<TransfersViewModel>();
+        services.AddSingleton<StockWriteOffsViewModel>();
         services.AddTransient<PermissionsMatrixViewModel>();
         services.AddTransient<AuditViewModel>();
         services.AddTransient<TariffFeaturesViewModel>();
@@ -108,7 +108,7 @@ public static class DependencyInjection
         services.AddTransient<PrintingViewModel>();
         services.AddTransient<BusinessSettingsViewModel>();
         services.AddTransient<SalesPolicyViewModel>();
-        services.AddTransient<ProductReferenceSettingsViewModel>();
+        services.AddTransient<CatalogSettingsViewModel>();
         services.AddTransient<SmsGatewayViewModel>();
         services.AddTransient<ModulesViewModel>();
         services.AddTransient<BarcodePrintViewModel>();

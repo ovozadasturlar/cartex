@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using Avalonia.Input;
 using Avalonia.Media.Imaging;
@@ -8,6 +8,7 @@ using Cartex.ApiClient.Api;
 using Cartex.ApiClient.Querying;
 using Cartex.ApiClient.Paging;
 using Cartex.Shared.Models.Loyalty;
+using Cartex.Shared.Models.Catalog;
 using Cartex.Shared.Models.Products;
 using Cartex.Shared.Models.Storage;
 using Cartex.Shared.Models.Categories;
@@ -23,7 +24,7 @@ namespace Cartex.UI.ViewModels;
 public partial class ProductsViewModel : ViewModelBase, ILoadable
 {
     private readonly IProductsApi _productsApi;
-    private readonly IProductReferenceApi _productReferenceApi;
+    private readonly ICatalogApi _catalogApi;
     private readonly ICategoriesApi _categoriesApi;
     private readonly IUnitsApi _unitsApi;
     private readonly IProductTypesApi _typesApi;
@@ -59,8 +60,10 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string? _editUnitHint;
     [ObservableProperty] private string? _editCategoryHint;
     [ObservableProperty] private string? _editManufacturerHint;
-    [ObservableProperty] private bool _editReferencePrice;
     [ObservableProperty] private bool _hasExistingBarcode;
+    [ObservableProperty] private string _catalogQuery = string.Empty;
+    [ObservableProperty] private bool _isCatalogSearchOpen;
+    [ObservableProperty] private bool _hasNoCatalogMatches;
     [ObservableProperty] private bool _isAddingManufacturer;
     [ObservableProperty] private string _newManufacturerName = string.Empty;
 
@@ -104,7 +107,9 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
 
     private string? _pendingAttributeValues;
 
+    public ScanIndicator ScanIndicator { get; } = new();
     public ObservableCollection<ProductDto> Products { get; } = [];
+    public ObservableCollection<CatalogProductDto> CatalogMatches { get; } = [];
     public ObservableCollection<ProductAttributeVM> EditAttributes { get; } = [];
     public bool HasAttributes => EditAttributes.Count > 0;
 
@@ -168,7 +173,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
 
     public ProductImportViewModel Import { get; }
 
-    public ProductsViewModel(IProductsApi productsApi, IProductReferenceApi productReferenceApi, ICategoriesApi categoriesApi, IUnitsApi unitsApi,
+    public ProductsViewModel(IProductsApi productsApi, ICatalogApi catalogApi, ICategoriesApi categoriesApi, IUnitsApi unitsApi,
         IProductTypesApi typesApi, IStorageApi storageApi, IBarcodesApi barcodesApi, IBarcodeLabelService labels,
         IFilePickerService filePicker, IPrinterService printer, IToastService toast, IBusyService busy, IExportService export, AuthService auth, IDialogService dialog,
         IBusinessApi businessApi, IRatesApi ratesApi, ISettingsApi settingsApi, ReferenceCache cache, ProductImportViewModel import, PrintDispatchService printDispatch)
@@ -181,7 +186,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
             if (e.PropertyName == nameof(ProductImportViewModel.IsOpen)) OnPropertyChanged(nameof(IsModalOpen));
         };
         _productsApi = productsApi;
-        _productReferenceApi = productReferenceApi;
+        _catalogApi = catalogApi;
         _categoriesApi = categoriesApi;
         _unitsApi = unitsApi;
         _typesApi = typesApi;
@@ -835,6 +840,12 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
 
     public async Task OpenCreateForSaleAsync(string? barcode = null) => await OpenCreateAsync(barcode, true);
 
+    public async Task OpenCreateFromReferenceAsync(CatalogProductDto reference)
+    {
+        await OpenCreateAsync(null, true);
+        if (IsEditOpen) ApplyProductReference(reference);
+    }
+
     private async Task OpenCreateAsync(string? barcode, bool isSaleCreate)
     {
         if (!CanCreate) return;
@@ -874,8 +885,11 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         EditUnitHint = null;
         EditCategoryHint = null;
         EditManufacturerHint = null;
-        EditReferencePrice = false;
         HasExistingBarcode = false;
+        CatalogQuery = string.Empty;
+        CatalogMatches.Clear();
+        IsCatalogSearchOpen = false;
+        HasNoCatalogMatches = false;
         EditAttributes.Clear();
         OnPropertyChanged(nameof(HasAttributes));
         EditMinStock = _defaultMinStock;
@@ -903,17 +917,28 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     private async Task LookupEditBarcodeAsync()
     {
         if (!IsNew || ExtractLookupBarcode(EditBarcodes) is not { } code) return;
+        if (await IsBarcodeTakenAsync(code)) return;
 
+        try
+        {
+            if (await ScanIndicator.TrackAsync(_catalogApi.GetByBarcodeAsync(code)) is { } reference)
+                ApplyProductReference(reference);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    private async Task<bool> IsBarcodeTakenAsync(string code)
+    {
         HasExistingBarcode = false;
         try
         {
             var existing = await _productsApi.GetByBarcodeAsync(code, 0);
             HasExistingBarcode = true;
             var useExisting = await _dialog.ConfirmAsync(string.Format(L["barcode_already_used"], existing.ProductName), L["warning"]);
-            if (!useExisting) return;
+            if (!useExisting) return true;
 
             var product = (await _productsApi.GetAllAsync(variantId: existing.VariantId)).FirstOrDefault();
-            if (product is null) return;
+            if (product is null) return true;
             if (IsSaleCreate)
             {
                 CreatedForSale?.Invoke(product);
@@ -924,21 +949,42 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
             {
                 OpenEditCore(product);
             }
-            return;
+            return true;
         }
-        catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound) { }
+        catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound) { return false; }
         catch (Exception ex)
         {
             _toast.Error(ApiErrors.Describe(ex));
-            return;
+            return true;
         }
+    }
+
+    [RelayCommand]
+    private async Task SearchCatalogAsync()
+    {
+        var query = CatalogQuery.Trim();
+        if (query.Length == 0) return;
 
         try
         {
-            ApplyProductReference(await _productReferenceApi.GetByBarcodeAsync(code));
+            var matches = await ScanIndicator.TrackAsync(_catalogApi.SearchAsync(query), found => found.Count > 0);
+            CatalogMatches.Clear();
+            foreach (var match in matches) CatalogMatches.Add(match);
+            IsCatalogSearchOpen = true;
+            HasNoCatalogMatches = CatalogMatches.Count == 0;
         }
-        catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound) { }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    [RelayCommand]
+    private void CloseCatalogSearch() => IsCatalogSearchOpen = false;
+
+    [RelayCommand]
+    private async Task PickCatalogMatchAsync(CatalogProductDto match)
+    {
+        IsCatalogSearchOpen = false;
+        if (await IsBarcodeTakenAsync(match.Barcode)) return;
+        ApplyProductReference(match);
     }
 
     private static string? ExtractLookupBarcode(string value)
@@ -948,18 +994,19 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         return string.IsNullOrWhiteSpace(code) ? null : code;
     }
 
-    private void ApplyProductReference(ProductReferenceDto reference)
+    private void ApplyProductReference(CatalogProductDto reference)
     {
+        _toast.Info(L["catalog_reference_found"]);
         if (string.IsNullOrWhiteSpace(EditName)) EditName = reference.Name;
         EditBarcodes = reference.PackQty is > 0 and not 1
             ? $"{reference.Barcode}*{reference.PackQty.Value:0.###}"
             : reference.Barcode;
 
-        if (!string.IsNullOrWhiteSpace(reference.UnitHint))
+        if (!string.IsNullOrWhiteSpace(reference.Unit))
         {
             var unit = _allUnits.FirstOrDefault(item =>
-                string.Equals(item.Name, reference.UnitHint, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(item.ShortName, reference.UnitHint, StringComparison.OrdinalIgnoreCase));
+                string.Equals(item.Name, reference.Unit, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(item.ShortName, reference.Unit, StringComparison.OrdinalIgnoreCase));
             if (unit is not null)
             {
                 EditDimension = unit.Dimension;
@@ -969,28 +1016,23 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
             else
             {
                 EditUnit = null;
-                EditUnitHint = reference.UnitHint;
+                EditUnitHint = reference.Unit;
             }
         }
 
-        if (!string.IsNullOrWhiteSpace(reference.CategoryHint))
+        var category = reference.CategoryChild ?? reference.CategoryParent;
+        if (!string.IsNullOrWhiteSpace(category))
         {
             EditCategory = Categories.FirstOrDefault(item =>
-                string.Equals(item.Name, reference.CategoryHint, StringComparison.OrdinalIgnoreCase));
-            EditCategoryHint = EditCategory is null ? reference.CategoryHint : null;
+                string.Equals(item.Name, category, StringComparison.OrdinalIgnoreCase));
+            EditCategoryHint = EditCategory is null ? category : null;
         }
 
-        if (!string.IsNullOrWhiteSpace(reference.ManufacturerHint))
+        if (!string.IsNullOrWhiteSpace(reference.Manufacturer))
         {
             EditManufacturer = Manufacturers.FirstOrDefault(item =>
-                string.Equals(item.Name, reference.ManufacturerHint, StringComparison.OrdinalIgnoreCase));
-            EditManufacturerHint = EditManufacturer is null ? reference.ManufacturerHint : null;
-        }
-
-        if (reference.SuggestedPrice is { } price && EditSellingPrice is null)
-        {
-            EditSellingPrice = price;
-            EditReferencePrice = true;
+                string.Equals(item.Name, reference.Manufacturer, StringComparison.OrdinalIgnoreCase));
+            EditManufacturerHint = EditManufacturer is null ? reference.Manufacturer : null;
         }
     }
 
@@ -1038,7 +1080,6 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         EditUnitHint = null;
         EditCategoryHint = null;
         EditManufacturerHint = null;
-        EditReferencePrice = false;
         HasExistingBarcode = false;
         EditMinStock = product.MinStock;
         EditBarcodes = string.Join(", ", product.Barcodes);
@@ -1102,7 +1143,6 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         EditUnitHint = null;
         EditCategoryHint = null;
         EditManufacturerHint = null;
-        EditReferencePrice = false;
         HasExistingBarcode = false;
         EditImageKey = null;
         EditImagePreview = null;

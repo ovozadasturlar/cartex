@@ -224,6 +224,13 @@
                                 <TextBlock Text="{Binding L[edit]}" VerticalAlignment="Center" />
                             </StackPanel>
                         </Button>
+                        <Button Classes="outline" Command="{Binding DeleteCommand}" CommandParameter="{Binding SelectedCustomer}"
+                                IsVisible="{Binding CanDelete}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <mi:MaterialIcon Kind="TrashCanOutline" Width="16" Height="16" />
+                                <TextBlock Text="{Binding L[delete]}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
                         <Button Classes="outline" Command="{Binding OpenMessageCommand}" IsVisible="{Binding CanMessage}">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <mi:MaterialIcon Kind="SendOutline" Width="17" Height="17" />

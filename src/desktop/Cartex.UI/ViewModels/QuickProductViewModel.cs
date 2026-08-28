@@ -1,7 +1,8 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
+using Cartex.Shared.Models.Catalog;
 using Cartex.Shared.Models.Categories;
 using Cartex.Shared.Models.Loyalty;
 using Cartex.Shared.Models.Products;
@@ -17,7 +18,7 @@ public partial class QuickProductViewModel : ViewModelBase
     private readonly ICategoriesApi _categoriesApi;
     private readonly IUnitsApi _unitsApi;
     private readonly IManufacturersApi _manufacturersApi;
-    private readonly IProductReferenceApi _productReferenceApi;
+    private readonly ICatalogApi _catalogApi;
     private readonly IToastService _toast;
     private readonly IBusyService _busy;
     private readonly ReferenceCache _cache;
@@ -40,7 +41,6 @@ public partial class QuickProductViewModel : ViewModelBase
     [ObservableProperty] private string? _categoryHint;
     [ObservableProperty] private string? _manufacturerHint;
     [ObservableProperty] private decimal _packQty = 1;
-    [ObservableProperty] private bool _isReferencePrice;
     [ObservableProperty] private bool _hasExistingBarcode;
 
     public long LookupWarehouseId { get; set; }
@@ -52,14 +52,14 @@ public partial class QuickProductViewModel : ViewModelBase
     public event Func<ProductLookupDto, Task>? ExistingSelected;
 
     public QuickProductViewModel(IProductsApi productsApi, ICategoriesApi categoriesApi, IUnitsApi unitsApi,
-        IManufacturersApi manufacturersApi, IProductReferenceApi productReferenceApi,
+        IManufacturersApi manufacturersApi, ICatalogApi catalogApi,
         IToastService toast, IBusyService busy, ReferenceCache cache, IDialogService dialog, AuthService auth)
     {
         _productsApi = productsApi;
         _categoriesApi = categoriesApi;
         _unitsApi = unitsApi;
         _manufacturersApi = manufacturersApi;
-        _productReferenceApi = productReferenceApi;
+        _catalogApi = catalogApi;
         _toast = toast;
         _busy = busy;
         _cache = cache;
@@ -70,6 +70,25 @@ public partial class QuickProductViewModel : ViewModelBase
     [RelayCommand]
     private async Task Open()
     {
+        ResetForm();
+        if (!await LoadLookupsAsync()) return;
+        SelectedUnit = DefaultUnit;
+        IsOpen = true;
+    }
+
+    public async Task<long> CreateFromReferenceAsync(CatalogProductDto reference, long warehouseId)
+    {
+        LookupWarehouseId = warehouseId;
+        ResetForm();
+        if (!await LoadLookupsAsync()) return 0;
+        ApplyReference(reference);
+        SelectedUnit ??= DefaultUnit;
+        if (SelectedUnit is null) { _toast.Warning(L["unit"]); return 0; }
+        return await CreateAsync();
+    }
+
+    private void ResetForm()
+    {
         Name = string.Empty;
         Barcode = string.Empty;
         Code = string.Empty;
@@ -79,9 +98,16 @@ public partial class QuickProductViewModel : ViewModelBase
         CategoryHint = null;
         ManufacturerHint = null;
         PackQty = 1;
-        IsReferencePrice = false;
         HasExistingBarcode = false;
         SelectedCategory = null;
+        SelectedUnit = null;
+    }
+
+    private UnitDto? DefaultUnit =>
+        Units.FirstOrDefault(u => u.IsDefault && u.Dimension == "Count") ?? Units.FirstOrDefault(u => u.IsDefault) ?? Units.FirstOrDefault();
+
+    private async Task<bool> LoadLookupsAsync()
+    {
         try
         {
             using (_busy.Begin(L["loading"]))
@@ -93,11 +119,9 @@ public partial class QuickProductViewModel : ViewModelBase
                 if (Manufacturers.Count == 0)
                     foreach (var m in await _cache.GetAsync(CacheKeys.Manufacturers, () => _manufacturersApi.GetAllAsync())) Manufacturers.Add(m);
             }
+            return true;
         }
-        catch { _toast.Error(L["error"]); return; }
-
-        SelectedUnit = Units.FirstOrDefault(u => u.IsDefault && u.Dimension == "Count") ?? Units.FirstOrDefault(u => u.IsDefault) ?? Units.FirstOrDefault();
-        IsOpen = true;
+        catch { _toast.Error(L["error"]); return false; }
     }
 
     [RelayCommand]
@@ -131,45 +155,39 @@ public partial class QuickProductViewModel : ViewModelBase
 
         try
         {
-            var reference = await _productReferenceApi.GetByBarcodeAsync(code);
-            ApplyReference(reference);
+            if (await _catalogApi.GetByBarcodeAsync(code) is { } reference)
+                ApplyReference(reference);
         }
-        catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound) { }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
-    public void ApplyReference(ProductReferenceDto reference)
+    public void ApplyReference(CatalogProductDto reference)
     {
         Barcode = reference.Barcode;
         if (string.IsNullOrWhiteSpace(Name)) Name = reference.Name;
         PackQty = reference.PackQty is > 0 ? reference.PackQty.Value : 1;
 
-        if (!string.IsNullOrWhiteSpace(reference.UnitHint))
+        if (!string.IsNullOrWhiteSpace(reference.Unit))
         {
             SelectedUnit = Units.FirstOrDefault(unit =>
-                string.Equals(unit.Name, reference.UnitHint, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(unit.ShortName, reference.UnitHint, StringComparison.OrdinalIgnoreCase));
-            UnitHint = SelectedUnit is null ? reference.UnitHint : null;
+                string.Equals(unit.Name, reference.Unit, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(unit.ShortName, reference.Unit, StringComparison.OrdinalIgnoreCase));
+            UnitHint = SelectedUnit is null ? reference.Unit : null;
         }
 
-        if (!string.IsNullOrWhiteSpace(reference.CategoryHint))
+        var category = reference.CategoryChild ?? reference.CategoryParent;
+        if (!string.IsNullOrWhiteSpace(category))
         {
-            SelectedCategory = Categories.FirstOrDefault(category =>
-                string.Equals(category.Name, reference.CategoryHint, StringComparison.OrdinalIgnoreCase));
-            CategoryHint = SelectedCategory is null ? reference.CategoryHint : null;
+            SelectedCategory = Categories.FirstOrDefault(item =>
+                string.Equals(item.Name, category, StringComparison.OrdinalIgnoreCase));
+            CategoryHint = SelectedCategory is null ? category : null;
         }
 
-        if (!string.IsNullOrWhiteSpace(reference.ManufacturerHint))
+        if (!string.IsNullOrWhiteSpace(reference.Manufacturer))
         {
             SelectedManufacturer = Manufacturers.FirstOrDefault(manufacturer =>
-                string.Equals(manufacturer.Name, reference.ManufacturerHint, StringComparison.OrdinalIgnoreCase));
-            ManufacturerHint = SelectedManufacturer is null ? reference.ManufacturerHint : null;
-        }
-
-        if (reference.SuggestedPrice is { } price && SellingPrice is null)
-        {
-            SellingPrice = price;
-            IsReferencePrice = true;
+                string.Equals(manufacturer.Name, reference.Manufacturer, StringComparison.OrdinalIgnoreCase));
+            ManufacturerHint = SelectedManufacturer is null ? reference.Manufacturer : null;
         }
     }
 
@@ -232,6 +250,12 @@ public partial class QuickProductViewModel : ViewModelBase
             if (HasExistingBarcode || !IsOpen) return;
         }
 
+        await CreateAsync();
+    }
+
+    private async Task<long> CreateAsync()
+    {
+        if (SelectedUnit is null) return 0;
         try
         {
             using (_busy.Begin(L["loading"]))
@@ -249,11 +273,13 @@ public partial class QuickProductViewModel : ViewModelBase
                 IsOpen = false;
                 _toast.Success(L["success"]);
                 if (variantId != 0 && Created is { } created) await created(variantId, Name.Trim());
+                return variantId;
             }
         }
         catch (Exception ex)
         {
             _toast.Error(ApiErrors.Describe(ex));
+            return 0;
         }
     }
 }

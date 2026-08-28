@@ -4,7 +4,10 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
 using Cartex.ApiClient.Querying;
+using Cartex.Shared.Models.Catalog;
 using Cartex.Shared.Models.Prepacks;
+using Cartex.Shared.Barcodes;
+using Cartex.Shared.Models.Scan;
 using Cartex.Shared.Models.Sales;
 using Cartex.Shared.Models.Stocks;
 using Cartex.Shared.Models.Customers;
@@ -19,7 +22,6 @@ using Cartex.Shared.Models.Ordering;
 using Avalonia.Input;
 using Cartex.UI.Models;
 using Cartex.UI.Services;
-using Refit;
 
 namespace Cartex.UI.ViewModels;
 
@@ -125,6 +127,9 @@ public partial class CartItem : ObservableObject
     public decimal? PriceOverride => UnitPrice != OriginalPrice ? UnitPrice : null;
     public decimal LineTotal => UnitPrice * Quantity;
 
+    public SubmitCartItemRequest ToCartLine() =>
+        new(VariantId, Quantity, IsPrepack ? null : PriceOverride, PrepackId);
+
     private decimal? _enteredAmount;
     private bool _applyingAmount;
 
@@ -188,7 +193,6 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     private readonly IPrinterService _printer;
     private readonly PrintDispatchService _printDispatch;
     private readonly IDialogService _dialog;
-    private readonly IScannedCodeParser _scannedCodeParser;
     private readonly IScanFeedbackService _scanFeedback;
     private readonly ConnectivityService _connectivity;
     private readonly AuthService _auth;
@@ -196,9 +200,10 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     private readonly List<CategoryDto> _allCategories = [];
     private long? _selectedCategoryId;
 
-    private readonly IPrepacksApi _prepacksApi;
     private readonly IFeaturesApi _featuresApi;
+    private readonly IScanApi _scanApi;
 
+    public ScanIndicator ScanIndicator { get; } = new();
     public BranchContextService Branch { get; }
     public ProductsViewModel ProductEditor { get; }
     public PrepackViewModel Prepack { get; }
@@ -233,6 +238,8 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _canSeeQueue;
     [ObservableProperty] private bool _posListMode = SettingsService.Instance.PosListMode;
     [ObservableProperty] private bool _isProductDetailOpen;
+    [ObservableProperty] private bool _isReferenceOpen;
+    [ObservableProperty] private CatalogProductDto? _referenceProduct;
     [ObservableProperty] private StockOnHandDto? _detailProduct;
     [ObservableProperty] private string _detailBarcodes = string.Empty;
     [ObservableProperty] private bool _isReceiveOpen;
@@ -250,12 +257,21 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     private decimal _detailRequestedQty;
     private static readonly CustomerDto EmptyCustomer = new(0, "", null, null, null, null, null, 0, 0, 0, 0);
     private static readonly StockOnHandDto EmptyDetailProduct = new(0, "", null, null, "", "", 0, 0, null);
+    private static readonly CatalogProductDto EmptyReference = new("", "", null, null, null, null, null, null, null, null);
     public CustomerDto SelectedCustomerDisplay => SelectedCustomer ?? EmptyCustomer;
     public StockOnHandDto DetailProductDisplay => DetailProduct ?? EmptyDetailProduct;
+    public CatalogProductDto ReferenceProductDisplay => ReferenceProduct ?? EmptyReference;
+    public string? ReferenceCategoryText => ReferenceProduct?.CategoryChild ?? ReferenceProduct?.CategoryParent;
 
-    public bool IsModalOpen => IsCustomerPanelOpen || IsProductDetailOpen || IsQuickRatesOpen || IsQueuePanelOpen || IsHeldPanelOpen || ProductEditor.IsModalOpen || Prepack.IsOpen;
+    public bool IsModalOpen => IsCustomerPanelOpen || IsProductDetailOpen || IsReferenceOpen || IsQuickRatesOpen || IsQueuePanelOpen || IsHeldPanelOpen || ProductEditor.IsModalOpen || Prepack.IsOpen;
     partial void OnIsCustomerPanelOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsProductDetailOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+    partial void OnIsReferenceOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+    partial void OnReferenceProductChanged(CatalogProductDto? value)
+    {
+        OnPropertyChanged(nameof(ReferenceProductDisplay));
+        OnPropertyChanged(nameof(ReferenceCategoryText));
+    }
     partial void OnIsQueuePanelOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsHeldPanelOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
 
@@ -427,19 +443,19 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
 
     public SalesViewModel(ISalesApi salesApi, IStocksApi stocksApi, ICustomersApi customersApi,
         IProductsApi productsApi, ICategoriesApi categoriesApi, IReceiptApi receiptApi, IBarcodesApi barcodesApi, BranchContextService branch,
-        ProductsViewModel productEditor, IToastService toast, IBusyService busy, IHeldSaleStore heldStore, IPrinterService printer, IScannedCodeParser scannedCodeParser, IScanFeedbackService scanFeedback, AuthService auth,
+        ProductsViewModel productEditor, IToastService toast, IBusyService busy, IHeldSaleStore heldStore, IPrinterService printer, IScanFeedbackService scanFeedback, AuthService auth,
         IBusinessApi businessApi, IRatesApi ratesApi, IOrderingApi orderingApi, PosHandoffService handoff, ISettingsApi settingsApi,
-        IPrepacksApi prepacksApi, PrepackViewModel prepack, IFeaturesApi featuresApi, ReferenceCache cache,
+        PrepackViewModel prepack, IFeaturesApi featuresApi, ReferenceCache cache,
         ISuppliersApi suppliersApi, ISuppliesApi suppliesApi, QueueHubService queueHub, IShiftsApi shiftsApi,
-        PrintDispatchService printDispatch, IDialogService dialog)
+        PrintDispatchService printDispatch, IDialogService dialog, IScanApi scanApi)
     {
+        _scanApi = scanApi;
         _shiftsApi = shiftsApi;
         _printDispatch = printDispatch;
         _dialog = dialog;
         _cache = cache;
         _suppliersApi = suppliersApi;
         _suppliesApi = suppliesApi;
-        _prepacksApi = prepacksApi;
         Prepack = prepack;
         _featuresApi = featuresApi;
         _businessApi = businessApi;
@@ -467,7 +483,6 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         _busy = busy;
         _heldStore = heldStore;
         _printer = printer;
-        _scannedCodeParser = scannedCodeParser;
         _scanFeedback = scanFeedback;
         _connectivity = ServiceLocator.Resolve<ConnectivityService>();
         _auth = auth;
@@ -500,6 +515,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     private void HandleEscape()
     {
         if (ProductEditor.IsEditOpen) { ProductEditor.CancelEditCommand.Execute(null); return; }
+        if (IsReferenceOpen) { IsReferenceOpen = false; return; }
         if (IsQuickRatesOpen) { IsQuickRatesOpen = false; return; }
         if (IsReceiveOpen) { IsReceiveOpen = false; return; }
         if (IsProductDetailOpen) { IsProductDetailOpen = false; return; }
@@ -513,6 +529,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     {
         ProductEditor.OnNavigatedFrom();
         Prepack.IsOpen = false;
+        IsReferenceOpen = false;
         IsQuickRatesOpen = false;
         IsReceiveOpen = false;
         IsProductDetailOpen = false;
@@ -540,7 +557,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             return existing;
         }
         var code = await SubmitCartAsync(
-            [.. CartItems.Select(x => new SubmitCartItemRequest(x.VariantId, x.Quantity, x.PriceOverride))],
+            [.. CartItems.Select(x => x.ToCartLine())],
             SelectedCustomer?.Id,
             string.IsNullOrWhiteSpace(SaleNote) ? null : SaleNote.Trim());
         if (code is not null) _activeCartCode = code;
@@ -569,7 +586,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         try
         {
             await _orderingApi.UpdateItemsAsync(code, new UpdateCartItemsRequest(
-                CartItems.Select(x => new SubmitCartItemRequest(x.VariantId, x.Quantity, x.PriceOverride)).ToList()));
+                CartItems.Select(x => x.ToCartLine()).ToList()));
         }
         catch { }
     }
@@ -738,7 +755,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             // etilishini server o'zi nazorat qiladi; lekin `Proforma` turi navbatda
             // ko'rinmaydi va kassa tozalanmaydi — kassir shu savat bilan davom etadi.
             var code = _activeCartCode ?? await SubmitCartAsync(
-                [.. CartItems.Select(x => new SubmitCartItemRequest(x.VariantId, x.Quantity, x.PriceOverride))],
+                [.. CartItems.Select(x => x.ToCartLine())],
                 SelectedCustomer?.Id,
                 string.IsNullOrWhiteSpace(SaleNote) ? null : SaleNote.Trim(),
                 kind: "Proforma");
@@ -778,7 +795,19 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     {
         try
         {
-            var cart = await _orderingApi.GetByCodeAsync(code);
+            return await ApplyCartAsync(await _orderingApi.GetByCodeAsync(code), code);
+        }
+        catch (Exception exception)
+        {
+            _toast.Error(ApiErrors.Describe(exception));
+            return false;
+        }
+    }
+
+    private async Task<bool> ApplyCartAsync(CartDto cart, string code)
+    {
+        try
+        {
             if (cart.Status is "CheckedOut" or "Cancelled")
             {
                 _toast.Warning(L["cart_already_done"]);
@@ -792,6 +821,13 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
 
             foreach (var item in cart.Items)
             {
+                if (item.PrepackId is { } prepackId)
+                {
+                    AddPrepackLine(item.VariantId, prepackId,
+                        $"{item.ProductName} ({item.Quantity:0.###} {item.UnitName})",
+                        item.UnitPrice, item.Quantity);
+                    continue;
+                }
                 // Use local stock price (already in base currency) to avoid unconverted foreign-currency prices
                 var price = Products.FirstOrDefault(p => p.VariantId == item.VariantId)?.SellingPrice
                     ?? item.OriginalUnitPrice ?? item.UnitPrice;
@@ -1368,22 +1404,18 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
 
         SearchText = string.Empty;
 
-        if (code.Length == 32 && code.All(char.IsAsciiHexDigit))
-        {
-            if (await TryLoadCartAsync(code))
-                return;
-        }
-
-        var scanned = _scannedCodeParser.Parse(code);
-
         if (IsOfflineMode)
         {
-            var cachedBarcode = await Offline.GetBarcodeAsync(scanned.Code);
+            var cachedBarcode = await Offline.GetBarcodeAsync(code);
+            decimal? weighed = null;
+            if (cachedBarcode is null && WeightedBarcode.TryParse(code, out var weightedCode, out var weight))
+            {
+                cachedBarcode = await Offline.GetBarcodeAsync(weightedCode);
+                weighed = weight;
+            }
             if (cachedBarcode is not null && await Offline.GetProductAsync(cachedBarcode.VariantId) is { } cachedProduct)
             {
-                var qty = scanned.Type == ScannedCodeType.Weighted && scanned.Weight is { } w
-                    ? w
-                    : cachedBarcode.PackQty > 1 ? cachedBarcode.PackQty : 1;
+                var qty = weighed ?? (cachedBarcode.PackQty > 1 ? cachedBarcode.PackQty : 1);
                 AddToCart(cachedProduct.VariantId, cachedProduct.ProductName, cachedProduct.SellingPrice, qty, cachedProduct.Quantity,
                     allowsAmountEntry: cachedProduct.AllowsAmountEntry, allowsFractional: cachedProduct.AllowsFractional);
                 return;
@@ -1399,54 +1431,56 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             return;
         }
 
+        ScanResultDto result;
         try
         {
-            var product = await _productsApi.GetByBarcodeAsync(scanned.Code, warehouseId.Value, forSale: true);
-            var quantity = scanned.Type == ScannedCodeType.Weighted && scanned.Weight is { } weight
-                ? weight
-                : product.PackQty > 1 ? product.PackQty : 1;
-            AddToCart(product.VariantId, product.ProductName, product.SellingPrice, quantity, product.OnHand,
-                allowsAmountEntry: product.AllowsAmountEntry, allowsFractional: product.AllowsFractional);
+            result = await ScanIndicator.TrackAsync(
+                _scanApi.ScanAsync(code, warehouseId.Value, forSale: true),
+                found => found.Kind != ScanKind.None);
+        }
+        catch (Exception ex)
+        {
+            _toast.Error(ApiErrors.Describe(ex));
             return;
         }
-        catch (ApiException)
-        {
-        }
 
-        if (code.StartsWith("PP"))
+        switch (result)
         {
-            try
-            {
-                var prepack = await _prepacksApi.GetByCodeAsync(code, warehouseId.Value);
+            case { Kind: ScanKind.Product, Product: { } product }:
+                var quantity = result.Quantity ?? (product.PackQty > 1 ? product.PackQty : 1);
+                AddToCart(product.VariantId, product.ProductName, product.SellingPrice, quantity, product.OnHand,
+                    allowsAmountEntry: product.AllowsAmountEntry, allowsFractional: product.AllowsFractional);
+                return;
+            case { Kind: ScanKind.Prepack, Prepack: { } prepack }:
                 AddPrepackToCart(prepack);
                 return;
-            }
-            catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.BadRequest)
-            {
-                _toast.Error(ApiErrors.Describe(ex));
-                return;
-            }
-            catch (ApiException)
-            {
-            }
-        }
-
-        try
-        {
-            var customer = await _customersApi.GetByCardAsync(code);
-            if (customer is not null)
-            {
+            case { Kind: ScanKind.Customer, Customer: { } customer }:
                 SelectedCustomer = customer;
                 _toast.Success(customer.FullName);
                 return;
-            }
+            case { Kind: ScanKind.Cart, Cart: { } cart }:
+                await ApplyCartAsync(cart, code);
+                return;
+            case { Kind: ScanKind.Reference, Reference: { } reference }:
+                ReferenceProduct = reference;
+                IsReferenceOpen = true;
+                return;
+            default:
+                _scanFeedback.Error();
+                _toast.Warning(L["barcode_not_found"]);
+                return;
         }
-        catch (ApiException)
-        {
-        }
+    }
 
-        _scanFeedback.Error();
-        _toast.Warning(L["barcode_not_found"]);
+    [RelayCommand]
+    private void CloseReference() => IsReferenceOpen = false;
+
+    [RelayCommand]
+    private async Task AddReferenceAsync()
+    {
+        if (ReferenceProduct is not { } reference) return;
+        IsReferenceOpen = false;
+        await ProductEditor.OpenCreateFromReferenceAsync(reference);
     }
 
     private void OnProductCreatedForSale(ProductDto product)
@@ -1748,14 +1782,21 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             return;
         }
 
+        AddPrepackLine(prepack.VariantId, prepack.PrepackId,
+            $"{prepack.ProductName} ({prepack.Quantity:0.###} {prepack.UnitName})",
+            prepack.UnitPrice, prepack.Quantity);
+    }
+
+    private void AddPrepackLine(long variantId, long prepackId, string name, decimal unitPrice, decimal quantity)
+    {
         CartItems.Insert(0, new CartItem
         {
-            VariantId = prepack.VariantId,
-            PrepackId = prepack.PrepackId,
-            ProductName = $"{prepack.ProductName} ({prepack.Quantity:0.###} {prepack.UnitName})",
-            OriginalPrice = prepack.UnitPrice,
-            UnitPrice = prepack.UnitPrice,
-            Quantity = prepack.Quantity
+            VariantId = variantId,
+            PrepackId = prepackId,
+            ProductName = name,
+            OriginalPrice = unitPrice,
+            UnitPrice = unitPrice,
+            Quantity = quantity
         });
         NotifyTotals();
     }
@@ -1970,8 +2011,10 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
     {
         IsCustomerPanelOpen = !IsCustomerPanelOpen;
         IsAddingCustomer = false;
-        if (IsCustomerPanelOpen && CustomerResults.Count == 0)
-            _ = SearchCustomerAsync();
+        if (!IsCustomerPanelOpen) return;
+        CustomerSearch = string.Empty;
+        Debounce.Cancel(ref _customerSearchCts);
+        _ = SearchCustomerAsync();
     }
 
     [RelayCommand]
@@ -2114,7 +2157,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         try
         {
             var code = await SubmitCartAsync(
-                [.. held.Items.Select(x => new SubmitCartItemRequest(x.VariantId, x.Quantity, x.PriceOverride))],
+                [.. held.Items.Select(x => x.ToCartLine())],
                 held.Customer?.Id, held.Label);
             if (code is null) { _toast.Error(L["error"]); return; }
             await _printDispatch.PrintCartProformaAsync(code, new PreviewDocument(
@@ -2239,7 +2282,7 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
             using (_busy.Begin(L["loading"]))
             {
                 var queueItems = CartItems
-                    .Select(item => new SubmitCartItemRequest(item.VariantId, item.Quantity, item.PriceOverride))
+                    .Select(item => item.ToCartLine())
                     .ToList();
                 var queueNote = string.IsNullOrWhiteSpace(SaleNote) ? null : SaleNote.Trim();
 
@@ -2287,6 +2330,13 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
         if (!CanCheckout)
             return;
         if (CartItems.Count == 0) { _toast.Warning(L["no_items"]); return; }
+        // Bepul mahsulot sotuvga qo'yilmaydi: narxsiz qator savdoni to'xtatadi, lekin
+        // narx maydonini bo'shatish xato bermaydi - u shunchaki nolga tushadi.
+        if (CartItems.FirstOrDefault(x => x.UnitPrice <= 0) is { } priceless)
+        {
+            _toast.Warning(string.Format(L["cart_price_required"], priceless.ProductName));
+            return;
+        }
 
         var warehouseId = Branch.CurrentWarehouseId;
         if (warehouseId is null) { _toast.Warning(L["select_warehouse"]); return; }
@@ -2363,7 +2413,8 @@ public partial class SalesViewModel : ViewModelBase, ILoadable
                     // Navbatdan kelgan chegirma har doim yuboriladi: uni kiritgan sotuvchi
                     // ruxsatini serverning o'zi tekshirgan; yakunlovchi ruxsatisiz ham saqlanadi.
                     var checkoutItems = CartItems
-                        .Select(c => new CheckoutCartItemDto(c.VariantId, c.Quantity, c.PriceOverride)
+                        .Select(c => new CheckoutCartItemDto(c.VariantId, c.Quantity,
+                            c.IsPrepack ? null : c.PriceOverride, c.PrepackId)
                             { ExpectedUnitPrice = c.IsPrepack ? null : c.OriginalPrice })
                         .ToList();
 

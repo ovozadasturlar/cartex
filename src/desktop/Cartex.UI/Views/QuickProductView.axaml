@@ -108,8 +108,6 @@
                         <TextBlock Text="{Binding L[selling_price]}" Classes="caption" />
                         <NumericUpDown Value="{Binding SellingPrice, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="1000" FormatString="N2"
                                        ShowButtonSpinner="False" MinHeight="40" PlaceholderText="0.00" />
-                        <TextBlock Text="{Binding L[product_reference_price_source]}" IsVisible="{Binding IsReferencePrice}"
-                                   Classes="caption" Foreground="{DynamicResource TextMuted}" />
                     </StackPanel>
                 </Grid>
 

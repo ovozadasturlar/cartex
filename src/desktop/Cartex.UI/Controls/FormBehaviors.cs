@@ -218,7 +218,8 @@ public static class FormBehaviors
             Dispatcher.UIThread.Post(() => FocusFirst(host), DispatcherPriority.Background);
     }
 
-    private static void FocusFirst(Control host)
+    /// Oyna ochilganda kursor birinchi maydonga tushadi: kassir sichqonchani qidirmasin.
+    public static void FocusFirst(Control host)
     {
         if (!host.IsVisible || !host.IsAttachedToVisualTree()) return;
         var first = FormInputs(host).FirstOrDefault();

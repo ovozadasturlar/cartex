@@ -222,6 +222,9 @@
                             <mi:MaterialIcon Kind="BarcodeScan" Width="20" Height="20" Margin="10,0,4,0"
                                              Foreground="{DynamicResource BrandPrimaryBrush}" />
                         </TextBox.InnerLeftContent>
+                        <TextBox.InnerRightContent>
+                            <views:ScanIndicatorView DataContext="{Binding ScanIndicator}" />
+                        </TextBox.InnerRightContent>
                         <TextBox.KeyBindings>
                             <KeyBinding Gesture="Enter" Command="{Binding ScanCommand}" />
                         </TextBox.KeyBindings>
@@ -783,7 +786,7 @@
                                                 <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondary}"
                                                            IsVisible="{Binding !$parent[UserControl].DataContext.CanOverridePrice}"
                                                            Text="{Binding UnitPrice, StringFormat='{}{0:N0}'}" />
-                                                <NumericUpDown Value="{Binding UnitPrice, Mode=TwoWay, Converter={x:Static conv:EmptyKeepsValueConverter.Instance}}" Minimum="0"
+                                                <NumericUpDown Value="{Binding UnitPrice, Mode=TwoWay, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0"
                                                                FormatString="0.##" ShowButtonSpinner="False"
                                                                MinHeight="28" MinWidth="96" HorizontalAlignment="Left"
                                                                IsVisible="{Binding $parent[UserControl].DataContext.CanOverridePrice}" />
@@ -1398,6 +1401,69 @@
                         <mi:MaterialIcon Kind="Pencil" Width="18" Height="18" />
                     </Button>
                 </Grid>
+            </Border>
+        </Border>
+
+        <Border Grid.ColumnSpan="3" Background="#30000000" IsVisible="{Binding IsReferenceOpen}"
+                c:OverlayBehaviors.DismissCommand="{Binding CloseReferenceCommand}">
+            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="440" MaxHeight="640"
+                    VerticalAlignment="Center" HorizontalAlignment="Center"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
+                <ScrollViewer>
+                    <StackPanel Margin="22" Spacing="12">
+                        <Grid ColumnDefinitions="Auto,16,*">
+                            <Border Width="128" Height="128" CornerRadius="12" ClipToBounds="True"
+                                    VerticalAlignment="Top" Background="{DynamicResource SidebarItemHover}">
+                                <Panel>
+                                    <mi:MaterialIcon Kind="BookSearchOutline" Width="40" Height="40"
+                                                     HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                     Foreground="{DynamicResource TextMuted}" />
+                                    <Image il:ImageLoader.Source="{Binding ReferenceProductDisplay.ImageUrl, Converter={x:Static conv:ImageUrlConverter.Instance}}"
+                                           Stretch="UniformToFill" />
+                                </Panel>
+                            </Border>
+                            <StackPanel Grid.Column="2" Spacing="10">
+                                <TextBlock Text="{Binding L[catalog_reference_found]}" Classes="caption"
+                                           Foreground="{DynamicResource TextMuted}" />
+                                <TextBlock Text="{Binding ReferenceProductDisplay.Name}" FontSize="17" FontWeight="Bold"
+                                           TextWrapping="Wrap" Foreground="{DynamicResource TextPrimary}" />
+                                <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding L[manufacturer]}" Foreground="{DynamicResource TextSecondary}" />
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ReferenceProductDisplay.Manufacturer}"
+                                               Foreground="{DynamicResource TextPrimary}" />
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding L[category]}" Foreground="{DynamicResource TextSecondary}" />
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ReferenceCategoryText}"
+                                               Foreground="{DynamicResource TextPrimary}" />
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding L[model]}" Foreground="{DynamicResource TextSecondary}" />
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ReferenceProductDisplay.Model}"
+                                               Foreground="{DynamicResource TextPrimary}" />
+                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="{Binding L[unit]}" Foreground="{DynamicResource TextSecondary}" />
+                                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding ReferenceProductDisplay.Unit}"
+                                               Foreground="{DynamicResource TextPrimary}" />
+                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="{Binding L[barcode]}" Foreground="{DynamicResource TextSecondary}" />
+                                    <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding ReferenceProductDisplay.Barcode}"
+                                               FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" />
+                                </Grid>
+                            </StackPanel>
+                        </Grid>
+
+                        <TextBlock Text="{Binding L[catalog_reference_hint]}" TextWrapping="Wrap" FontSize="12"
+                                   Foreground="{DynamicResource TextMuted}" />
+
+                        <Grid ColumnDefinitions="Auto,8,*" Margin="0,6,0,0">
+                            <Button Grid.Column="0" Classes="outline" MinHeight="46" Padding="16,0"
+                                    Command="{Binding CloseReferenceCommand}" Content="{Binding L[cancel]}" />
+                            <Button Grid.Column="2" Classes="brand" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                    MinHeight="46" Command="{Binding AddReferenceCommand}"
+                                    IsVisible="{Binding CanManageProducts}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <mi:MaterialIcon Kind="PackageVariantPlus" Width="18" Height="18" />
+                                    <TextBlock Text="{Binding L[add]}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
             </Border>
         </Border>
 

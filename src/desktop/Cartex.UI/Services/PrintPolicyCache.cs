@@ -8,19 +8,26 @@ namespace Cartex.UI.Services;
 public sealed record LocalPrintPolicy(
     PrintRoutingPolicyDto Routing,
     SalesPolicyDto Sales,
-    bool HasEnabledLocalEndpoint);
+    bool HasEnabledLocalEndpoint,
+    bool PinnedToThisDevice);
 
 public static class LocalPrintRouting
 {
     public static bool ShouldPrintLocally(
-        PrintRoutingPolicyDto? policy,
+        LocalPrintPolicy? policy,
         bool canPrintLocally,
         bool hasLocalPrinter,
         bool salesPolicyAllows) =>
         canPrintLocally
         && hasLocalPrinter
         && salesPolicyAllows
-        && policy is { IsEnabled: true, RoutingMode: PrintRoutingMode.LocalFirst };
+        && policy is { Routing.IsEnabled: true }
+        && policy.Routing.RoutingMode switch
+        {
+            PrintRoutingMode.LocalFirst => true,
+            PrintRoutingMode.LocalOnly => policy.PinnedToThisDevice,
+            _ => false
+        };
 }
 
 public sealed class PrintPolicyCache
@@ -143,8 +150,13 @@ public sealed class PrintPolicyCache
     {
         public LocalPrintPolicy? Policy(PrintJobKind kind) =>
             Policies.TryGetValue(kind, out var routing)
-                ? new LocalPrintPolicy(routing, Sales, HasEnabledEndpoint(kind))
+                ? new LocalPrintPolicy(routing, Sales, HasEnabledEndpoint(kind), PinnedHere(routing))
                 : null;
+
+        private bool PinnedHere(PrintRoutingPolicyDto routing) =>
+            DeviceNode is not null
+            && routing.Targets.Any(target => target.IsEnabled
+                && DeviceNode.Endpoints.Any(x => x.Id == target.EndpointId && x.IsEnabled));
 
         private bool HasEnabledEndpoint(PrintJobKind kind)
         {

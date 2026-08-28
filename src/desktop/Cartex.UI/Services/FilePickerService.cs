@@ -10,6 +10,7 @@ public interface IFilePickerService
     Task<PickedFile?> PickImageAsync();
     Task<PickedFile?> PickSpreadsheetAsync();
     Task<PickedFile?> PickJsonAsync();
+    Task<PickedFile?> PickCatalogPackAsync();
     Task<Stream?> SaveFileAsync(string suggestedName, string extension);
     Task<string?> SaveFilePathAsync(string suggestedName, string extension);
 }
@@ -82,6 +83,24 @@ public sealed class FilePickerService : IFilePickerService
 
         var file = files[0];
         return new PickedFile(await file.OpenReadAsync(), file.Name, "application/json");
+    }
+
+    public async Task<PickedFile?> PickCatalogPackAsync()
+    {
+        if (_top is null)
+            return null;
+
+        var files = await _top.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            AllowMultiple = false,
+            FileTypeFilter = [new FilePickerFileType("Catalog pack") { Patterns = ["*.db"] }]
+        });
+
+        if (files.Count == 0)
+            return null;
+
+        var file = files[0];
+        return new PickedFile(await file.OpenReadAsync(), file.Name, "application/vnd.sqlite3");
     }
 
     public async Task<Stream?> SaveFileAsync(string suggestedName, string extension)

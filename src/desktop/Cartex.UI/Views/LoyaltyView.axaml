@@ -316,7 +316,7 @@
             </Grid>
         </DockPanel>
 
-        <Border IsVisible="{Binding IsRuleOpen}" Background="#30000000"
+        <Border IsVisible="{Binding IsRuleOpen}" Background="#30000000" c:FormBehaviors.AutoFocus="True"
                 c:OverlayBehaviors.DismissCommand="{Binding CancelRuleCommand}">
             <Border Classes="form" Background="{DynamicResource CardBg}" CornerRadius="14" Width="440"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
@@ -369,7 +369,7 @@
             </Border>
         </Border>
 
-        <Border IsVisible="{Binding IsDiscountOpen}" Background="#30000000"
+        <Border IsVisible="{Binding IsDiscountOpen}" Background="#30000000" c:FormBehaviors.AutoFocus="True"
                 c:OverlayBehaviors.DismissCommand="{Binding CancelDiscountCommand}">
             <Border Classes="form" Background="{DynamicResource CardBg}" CornerRadius="14" Width="560" MaxHeight="680"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"

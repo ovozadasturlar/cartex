@@ -39,7 +39,9 @@ public sealed class PrintHostService
     private long? _registeredBranchId;
     private string? _hostToken;
     private string? _reportedFailure;
-    private bool _hubSubscribed;
+    private readonly HubSubscription _subscription = new();
+    private DateTime _lastHeartbeatAt;
+    private static readonly TimeSpan HeartbeatInterval = TimeSpan.FromSeconds(60);
     private int _processPending;
     private IReadOnlyList<PrinterEndpointRegistration> _cachedEndpoints = [];
     private DateTime _endpointsLoadedAt;
@@ -121,7 +123,6 @@ public sealed class PrintHostService
             if (_lifetime is not null) return;
             _lifetime = new CancellationTokenSource();
             _ = RunAsync(_lifetime.Token);
-            _ = RunHubAsync(_lifetime.Token);
         }
         finally
         {
@@ -129,52 +130,11 @@ public sealed class PrintHostService
         }
     }
 
+    // Ish topshirig'i hub orqali keladi, so'rab olinmaydi: sikl faqat ro'yxatdan o'tishni va
+    // hub obunasini tirik saqlaydi. Obuna yangilanganda kutayotgan ishlar darhol olinadi.
     private async Task RunAsync(CancellationToken cancellationToken)
     {
-        while (!cancellationToken.IsCancellationRequested)
-        {
-            try
-            {
-                if (!_auth.IsAuthenticated || !_auth.HasPermission("printing.host")
-                    || !SettingsService.Instance.EnabledFeatures.Contains("remote_printing"))
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
-                    continue;
-                }
-
-                if (_branch.CurrentBranchId is null)
-                {
-                    await Task.Delay(1000, cancellationToken);
-                    continue;
-                }
-                if (!await RegisterAsync(_branch.CurrentBranchId.Value, cancellationToken))
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(20), cancellationToken);
-                    continue;
-                }
-
-                await ProcessAssignedAsync(cancellationToken);
-
-                // A full healthy cycle means whatever was shown in the settings banner
-                // (e.g. rejected while the device was still untrusted) is over.
-                ClearHostFailure();
-                await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken);
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                break;
-            }
-            catch (Exception exception)
-            {
-                ReportHostFailure(exception);
-                await Task.Delay(TimeSpan.FromSeconds(15), cancellationToken);
-            }
-        }
-    }
-
-    private async Task RunHubAsync(CancellationToken cancellationToken)
-    {
-        var delay = TimeSpan.FromSeconds(1);
+        var backoff = TimeSpan.FromSeconds(1);
         while (!cancellationToken.IsCancellationRequested)
         {
             try
@@ -182,16 +142,20 @@ public sealed class PrintHostService
                 if (!_auth.IsAuthenticated
                     || !_auth.HasPermission("printing.host")
                     || !SettingsService.Instance.IsFeatureOn("remote_printing")
-                    || _registeredBranchId is null
-                    || string.IsNullOrWhiteSpace(_hostToken))
+                    || _branch.CurrentBranchId is null)
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+                    await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
                     continue;
                 }
 
+                await RegisterAsync(_branch.CurrentBranchId.Value, cancellationToken);
                 if (await EnsureHubAsync(cancellationToken))
                     await ProcessAssignedAsync(cancellationToken);
-                delay = TimeSpan.FromSeconds(1);
+
+                // A full healthy cycle means whatever was shown in the settings banner
+                // (e.g. rejected while the device was still untrusted) is over.
+                ClearHostFailure();
+                backoff = TimeSpan.FromSeconds(1);
                 await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -203,19 +167,20 @@ public sealed class PrintHostService
                 ReportHostFailure(exception);
                 try
                 {
-                    await Task.Delay(delay, cancellationToken);
+                    await Task.Delay(backoff, cancellationToken);
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
                     break;
                 }
-                delay = TimeSpan.FromSeconds(Math.Min(delay.TotalSeconds * 2, 30));
+                backoff = TimeSpan.FromSeconds(Math.Min(backoff.TotalSeconds * 2, 30));
             }
         }
     }
 
-    private async Task<bool> RegisterAsync(long branchId, CancellationToken cancellationToken)
+    private async Task RegisterAsync(long branchId, CancellationToken cancellationToken)
     {
+        if (_registeredBranchId == branchId && DateTime.UtcNow - _lastHeartbeatAt < HeartbeatInterval) return;
         var endpoints = BuildEndpoints();
         if (_registeredBranchId != branchId)
         {
@@ -237,9 +202,10 @@ public sealed class PrintHostService
             }
 
             _registeredBranchId = branchId;
+            _lastHeartbeatAt = DateTime.UtcNow;
             SchedulePolicyRefresh();
             ClearHostFailure();
-            return true;
+            return;
         }
 
         try
@@ -248,6 +214,7 @@ public sealed class PrintHostService
                 _auth.DeviceId,
                 endpoints,
                 _hostToken ?? throw new InvalidOperationException("Print host credential is missing.")), cancellationToken);
+            _lastHeartbeatAt = DateTime.UtcNow;
             if (Interlocked.Exchange(ref _endpointPolicyRefreshPending, 0) != 0)
                 SchedulePolicyRefresh();
         }
@@ -259,8 +226,6 @@ public sealed class PrintHostService
             _registeredBranchId = null;
             throw;
         }
-
-        return true;
     }
 
     private IReadOnlyList<PrinterEndpointRegistration> BuildEndpoints()
@@ -295,6 +260,7 @@ public sealed class PrintHostService
 
     private void InvalidateEndpointCache()
     {
+        _lastHeartbeatAt = DateTime.MinValue;
         lock (_endpointCacheLock)
             _endpointsInvalidated = true;
         Interlocked.Exchange(ref _endpointPolicyRefreshPending, 1);
@@ -336,54 +302,22 @@ public sealed class PrintHostService
 
     private async Task<bool> EnsureHubAsync(CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(_hostToken)) return false;
         if (_connection is null)
         {
-            _connection = new HubConnectionBuilder()
-                .WithUrl(SettingsService.Instance.ApiBaseUrl.TrimEnd('/') + "/hubs/printing", options =>
-                {
-                    options.AccessTokenProvider = () => _auth.EnsureFreshTokenAsync(CancellationToken.None);
-                    options.Headers["X-Client"] = "desktop";
-                    options.Headers["X-Device-Id"] = _auth.DeviceId;
-                    options.Headers["X-Device-Name"] = _auth.DeviceName;
-                })
-                .WithAutomaticReconnect()
-                .Build();
+            _connection = HubConnections.Create("/hubs/printing", _auth);
             _connection.On<long>("PrintJobAvailable", ignoredJobId =>
             {
                 _ = ProcessAssignedAsync(CancellationToken.None);
             });
-            _connection.Reconnecting += _ =>
-            {
-                _hubSubscribed = false;
-                return Task.CompletedTask;
-            };
             _connection.Reconnected += _ => OnHubReconnectedAsync();
-            _connection.Closed += _ =>
-            {
-                _hubSubscribed = false;
-                return Task.CompletedTask;
-            };
         }
-        var subscribedNow = false;
-        if (_connection.State == HubConnectionState.Disconnected)
-        {
-            await _connection.StartAsync(cancellationToken);
-            _hubSubscribed = false;
-        }
-        // Obuna alohida kuzatiladi: ulanish tirik qolib obuna yiqilgan bo'lsa (masalan o'sha
-        // paytda qurilma hali ishonchli emas edi) keyingi aylanishda qayta uriniladi.
-        if (!_hubSubscribed)
-        {
-            await _connection.InvokeAsync("Subscribe", _auth.DeviceId, _hostToken, cancellationToken);
-            _hubSubscribed = true;
-            subscribedNow = true;
-        }
-        return subscribedNow;
+        return await _subscription.EnsureAsync(_connection, () =>
+            _connection.InvokeAsync("Subscribe", _auth.DeviceId, _hostToken, cancellationToken));
     }
 
     private async Task OnHubReconnectedAsync()
     {
-        _hubSubscribed = false;
         try
         {
             if (await EnsureHubAsync(CancellationToken.None))
@@ -398,7 +332,7 @@ public sealed class PrintHostService
     private async Task ProcessAssignedAsync(CancellationToken cancellationToken)
     {
         if (!_auth.IsAuthenticated || !_auth.HasPermission("printing.host")
-            || !SettingsService.Instance.EnabledFeatures.Contains("remote_printing")) return;
+            || !SettingsService.Instance.IsFeatureOn("remote_printing")) return;
         Interlocked.Exchange(ref _processPending, 1);
         if (!_processLock.Wait(0)) return;
         try
@@ -842,7 +776,7 @@ public sealed class PrintHostService
         _lifetime = null;
         _connection = null;
         _registeredBranchId = null;
-        _hubSubscribed = false;
+        _subscription.Invalidate();
         _startLock.Release();
         lifetime?.Cancel();
         lifetime?.Dispose();

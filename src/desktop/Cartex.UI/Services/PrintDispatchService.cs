@@ -227,7 +227,7 @@ public sealed class PrintDispatchService
         var localPolicy = await _policyCache.GetAsync(targetBranchId.Value, kind, cancellationToken);
         var salesPolicyAllows = localPolicy is not null && SalesPolicyAllows(localPolicy.Sales, kind, sourceType);
         if (LocalPrintRouting.ShouldPrintLocally(
-                localPolicy?.Routing,
+                localPolicy,
                 printLocally is not null,
                 localPolicy?.HasEnabledLocalEndpoint == true && HasLocalPrinter(kind),
                 salesPolicyAllows))
@@ -241,7 +241,7 @@ public sealed class PrintDispatchService
         }
 
         _ = FlushOfflineSafeAsync();
-        await _statusHub.EnsureStartedAsync();
+        _ = _statusHub.EnsureStartedAsync();
         var job = await _printing.CreateJobAsync(new CreatePrintJobRequest(
             targetBranchId.Value,
             kind,

@@ -5,7 +5,9 @@
              xmlns:conv="using:Cartex.UI.Converters"
              xmlns:vm="using:Cartex.UI.ViewModels"
              xmlns:models="using:Cartex.UI.Models"
+             xmlns:views="using:Cartex.UI.Views"
              xmlns:barcodes="using:Cartex.Shared.Models.Barcodes"
+             xmlns:catalog="using:Cartex.Shared.Models.Catalog"
              xmlns:categories="using:Cartex.Shared.Models.Categories"
              xmlns:loyalty="using:Cartex.Shared.Models.Loyalty"
              xmlns:products="using:Cartex.Shared.Models.Products"
@@ -112,6 +114,48 @@
                                     <c:FieldLabel Text="{Binding L[name]}" Required="True" />
                                     <TextBox x:Name="EditNameBox" Text="{Binding EditName, Mode=TwoWay}" MinHeight="42" />
                                 </StackPanel>
+                                <StackPanel Spacing="6" IsVisible="{Binding IsNew}">
+                                    <TextBlock Text="{Binding L[catalog_search_by_name]}" Classes="caption" />
+                                    <Grid ColumnDefinitions="*,8,Auto">
+                                        <TextBox Text="{Binding CatalogQuery, Mode=TwoWay}" MinHeight="40">
+                                            <TextBox.InnerRightContent>
+                                                <views:ScanIndicatorView DataContext="{Binding ScanIndicator}" />
+                                            </TextBox.InnerRightContent>
+                                            <TextBox.KeyBindings>
+                                                <KeyBinding Gesture="Enter" Command="{Binding SearchCatalogCommand}" />
+                                            </TextBox.KeyBindings>
+                                        </TextBox>
+                                        <Button Grid.Column="2" Classes="outline" Command="{Binding SearchCatalogCommand}"
+                                                Content="{Binding L[find]}" MinHeight="40" />
+                                    </Grid>
+                                    <Border IsVisible="{Binding IsCatalogSearchOpen}" Background="{DynamicResource AppBg}"
+                                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                                            CornerRadius="8" Padding="6">
+                                        <StackPanel Spacing="4">
+                                            <TextBlock Text="{Binding L[catalog_no_matches]}" Classes="caption"
+                                                       Foreground="{DynamicResource TextMuted}"
+                                                       IsVisible="{Binding HasNoCatalogMatches}" />
+                                            <ScrollViewer MaxHeight="180" HorizontalScrollBarVisibility="Disabled">
+                                                <ItemsControl ItemsSource="{Binding CatalogMatches}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="catalog:CatalogProductDto">
+                                                            <Button Classes="outline" HorizontalAlignment="Stretch"
+                                                                    HorizontalContentAlignment="Left" Margin="0,0,0,4" Padding="10,6"
+                                                                    Command="{Binding $parent[UserControl].((vm:ProductsViewModel)DataContext).PickCatalogMatchCommand}"
+                                                                    CommandParameter="{Binding}">
+                                                                <StackPanel Spacing="1">
+                                                                    <TextBlock Text="{Binding Name}" TextWrapping="Wrap" />
+                                                                    <TextBlock Text="{Binding Manufacturer}" Classes="caption"
+                                                                               Foreground="{DynamicResource TextMuted}" />
+                                                                </StackPanel>
+                                                            </Button>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
                                 <StackPanel Spacing="6">
                                     <c:FieldLabel Text="{Binding L[selling_price]}" Required="{Binding IsNew}" />
                                     <Grid ColumnDefinitions="*,8,Auto">
@@ -120,8 +164,6 @@
                                         <ComboBox Grid.Column="2" ItemsSource="{Binding PriceCurrencies}" SelectedItem="{Binding EditPriceCurrency}"
                                                   MinHeight="42" MinWidth="86" IsVisible="{Binding IsMulticurrency}" />
                                     </Grid>
-                                    <TextBlock Text="{Binding L[product_reference_price_source]}" IsVisible="{Binding EditReferencePrice}"
-                                               Classes="caption" Foreground="{DynamicResource TextMuted}" />
                                 </StackPanel>
                                 <StackPanel Spacing="6">
                                     <TextBlock Text="{Binding L[image_url]}" Classes="caption" />
@@ -229,7 +271,11 @@
                         <Grid ColumnDefinitions="*,8,Auto">
                             <TextBox Text="{Binding EditBarcodes, Mode=TwoWay}" MinHeight="40"
                                      PlaceholderText="4780000000001, 4780000000002*6, ..."
-                                     c:FormBehaviors.LostFocusCommand="{Binding LookupEditBarcodeCommand}" />
+                                     c:FormBehaviors.LostFocusCommand="{Binding LookupEditBarcodeCommand}">
+                                <TextBox.InnerRightContent>
+                                    <views:ScanIndicatorView DataContext="{Binding ScanIndicator}" />
+                                </TextBox.InnerRightContent>
+                            </TextBox>
                             <Button Grid.Column="2" Classes="outline" Command="{Binding LookupEditBarcodeCommand}"
                                     Content="{Binding L[find]}" MinHeight="40" />
                         </Grid>

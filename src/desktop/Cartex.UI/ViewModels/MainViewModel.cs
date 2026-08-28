@@ -96,7 +96,7 @@ public partial class MainViewModel : ViewModelBase
         IsShortcutHelpOpen = !IsShortcutHelpOpen;
     }
 
-    public MainViewModel(AuthService authService, NavigationService navigationService, BranchContextService branch, IBusyService busy, ConnectivityService connectivity, Cartex.ApiClient.Api.IBusinessApi businessApi, Cartex.ApiClient.Api.IFeaturesApi featuresApi, ShortcutService shortcuts, IDialogService dialogService)
+    public MainViewModel(AuthService authService, NavigationService navigationService, BranchContextService branch, IBusyService busy, ConnectivityService connectivity, Cartex.ApiClient.Api.IBusinessApi businessApi, Cartex.ApiClient.Api.IFeaturesApi featuresApi, Cartex.ApiClient.Api.ISettingsApi settingsApi, ReferenceCache cache, ShortcutService shortcuts, IDialogService dialogService)
     {
         _shortcuts = shortcuts;
         _authService = authService;
@@ -104,6 +104,8 @@ public partial class MainViewModel : ViewModelBase
         _dialogService = dialogService;
         _businessApi = businessApi;
         _featuresApi = featuresApi;
+        _settingsApi = settingsApi;
+        _cache = cache;
         _authService.LoggedOut += OnSessionEnded;
         Branch = branch;
         Branch.PropertyChanged += OnBranchPropertyChanged;
@@ -190,7 +192,8 @@ public partial class MainViewModel : ViewModelBase
     {
         try
         {
-            await CompleteBootstrapAsync(RefreshFeaturesAsync(), Branch.LoadAsync(), () =>
+            await CompleteBootstrapAsync(
+                Task.WhenAll(RefreshFeaturesAsync(), RefreshPolicyAsync()), Branch.LoadAsync(), () =>
             {
                 if (generation != _bootstrapGeneration) return;
                 BuildMenu();
@@ -378,12 +381,16 @@ public partial class MainViewModel : ViewModelBase
 
     private readonly HashSet<string> _enabledFeatures = new(SettingsService.Instance.EnabledFeatures);
     private Cartex.ApiClient.Api.IFeaturesApi _featuresApi = null!;
+    private readonly Cartex.ApiClient.Api.ISettingsApi _settingsApi;
+    private readonly ReferenceCache _cache;
 
     private async Task LoadFeaturesAsync()
     {
         try
         {
-            if (!await RefreshFeaturesAsync()) return;
+            var changed = await RefreshFeaturesAsync();
+            changed |= await RefreshPolicyAsync();
+            if (!changed) return;
             var openKey = SelectedMenuItem?.Key;
             BuildMenu();
             RestoreSelection(openKey);
@@ -400,6 +407,23 @@ public partial class MainViewModel : ViewModelBase
         foreach (var code in enabled) _enabledFeatures.Add(code);
         SettingsService.Instance.EnabledFeatures = [.. _enabledFeatures];
         return true;
+    }
+
+    /// BRAK-06: menyudagi chiqim bo'limi siyosatga qarab ochiladi. Siyosat yetib kelmasa
+    /// oxirgi ma'lum holat qoladi — bo'limni yashirish uchun bootstrap to'xtatilmaydi.
+    private async Task<bool> RefreshPolicyAsync()
+    {
+        try
+        {
+            var policy = await _cache.GetAsync(CacheKeys.SalesPolicy, _settingsApi.GetSalesPolicyAsync);
+            if (SettingsService.Instance.TrackWriteOff == policy.TrackWriteOff) return false;
+            SettingsService.Instance.TrackWriteOff = policy.TrackWriteOff;
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     /// Menyu qayta qurilgach ro'yxatdagi obyektlar almashadi va tanlov uziladi; ochiq sahifa

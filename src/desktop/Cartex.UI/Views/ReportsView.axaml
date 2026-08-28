@@ -395,7 +395,7 @@
         </TabControl>
     </DockPanel>
 
-        <Border IsVisible="{Binding IsBonusOpen}" Background="#30000000"
+        <Border IsVisible="{Binding IsBonusOpen}" Background="#30000000" c:FormBehaviors.AutoFocus="True"
                 c:OverlayBehaviors.DismissCommand="{Binding CancelBonusCommand}">
             <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="420"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"

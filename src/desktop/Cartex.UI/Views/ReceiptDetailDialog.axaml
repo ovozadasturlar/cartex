@@ -7,6 +7,7 @@
              xmlns:views="using:Cartex.UI.Views"
              xmlns:sales="using:Cartex.Shared.Models.Sales"
              xmlns:c="using:Cartex.Shared.Models.Customers"
+             xmlns:ctl="using:Cartex.UI.Controls"
              x:Class="Cartex.UI.Views.ReceiptDetailDialog"
              x:Name="RootReceipt"
              x:DataType="vm:ReceiptDetailViewModel"
@@ -69,10 +70,6 @@
                                 <TextBlock Text="{Binding L[send_receipt_sms]}" VerticalAlignment="Center" FontSize="12.5" />
                             </StackPanel>
                         </Button>
-                        <TextBlock Text="{Binding ReceiptSmsDisabledReason}"
-                                   IsVisible="{Binding ShowReceiptSms}"
-                                   Foreground="{DynamicResource TextMuted}" FontSize="11"
-                                   VerticalAlignment="Center" />
 
                         <Button Classes="danger" MinHeight="40" Padding="14,0"
                                 Command="{Binding ReturnSaleCommand}"
@@ -313,7 +310,7 @@
             <!-- ========================================================= -->
             <!-- SUB-PANEL 1: CUSTOMER PICKER                              -->
             <!-- ========================================================= -->
-            <Border Background="#88000000" IsVisible="{Binding IsCustomerPickerOpen}">
+            <Border Background="#88000000" IsVisible="{Binding IsCustomerPickerOpen}" ctl:FormBehaviors.AutoFocus="True">
                 <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="480" MaxHeight="480"
                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                         BoxShadow="0 18 50 0 #33000000" Padding="20"

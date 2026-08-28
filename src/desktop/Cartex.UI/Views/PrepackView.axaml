@@ -6,7 +6,7 @@
              x:Class="Cartex.UI.Views.PrepackView"
              x:CompileBindings="False">
 
-    <Border Background="#30000000" IsVisible="{Binding IsOpen}"
+    <Border Background="#30000000" IsVisible="{Binding IsOpen}" c:FormBehaviors.AutoFocus="True"
             c:OverlayBehaviors.DismissCommand="{Binding CloseCommand}">
         <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="560" MaxHeight="640"
                 VerticalAlignment="Center" HorizontalAlignment="Center"

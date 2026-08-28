@@ -235,7 +235,7 @@
             </Border>
         </Border>
 
-        <Border Background="#30000000" IsVisible="{Binding IsVariantEditOpen}" c:OverlayBehaviors.DismissCommand="{Binding CancelVariantEditCommand}">
+        <Border Background="#30000000" IsVisible="{Binding IsVariantEditOpen}" c:FormBehaviors.AutoFocus="True" c:OverlayBehaviors.DismissCommand="{Binding CancelVariantEditCommand}">
             <Border Classes="form" Background="{DynamicResource CardBg}" CornerRadius="14" Width="460" MaxHeight="640"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"

@@ -126,6 +126,9 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
     [NotifyPropertyChangedFor(nameof(AllowSaleQueueHint))]
     private bool _allowSaleQueue = true;
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TrackWriteOffHint))]
+    private bool _trackWriteOff;
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanTogglePricingMulticurrency))]
     [NotifyPropertyChangedFor(nameof(CanToggleSalesMulticurrency))]
     private bool _multicurrencyLicensed;
@@ -163,6 +166,7 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
     public string ShowUnlistedProductsHint => Hint(ShowUnlistedProducts, "show_unlisted_products");
     public string AllowInsufficientStockSalesHint => Hint(AllowInsufficientStockSales, "allow_insufficient_stock_sales");
     public string AllowNegativeStockOfflineHint => Hint(AllowNegativeStockWhenOffline, "allow_negative_stock_offline");
+    public string TrackWriteOffHint => Hint(TrackWriteOff, "track_write_off");
 
     public bool ShowCorrectionDays => CorrectionWindowIndex == 3;
     public bool CanEdit => _auth.HasPermission("settings.salesPolicy");
@@ -225,6 +229,7 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
             AllowFreeReturnLines = _loaded.AllowFreeReturnLines;
             RequireReturnReason = _loaded.RequireReturnReason;
             AllowSaleQueue = _loaded.AllowSaleQueue;
+            TrackWriteOff = _loaded.TrackWriteOff;
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
@@ -271,7 +276,8 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
                 AllowReturnOnVoidedSale = AllowReturnOnVoidedSale,
                 AllowFreeReturnLines = AllowFreeReturnLines,
                 RequireReturnReason = RequireReturnReason,
-                AllowSaleQueue = AllowSaleQueue
+                AllowSaleQueue = AllowSaleQueue,
+                TrackWriteOff = TrackWriteOff
             };
 
             using (_busy.Begin(L["loading"]))
@@ -279,6 +285,7 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
 
             _loaded = policy;
             ServiceLocator.Resolve<ReferenceCache>().Invalidate(CacheKeys.SalesPolicy);
+            await ServiceLocator.Resolve<NavigationService>().RequestFeaturesRefreshAsync();
             await _printPolicyCache.RefreshAsync();
             _toast.Success(L["success"]);
         }

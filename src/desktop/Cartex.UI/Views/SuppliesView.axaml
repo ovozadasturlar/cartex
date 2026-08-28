@@ -137,7 +137,7 @@
             </Panel>
         </DockPanel>
 
-        <DockPanel Margin="24" Classes="editor" IsVisible="{Binding IsEditOpen}" Classes.blurred="{Binding IsModalOpen}">
+        <DockPanel Margin="24" Classes="editor" IsVisible="{Binding IsEditOpen}" Classes.blurred="{Binding IsModalOpen}" c:FormBehaviors.AutoFocus="True">
             <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*" Margin="0,0,0,12">
                 <Button Classes="icon" Command="{Binding CancelEditCommand}" ToolTip.Tip="{Binding L[back]}"
                         VerticalAlignment="Center" Margin="0,0,10,0">
@@ -189,6 +189,9 @@
                                 <mi:MaterialIcon Kind="BarcodeScan" Width="16" Height="16" Margin="8,0,2,0"
                                                  Foreground="{DynamicResource BrandPrimaryBrush}" />
                             </TextBox.InnerLeftContent>
+                            <TextBox.InnerRightContent>
+                                <views:ScanIndicatorView DataContext="{Binding ScanIndicator}" />
+                            </TextBox.InnerRightContent>
                             <TextBox.KeyBindings>
                                 <KeyBinding Gesture="Enter" Command="{Binding ScanLineCommand}" />
                             </TextBox.KeyBindings>

@@ -2,7 +2,7 @@ using Avalonia.Controls;
 
 namespace Cartex.UI.Views;
 
-public partial class ProductReferenceSettingsView : UserControl
+public partial class CatalogSettingsView : UserControl
 {
-    public ProductReferenceSettingsView() => InitializeComponent();
+    public CatalogSettingsView() => InitializeComponent();
 }

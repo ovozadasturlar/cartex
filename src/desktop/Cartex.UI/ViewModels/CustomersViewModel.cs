@@ -327,13 +327,21 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     public string EditTitle => L[IsNew ? "customer_new" : "customer_edit"];
 
     // QARZ-23: boshlang'ich qoldiq defterga yozadi — mijoz yaratish ruxsati yetarli emas.
-    public bool CanEnterOpeningBalance => IsNew && _auth.HasPermission("customers.openingBalance");
+    // QARZ-24: hali operatsiya bo'lmagan mijozda uni tahrirlashda ham tuzatish mumkin.
+    [ObservableProperty] private bool _isEditableCustomerUntouched;
+    public bool CanEnterOpeningBalance =>
+        (IsNew || IsEditableCustomerUntouched) && _auth.HasPermission("customers.openingBalance");
 
     partial void OnIsNewChanged(bool value)
     {
         OnPropertyChanged(nameof(EditTitle));
         OnPropertyChanged(nameof(CanEnterOpeningBalance));
     }
+
+    partial void OnIsEditableCustomerUntouchedChanged(bool value) =>
+        OnPropertyChanged(nameof(CanEnterOpeningBalance));
+
+    public bool CanDelete => _auth.HasPermission("customers.delete");
     public bool IsModalOpen => IsEditOpen || IsMessageOpen || IsRepayOpen || IsPublicityOpen;
     partial void OnIsEditOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsMessageOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
@@ -724,6 +732,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         EditAllowMarketingSms = false;
         EditLanguage = "uz-latn";
         await EnsureCurrenciesAsync();
+        IsEditableCustomerUntouched = false;
         EditOpeningBalance = 0;
         EditOpeningKindIndex = 0;
         OpeningKinds.Clear();
@@ -734,11 +743,30 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
     }
 
     [RelayCommand]
-    private void OpenEdit(CustomerDto customer)
+    private async Task OpenEditAsync(CustomerDto customer)
     {
         if (!CanEdit) return;
         IsNew = false;
         _editId = customer.Id;
+        IsEditableCustomerUntouched = false;
+        EditOpeningBalance = 0;
+        EditOpeningKindIndex = 0;
+        await EnsureCurrenciesAsync();
+        EditOpeningCurrency = _baseCurrency;
+        OpeningKinds.Clear();
+        OpeningKinds.Add(L["opening_kind_debt"]);
+        OpeningKinds.Add(L["opening_kind_credit"]);
+        // QARZ-24: tuzatish imkoniyati va hozirgi qiymat faqat serverdan aniqlanadi.
+        try
+        {
+            var fresh = await _api.GetByIdAsync(customer.Id);
+            IsEditableCustomerUntouched = fresh.IsUntouched;
+            EditOpeningBalance = Math.Abs(fresh.OpeningBalance);
+            EditOpeningKindIndex = fresh.OpeningBalance < 0 ? 1 : 0;
+            if (!string.IsNullOrWhiteSpace(fresh.OpeningCurrency)) EditOpeningCurrency = fresh.OpeningCurrency;
+            customer = fresh;
+        }
+        catch { }
         EditFullName = customer.FullName;
         EditLastName = customer.LastName ?? "";
         EditAddress = customer.Address ?? "";
@@ -752,6 +780,24 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         EditAllowMarketingSms = customer.AllowMarketingSms;
         EditLanguage = customer.PreferredLanguage ?? "uz-latn";
         IsEditOpen = true;
+    }
+
+    /// QARZ-24: operatsiya bo'lmagan mijoz adashib kiritilgan bo'lishi mumkin — u butunlay
+    /// o'chiriladi. Operatsiya bo'lgan mijozni server o'zi rad etadi.
+    [RelayCommand]
+    private async Task DeleteAsync(CustomerDto customer)
+    {
+        if (!CanDelete) return;
+        if (!await _dialog.ConfirmAsync(string.Format(L["customer_delete_confirm"], customer.FullName), L["delete"]))
+            return;
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+                await _api.DeleteAsync(customer.Id);
+            _toast.Success(L["success"]);
+            await LoadAsync();
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
     public string[] CustomerLanguages { get; } = ["uz-latn", "uz-cyrl", "ru", "en"];
@@ -784,7 +830,11 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
                 }
                 else
                 {
-                    await _api.UpdateAsync(_editId, new UpdateCustomerRequest(EditFullName.Trim(), phone, card, EditDiscountPct, email, lastName, address, EditCreditLimit, EditNotificationsOptOut, EditLanguage, note, EditAllowMarketingSms));
+                    decimal? opening = CanEnterOpeningBalance
+                        ? EditOpeningKindIndex == 1 ? -EditOpeningBalance : EditOpeningBalance
+                        : null;
+                    await _api.UpdateAsync(_editId, new UpdateCustomerRequest(EditFullName.Trim(), phone, card, EditDiscountPct, email, lastName, address, EditCreditLimit, EditNotificationsOptOut, EditLanguage, note, EditAllowMarketingSms,
+                        opening, opening is not null && IsMulticurrency ? EditOpeningCurrency : null));
                     targetId = _editId;
                 }
             }
@@ -811,6 +861,7 @@ public partial class CustomersViewModel : ViewModelBase, ILoadable
         if (!string.IsNullOrWhiteSpace(SelectedCustomer.Phone)) MessageChannels.Add(new("sms", L["channel_sms"]));
         if (!string.IsNullOrWhiteSpace(SelectedCustomer.Email)) MessageChannels.Add(new("email", L["channel_email"]));
         if (MessageChannels.Count == 0) { _toast.Warning(L["message_no_channel"]); return; }
+        MessageChannels.Insert(0, new("auto", L["channel_auto"]));
         MessageChannel = MessageChannels[0].Code;
         MessageText = "";
         IsMessageOpen = true;
