@@ -211,6 +211,9 @@ Chegirmaning uch manbai bor: **narx pasaytirish**, **avtomatik (loyalty) qoida**
 | `QAYT-08` | Bekor qilingan (`Voided`) savdo allaqachon ortga qaytarilgan — tovari omborga qaytgan, puli hisobdan yechilgan; unga yana qaytarish rasmiylashtirilsa tovar ikki marta kirim bo'lib, pul ikki marta chiqadi. Shuning uchun **standart holatda** qaytarish faqat `Completed` yoki `PartialReturn` savdoga bog'lanadi. Do'kon o'z siyosati bilan buni ocha oladi: `AllowReturnOnVoidedSale` yoqilsa server bunday qaytarishni qabul qiladi (`SOZ-12`). |
 | `QAYT-09` | Savdoga bog'lanmagan **erkin qator** — sotilganidan ortiq miqdor ham shu yo'l bilan ketadi — `returns.freeLine` ruxsati bilan birga `AllowFreeReturnLines` siyosatini talab qiladi. Ruxsat kimga, siyosat esa do'konga tegishli: biri xodimni, ikkinchisi do'kon qoidasini boshqaradi. |
 | `QAYT-10` | `RequireReturnReason` yoqilgan bo'lsa, har bir qaytarish qatorida sabab yozilishi shart. Sababsiz qaytarish keyin tekshirib bo'lmaydigan yozuv qoldiradi. |
+| `QAYT-11` | **Qaytarilgan tovar qaytarish hujjatining omboriga kiradi**, savdo qilingan omborga emas. Mijoz A filialda sotib olib B filialda qaytarsa, tovar jismonan B da turadi — qoldiq ham B da oshishi shart. Aks holda hujjat B deydi, tovar A da paydo bo'ladi va ikkala ombor qoldig'i ham yolg'on bo'ladi. |
+| `QAYT-12` | Boshqa omborga qaytarilganda asl partiyaning **tannarxi ham, yaroqlilik muddati ham** saqlanadi. Tannarxsiz qaytarilgan tovar tasodifiy partiya narxini oladi va foyda noto'g'ri hisoblanadi. Muddatsiz esa u FEFO navbatining **oxiriga** tushadi: eng avval sotilishi kerak bo'lgan tovar eng oxirida sotiladi va javonda buzilib qoladi. |
+| `QAYT-13` | Bitta qaytarish hujjati **bitta omborga** tegishli: sotuvga qaytadigan qatorlar ham, karantin/brak/da'vo qatorlari ham o'sha hujjatning omboriga yoziladi. Bir hujjat ikki omborga bo'linmaydi. |
 
 ### Qabul mezonlari
 
@@ -274,7 +277,7 @@ amal** — u hech qanday hujjat yaratmaydi va hech narsani qayta hisoblamaydi.
 |---|---|
 | `QARZ-01` | Qarz — hisob (`Account`) va tranzaksiyalar defteri. Mijozdagi ustun emas. Har valyuta uchun alohida hisob. |
 | `QARZ-02` | Qarzga savdo `AllowDebtSales` siyosatiga va mijozning kredit limitiga bo'ysunadi. Mijozsiz qarz bo'lmaydi. |
-| `QARZ-22` | **Kredit limitining qattiqligi — do'kon siyosati:** `CreditLimitEnforcement`. `Block` (standart) — limitdan oshiradigan qarz **rad etiladi** (`credit_limit_exceeded`); `Warn` — savdo o'tadi, javobda `credit_limit_exceeded` **ogohlantirishi** qaytadi va klient uni kassirga ko'rsatadi (`OFF-17` dagi `stock_negative_offline` bilan bir xil tartibda). Sozlama **ikkala qarz eshigiga ham** qo'llanadi — savdodagi qarz va naqd qarz (`QARZ-18`) — chunki limit mijozning **umumiy majburiyati** haqidagi savol, u qaysi kanal orqali yuzaga kelgani haqidagi emas. **`Warn` rejimi taqiqni ochmaydi:** `CreditLimit = 0` (`SOZ-02a` bo'yicha "bu mijozga umuman qarzga sotilmaydi") va `AllowDebtSales = false` har ikki rejimda ham rad etishda qoladi — ular chegara emas, **taqiq**, va `SOZ-02` bo'yicha egasi nolni yozganda aynan taqiqni nazarda tutadi. Sozlama faqat **musbat** limitdan oshishni yumshatadi. Limit bo'sh bo'lsa tekshiruv umuman ishlamaydi. |
+| `QARZ-22` | **Kredit limitining qattiqligi — do'kon siyosati:** `CreditLimitEnforcement`. `Block` (standart) — limitdan oshiradigan qarz **rad etiladi** (`credit_limit_exceeded`); `Warn` — savdo o'tadi, javobda `credit_limit_exceeded` **ogohlantirishi** qaytadi va klient uni kassirga ko'rsatadi (`OFF-17` dagi `stock_negative_offline` bilan bir xil tartibda). Sozlama **ikkala qarz eshigiga ham** qo'llanadi — savdodagi qarz va naqd qarz (`QARZ-18`) — chunki limit mijozning **umumiy majburiyati** haqidagi savol, u qaysi kanal orqali yuzaga kelgani haqidagi emas. **`Warn` rejimi taqiqni ochmaydi:** `CreditLimit = 0` (`SOZ-02a` bo'yicha "bu mijozga umuman qarzga sotilmaydi") va `AllowDebtSales = false` har ikki rejimda ham rad etishda qoladi — ular chegara emas, **taqiq**, va `SOZ-02` bo'yicha egasi nolni yozganda aynan taqiqni nazarda tutadi. Sozlama faqat **musbat** limitdan oshishni yumshatadi. Limit bo'sh bo'lsa tekshiruv umuman ishlamaydi. **Istisno — oflayn replay:** `OFF-22` bo'yicha qayta ijroda hech qanday limit (`CreditLimit = 0` ham) rad etmaydi, faqat ogohlantiradi — chunki tovar allaqachon berilgan; taqiq oflayn keshda, sotuv paytida ishlaydi. |
 | `QARZ-03` | To'lov savdolarga **FIFO** taqsimlanadi: avval muddati yaqinlari, muddatsizlari oxirida. Ortiqcha to'lov mijoz avansiga tushadi — lekin bu `QARZ-20` bilan cheklangan: haqdorlik sozlamasi o'chiq bo'lsa (standart holat) ortiqcha to'lov umuman qabul qilinmaydi. |
 | `QARZ-20` | **Ortiqcha to'lov haqdorlik sozlamasiga bo'ysunadi.** `AllowCustomerCredit` o'chiq bo'lsa do'kon mijozga qarzdor bo'lishni istamaydi, shuning uchun **onlayn** to'lovda qarzdan ortiq summa qabul qilinmaydi (`payment_exceeds_debt`) — kassir farqni naqd qaytaradi, xuddi savdodagi qaytim kabi. Sozlama yoniq bo'lsa ortiqcha summa `QARZ-03` bo'yicha avansga tushadi. **Istisno — oflayn replay:** u yerda pul allaqachon olingan va hodisa o'tmishda sodir bo'lgan, shuning uchun `OFF-21` ustun turadi va ortiqcha summa sozlamadan qat'i nazar avansga yoziladi (rad etish pulni yo'qotardi). Klient interfeysi sozlama o'chiq bo'lganda qarzdan ortiq summa kiritishga yo'l qo'ymaydi. **Konvertatsiya qoldig'i ortiqcha to'lov hisoblanmaydi:** chet valyutadagi taqsimot 4 xonada kesilgani uchun aynan qarzcha to'langanda ham kursga bog'liq mayda qoldiq qolishi mumkin (`0.0001 × kurs` dan kichik) — u rad etishga sabab bo'lmaydi. |
 | `QARZ-04` | **Qarz kechirimi yopilgan savdoni o'zgartirmaydi.** U — bugungi yangi hodisa (`DebtWriteOff`), chunki savdo smenaga tushgan, unga qarab cashback va hamkor mukofoti hisoblangan. Savdoning summasi, chegirmasi va qatorlari tegilmaydi; mijoz balansi esa nolga tushadi. |
@@ -285,6 +288,16 @@ amal** — u hech qanday hujjat yaratmaydi va hech narsani qayta hisoblamaydi.
 | `QARZ-16` | Kechirim naqdsiz ham bo'ladi: hujjatda bironta to'lov qatori bo'lmasa ham, kechirim summasi noldan katta bo'lsa hujjat qabul qilinadi. |
 | `QARZ-12` | Kechirim to'lov bilan bir hujjatda rasmiylashtiriladi va savdolarga xuddi to'lov kabi taqsimlanadi — shunda savdo haqiqatan yopiladi. Kechirim **avval**, eng eski muddatdagi qarzdan boshlab qo'llanadi. |
 | `QARZ-13` | To'lov hujjati bekor qilinsa, kechirim ham qaytariladi: qarz o'zining oldingi holatiga tiklanadi. |
+
+
+**Qabul mezoni — `QARZ-24`**
+
+> **Berilgan:** mijoz endi yaratildi, boshlang'ich qarzi 500 000, boshqa hech narsa yo'q.
+> **Qachonki:** tahrirlashda qoldiq 300 000 ga o'zgartirilsa,
+> **U holda:** qarzi 300 000 bo'ladi va defterda bitta boshlang'ich yozuv qoladi.
+> **Qachonki:** o'sha mijoz o'chirilsa, u soft-delete bo'ladi va qarz hisobi nolga tushadi.
+> **Qachonki:** mijozga savdo qilingandan keyin o'sha ikki amal urinilsa,
+> **U holda:** ikkalasi ham `customer_has_activity` bilan rad etiladi.
 
 **Qabul mezoni — `QARZ-22`**
 
@@ -334,7 +347,8 @@ Do'kon -> mijoz (chiqim):    avval avans kamayadi, yetmagani qarzga aylanadi
 | `QARZ-19` | Qarzga berilgan pul hujjatda alohida ko'rinadi: `AdvanceBaseAmount` + `LoanBaseAmount` = `TotalBaseAmount`, va bu klient DTO'siga ham chiqadi — mijoz qo'lidagi qog'ozda qaysi qismi qarz bo'lganini ko'rishi shart (`HUJJ-03`). |
 | `QARZ-10` | Har qanday pul chiqimi ochiq smenani talab qiladi va kassa qoldig'ini kamaytiradi. Smena yopilishida u ham hisobga olinadi. |
 | `QARZ-11` | Mijozning yakuniy holati bitta son bilan ifodalanadi: **qarzdor** (musbat qarz) yoki **haqdor** (musbat avans). Ikkalasi bir vaqtda musbat bo'lib turishi mumkin, chunki ular alohida valyutalarda bo'lishi mumkin — hisobotda har valyuta alohida ko'rsatiladi. |
-| `QARZ-21` | **Pul majburiyati ochiq mijoz o'chirilmaydi.** Tekshiruvga **qarz va avans** kiradi (`customer_balance_open`) — ikkalasi ham haqiqiy pul: qarz do'kon oladigan, avans do'kon **qaytaradigan** pul. Avansi bor mijozni o'chirish do'konning qarzini ro'yxatdan yo'qotadi, mijoz esa puli uchun kelganda hech qanday yozuv qolmaydi. **Bonus bunga kirmaydi:** u pul emas, sodiqlik balansi, va har xarid keshbek yozgani uchun deyarli har mijozda qoladi — bonusni ham shartga qo'shish o'chirishni umuman imkonsiz qilardi (bonusni nolga tushiradigan amal yo'q). O'chirilgan mijoz **soft-delete** bo'lgani uchun bonus yo'qolmaydi, yozuvi bilan birga qoladi. |
+| `QARZ-24` | **Hali hech qanday operatsiya bo'lmagan mijoz — kiritish xatosi, biznes tarixi emas.** Mijoz **toza** hisoblanadi, agar unga **hisob-kitobga kiradigan amal** bo'lmasa: savdo, to'lov, qaytarish, qaytarim yoki undan mahsulot kirimi. **Tugallanmagan savat va navbat amal hisoblanmaydi** — ular pul harakatini yaratmaydi va mijoz o'chirilganda u bilan birga yopiladi. Toza mijozda ikki amal ochiq: (a) **boshlang'ich qoldiqni tuzatish** — tahrirlashda qiymat, valyuta va yo'nalish (qarz/haqdorlik) o'zgartiriladi; eski yozuv o'chirilib yangisi yoziladi va hisob qoldig'i qayta hisoblanadi, `customers.openingBalance` ruxsati talab qilinadi (`QARZ-23`), chunki tuzatish ham majburiyat yaratadi; (b) **mijozni o'chirish** — `QARZ-21` dagi ochiq qoldiq to'sig'i qo'llanmaydi, chunki bu qoldiq savdo natijasi emas, o'sha kiritish xatosining o'zi; o'chirishda boshlang'ich yozuv olib tashlanadi va hisob nolga tushadi, aks holda o'chirilgan mijozning qarzi umumiy qarzdorlikda osilib qolardi. **Birinchi operatsiya bilan ikkala imkoniyat ham yopiladi** (`customer_has_activity`): qoldiq endi biznes tarixining bir qismi va faqat to'lov/qaytarish orqali o'zgaradi. Har ikki amal auditga eski va yangi qiymat bilan yoziladi. |
+| `QARZ-21` | **Pul majburiyati ochiq mijoz o'chirilmaydi** (istisno — `QARZ-24` dagi toza mijoz). Tekshiruvga **qarz va avans** kiradi (`customer_balance_open`) — ikkalasi ham haqiqiy pul: qarz do'kon oladigan, avans do'kon **qaytaradigan** pul. Avansi bor mijozni o'chirish do'konning qarzini ro'yxatdan yo'qotadi, mijoz esa puli uchun kelganda hech qanday yozuv qolmaydi. **Bonus bunga kirmaydi:** u pul emas, sodiqlik balansi, va har xarid keshbek yozgani uchun deyarli har mijozda qoladi — bonusni ham shartga qo'shish o'chirishni umuman imkonsiz qilardi (bonusni nolga tushiradigan amal yo'q). O'chirilgan mijoz **soft-delete** bo'lgani uchun bonus yo'qolmaydi, yozuvi bilan birga qoladi. |
 
 **Qabul mezoni — `QARZ-07` / `QARZ-08`**
 
@@ -381,6 +395,7 @@ Do'kon -> mijoz (chiqim):    avval avans kamayadi, yetmagani qarzga aylanadi
 | `NAVBAT-03` | Savatni qayta navbatga qo'yish (requeue) barcha maydonlarni ko'chiradi. |
 | `NAVBAT-04` | Savat yakunlangach yopiladi; bekor qilingan savat navbatda ko'rinmaydi. Bo'sh "arvoh" savat qolmaydi. |
 | `NAVBAT-06` | Navbat — do'konning **ish uslubi**, sotiladigan modul emas: bir do'kon hamma narsani bitta kassada uradi, boshqasida yig'uvchi tayyorlab, kassir pul oladi. Shuning uchun u `AllowSaleQueue` savdo siyosati kaliti bilan boshqariladi (`SOZ-13`), tarif feature'i bilan emas. O'chirilgan bo'lsa server `Queue` turidagi savat yaratishni rad etadi va **hamma klient** navbat tushunchasini yashiradi: kassadagi navbat va navbatga yuborish ikonalari, mobil ilovadagi navbat plitkasi va ro'yxati. |
+| `NAVBAT-08` | **Navbat signali filialga cheklangan.** Savat o'zgargani haqidagi hub xabari faqat o'sha savatning filialiga obuna bo'lgan klientlarga boradi; hamma klientga yuborish boshqa filial va boshqa biznesdagi kassalarni ham keraksiz qayta so'rovga majburlardi. Klient qaysi filialga obuna bo'lishini o'zi aytadi va server bu filialga ruxsati borligini tekshiradi; filial almashsa obuna ko'chiriladi. Obuna ulanish identifikatoriga bog'lanadi (`CHOP-11` bilan bir xil sabab) va ulanish uzilib tiklanganda klient navbatni to'liq qayta o'qiydi — bitta yo'qolgan xabar ekranni eskirgan holda qoldirmaydi. |
 | `NAVBAT-07` | **Proforma navbat emas.** Oldindan chop etish qog'oz chiqarish uchun savatni serverda saqlaydi (server nima chop etilishini o'zi nazorat qiladi), lekin bu savat `Proforma` turida bo'ladi: navbatda ko'rinmaydi va **kassani tozalamaydi** — kassir qog'ozni berib, o'sha savat bilan ishlashda davom etadi. Savatni navbatga qo'yish alohida amal. |
 
 **Qabul mezoni — `NAVBAT-01` / `NAVBAT-05`**
@@ -516,10 +531,12 @@ Sozlama noto'g'ri boshqarilsa, mantiq to'g'ri bo'lsa ham natija noto'g'ri chiqad
 | `CHOP-03` | Muvaffaqiyatli lokal chop etish kassirni audit yozuvi yuborilishini kutdirmaydi. Serverga `CompletedLocally` tarix yozuvi yuboriladi; yuborilmasa lokal jurnal saqlaydi va keyin qayta yuboradi. Bu tarix yozuvi `printing.remote.use` ruxsatini talab qilmaydi, lekin tur bo'yicha chop etish ruxsati, filial, payload va savdo siyosati tekshiruvlari saqlanadi. |
 | `CHOP-04` | `CompletedLocally` so'rov tanasidagi belgi savdo siyosatini chetlab o'tmaydi: `PrintMoneyDocuments` va `PrintCartProforma` o'chiq bo'lsa lokal tarix yozuvi ham rad etiladi (`SOZ-14`, `RUXSAT-05`). |
 | `CHOP-05` | Lokal tarix yozuvi idempotency kaliti bo'yicha deduplikatsiya qilinadi. Qog'oz allaqachon chiqqani sabab server tezlik chegarasidan oshgan yozuvni yo'qotmaydi: saqlaydi va auditda belgilaydi. Klient bir daqiqada `MaxCopiesPerMinute` dan oshadigan lokal chop etishni qog'oz chiqishidan oldin to'xtatadi. |
-| `CHOP-06` | Hub xabari host band paytda yo'qolmaydi: band chaqiruv tugagach kamida yana bir aylanish bajariladi. Hub ulanishi 30 soniyalik fallback so'rovidan mustaqil backoff bilan tiklanadi va obuna o'rnatilgach tayinlangan ishlar darhol olinadi. |
+| `CHOP-06` | **Xost ish so'rab turmaydi.** Topshiriq faqat hub orqali keladi; xost tomonida davriy "menga ish bormi" so'rovi yo'q. Hub xabari host band paytda yo'qolmaydi: band chaqiruv tugagach kamida yana bir aylanish bajariladi. Ulanish backoff bilan tiklanadi va **obuna har yangilanganda** kutayotgan ishlar darhol olinadi — server tomonidagi tiklash sikli esa (`CHOP-11`) xost kodi umuman ishlamay qolgan holatning yagona zaxirasi. Xostdan serverga boradigan davriy yagona so'rov — heartbeat: u printer ro'yxati va spooler holatini olib boradi, ko'pi bilan 60 soniyada bir marta yuboriladi (`CHOP-08`) va printer sozlamasi o'zgarganda darhol yuboriladi. |
 | `CHOP-07` | Logo chekni ushlab turmaydi: yuklash chegaralangan, raster natija diskda kalit va kenglik bo'yicha keshlanadi va oldindan isitiladi. Chop etishda kesh tayyor bo'lmasa ko'pi bilan 1.5 soniyadan keyin chek logosiz chiqadi va kassir ogohlantiriladi. |
 | `CHOP-08` | Printer endpointlari va spooler holati ko'pi bilan 60 soniyada bir marta yoki printer sozlamasi o'zgarganda yangilanadi; heartbeat har safar Windows spooler'ini so'ramaydi. |
-| `CHOP-09` | Yo'naltirish siyosati filial va chop turi uchun umumiy: `LocalFirst` avval so'rov yuborgan qurilmaning mos printerini, keyin sticky va prioritet ro'yxatini, oxirida ruxsat berilgan fallback'ni tanlaydi; `PriorityOnly` faqat ro'yxat bo'yicha ishlaydi. So'rov yuborgan qurilmada printer bo'lmasa (jumladan telefon/web) `LocalFirst` prioritet printerga o'tadi. `AllowFallback = false`, bo'sh prioritet va lokal printer yo'qligi hech kimga tayinlamaslikning aniq usuli. Eski yoki noma'lum saqlangan rejim `LocalFirst` ga bir marta normallashtiriladi. Printer hostligi esa alohida qurilma holati: node `HostEnabled`, endpoint `IsEnabled` va qurilma `IsTrusted` bo'lishi shart. |
+| `CHOP-09` | Yo'naltirish siyosati filial va chop turi uchun umumiy: `LocalFirst` avval so'rov yuborgan qurilmaning mos printerini, keyin sticky va prioritet ro'yxatini, oxirida ruxsat berilgan fallback'ni tanlaydi; `PriorityOnly` faqat ro'yxat bo'yicha ishlaydi. So'rov yuborgan qurilmada printer bo'lmasa (jumladan telefon/web) `LocalFirst` prioritet printerga o'tadi. `AllowFallback = false`, bo'sh prioritet va lokal printer yo'qligi hech kimga tayinlamaslikning aniq usuli. Bazadan o'qilgan noma'lum rejim (masalan enumdan olib tashlangan eski qiymat) xato bermaydi: o'qishda `LocalFirst` ga keltiriladi. Printer hostligi esa alohida qurilma holati: node `HostEnabled`, endpoint `IsEnabled` va qurilma `IsTrusted` bo'lishi shart. |
+| `CHOP-10` | `LocalOnly` — qog'oz **faqat siyosatda tanlangan printerlardan** chiqadi. Bu qurilmaning o'ziga bog'liq emas: telefondan, web'dan yoki boshqa kompyuterdan kelgan ish ham o'sha printerga boradi va boshqasiga o'tmaydi. Sticky, so'rov yuborgan qurilma afzalligi va `AllowFallback` bu rejimda qo'llanmaydi; ro'yxat bo'sh yoki tanlangan printer oflayn bo'lsa ish hech kimga tayinlanmaydi va navbatda kutadi. Tanlangan printer **shu qurilmaning o'ziniki** bo'lsa, qog'oz `CHOP-01` dagi kabi server relay'ini kutmasdan lokal chiqadi; qolgan qurilmalar o'sha printerga server orqali boradi. Bu qurilma sozlamasi emas: siyosat filial va chop turi uchun bitta, "masofaviy" degan alohida rejim yo'q — u tanlangan printerga ega bo'lmagan qurilmalar uchun shu bitta qoidaning natijasi. |
+| `CHOP-11` | Host tinglayaptimi degan savolga faqat jonli hub ulanishi javob beradi, vaqt belgisi emas. Ish faqat ayni damda hub'ga obuna bo'lgan node'ga tayinlanadi; ulanish uzilsa o'sha node'ga tayinlangan, hali qabul qilinmagan ishlar `host_offline` bilan navbatga qaytariladi va boshqa mos printerga o'tadi. `host_offline` sababli qaytarish printer nosozligi hisoblanmaydi: o'sha endpoint keyingi urinishdan chetlatilmaydi. Xuddi shu jonli ulanish "qurilma nomini kim egallab turibdi" savoliga ham javob beradi: nomni ayni damda ulangan kompyuter himoya qiladi, vaqt oynasi emas — ulanmagan qurilmaning nomini o'sha qurilmaning o'zi credential'ini yo'qotib qayta ro'yxatdan o'tishi uchun bo'shatadi. Ulanishlar ro'yxati API jarayonining xotirasida turadi: API qayta ishga tushsa ro'yxat bo'shaydi, klientlar qayta ulanguncha ish tayinlanmaydi va tayinlanmagan ish yo'qolmaydi — tiklash sikli uni o'zi oladi. Shu sababli API **bitta nusxada** ishlashi shart; ko'p nusxa kerak bo'lsa SignalR backplane va umumiy ulanishlar ro'yxati birga qo'shiladi. |
 
 **Qabul mezoni — `CHOP-01` / `CHOP-02`**
 
@@ -535,7 +552,23 @@ Sozlama noto'g'ri boshqarilsa, mantiq to'g'ri bo'lsa ham natija noto'g'ri chiqad
 > **U holda:** desktopning o'z printeri tanlanadi. So'rov telefondan kelib, lokal node bo'lmasa,
 > prioritet printer tanlanadi. Prioritet ro'yxati bo'sh va `AllowFallback = false` bo'lsa hech
 > qanday printer tayinlanmaydi. Bazada noma'lum rejim saqlangan bo'lsa, o'qishda `LocalFirst`
-> qaytadi va shu qiymat bazaga saqlanadi.
+> qaytadi va chop etish to'xtamaydi.
+
+**Qabul mezoni — `SMS-34`**
+
+> **Berilgan:** mijozda telefon ham, email ham bor; Telegram ulanmagan; SMS o'chiq, email yoqilgan.
+> **Qachonki:** klient `auto` kanali bilan xabar yuborsa,
+> **U holda:** xabar email orqali ketadi. Uchala kanal ham yaroqsiz bo'lsa
+> `no_message_channel` xatosi qaytadi va hech narsa yuborilmaydi.
+
+**Qabul mezoni — `CHOP-10` / `CHOP-11`**
+
+> **Berilgan:** siyosat `LocalOnly` va ro'yxatda faqat kassa kompyuterining printeri bor.
+> **Qachonki:** so'rov telefondan yoki boshqa kompyuterdan kelsa,
+> **U holda:** ish o'sha kassa kompyuteriga tayinlanadi. Kassa kompyuteri hub'ga ulanmagan
+> bo'lsa hech kimga tayinlanmaydi va ulangan zahoti tayinlanadi. Ish tayinlangandan keyin
+> ulanish uzilsa, ish `host_offline` bilan navbatga qaytadi. So'rov o'sha kassa
+> kompyuterining o'zidan kelsa, qog'oz serverga bormasdan lokal chiqadi.
 
 **Qabul mezoni — `CHOP-03` / `CHOP-04` / `CHOP-05`**
 
@@ -582,6 +615,8 @@ Sozlama noto'g'ri boshqarilsa, mantiq to'g'ri bo'lsa ham natija noto'g'ri chiqad
 | `SMS-30` | Xabar qanday chiqishi **bitta** sozlama: do'kon telefoni (SIM), agregator yoki telefon-keyin-agregator. Agregator tanlanmagan bo'lsa uning hisob ma'lumotlari va zaxiraga o'tish vaqti yuzada ko'rsatilmaydi. Standart — do'kon telefoni: u bepul, lekin mijoz raqamni ko'radi; agregator jo'natuvchi nomini bera oladi va telefon o'chiq bo'lsa ham yuboradi, ammo pullik. |
 | `SMS-31` | Sodiq SIM kutishi faqat filialda bittadan ortiq shlyuz qurilmasi bo'lganda ma'noga ega va faqat shunda ko'rsatiladi. U **qayta urinish oralig'i emas**: mijozga oxirgi marta xabar ketgan SIM shuncha daqiqa kutiladi, keyin boshqa mos SIM tanlanadi. Sozlama qurilmalar bo'limida turadi, tinch soatlar yonida emas — ular boshqa savolga javob beradi. |
 | `SMS-32` | Telefondagi shlyuz sahifasi kundalik holatni ko'rsatadi: tanlangan SIM, kvota bari va shu qurilmadan yuborilganlar. Limit, tezlik chegaralari, sinov xabari, pauza va rozilikni bekor qilish alohida sozlamalar sahifasida bo'ladi. Ro'yxatdan o'tmagan qurilmada ro'yxatdan o'tkazish oqimi asosiy ekranda qoladi. |
+| `SMS-33` | **Shlyuz tinglayaptimi degan savolga jonli hub ulanishi javob beradi**, vaqt belgisi emas: ish faqat ayni damda o'z SIM kanaliga obuna bo'lgan qurilmaga tayinlanadi (`CHOP-11` bilan bir xil qoida, bitta mexanizm). Ulanmagan SIM `no_device` sababi bilan kutadi va qurilma ulangan zahoti tayinlanadi. Telefon uzilishni har doim ham toza xabar qila olmaydi (Android uxlash rejimi), shuning uchun telefon tomonida sekin zaxira so'rov saqlanadi — kompyuterdagi xostda esa saqlanmaydi (`CHOP-06`). |
+| `SMS-34` | **Kanal tanlash mijozning emas, do'konning holatiga qarab hal qilinadi.** Klient `auto` yuborishi mumkin: server Telegram → SMS → email tartibida **ham mijozda manzil bor, ham o'sha kanal yoqilgan** birinchisini tanlaydi. Hech biri yaroqli bo'lmasa `no_message_channel` bilan aniq xato qaytadi. Aniq kanal so'ralganda sabab ajratiladi: mijozda manzil yo'qmi yoki kanal sozlanmaganmi. Klient qaysi kanal yoqilganini bilishi shart emas. |
 
 **Qabul mezonlari — `SMS-02` / `SMS-07` / `SMS-08`**
 
@@ -732,7 +767,7 @@ hisobga to'g'ri kelishi**. Shuning uchun bu yerdagi har qoida bitta savolga xizm
 | `SMENA-03` | **Kutilgan naqd** = boshlang'ich qoldiq + naqd savdo − naqd qaytarish/qaytim + kassa kirimi − kassa chiqimi + naqd qarz to'lovi − naqd ta'minot to'lovi. Bu ro'yxat **to'liq** bo'lishi shart: yashikdan chiqadigan har qanday pul (jumladan hamkorga naqd mukofot, `QARZ-10`) hisobga olinadi, aks holda kassirda soxta kamomad chiqadi. |
 | `SMENA-04` | Yopishda kassir **sanagan** naqd yoziladi. Sanalgan bilan kutilganning farqi — **biznes fakti** (kam yoki ortiqcha), xato emas: u yashirilmaydi, tuzatilmaydi va hujjatda saqlanadi. |
 | `SMENA-05` | Z-hisobot **saqlanmaydi, har safar daftar yozuvlaridan qayta hisoblanadi**. Shundan kelib chiqadigan majburiyat: yopilgan smenaga keyin yozuv qo'shilmaydi. Keyinroq qilingan tuzatish (bekor qilish, qaytarish) puli **joriy** smenaga tushadi — aks holda kecha chop etilgan Z-hisobot orqadan o'zgarib ketadi. |
-| `SMENA-06` | Chet valyutadagi naqd **alohida yuritiladi**: har valyuta o'z boshlang'ich qoldig'i, o'z sanog'i va o'z kutilgan qiymatiga ega. Bazaviy valyuta alohida qator sifatida yuborilmaydi — u smenaning o'zida. |
+| `SMENA-06` | Chet valyutadagi naqd **alohida yuritiladi**: har valyuta o'z boshlang'ich qoldig'i, o'z sanog'i va o'z kutilgan qiymatiga ega. Bazaviy valyuta alohida qator sifatida **yuborilmaydi** — u so'rov va javobning smena darajasidagi maydonida turadi. Bazada esa u ham boshqa valyutalar kabi `shift_cash` qatorida saqlanadi: bitta fakt — bitta uy. |
 | `SMENA-08` | **Smenaning boshlang'ich qoldig'i daftarga yozilmaydi.** U kassirga beriladigan mayda pul: har smenada qaytariladi va biznes puli sifatida hisoblanmaydi. Ikkita amaliy oqibat: (1) kutilgan naqdda u alohida had bo'lib turadi (`SMENA-03`), daftardan kelmaydi; (2) naqd chiqim (mas. hamkorga mukofot) **daftardagi kassa qoldig'i** bilan cheklanadi, ya'ni yashikda jismonan boshlang'ich qoldiq turgan bo'lsa ham undan to'lab bo'lmaydi (`cash_balance_insufficient`). Bu ataylab: boshlang'ich qoldiqni sarflab yuborish smenani yopishda kamomad bo'lib chiqardi. |
 | `SMENA-07` | Z-hisobotning har hadi **o'z ustunida** ko'rinadi va ustunlar aralashmaydi: naqd savdo `CashSales`, naqd qaytarish/qaytim `CashReturns`, **naqd qarz to'lovi `DebtPayIn`** (kassa kirimi `PayIn` emas), ta'minot to'lovi `SupplyPayOut`, qolgan har qanday kirim/chiqim `PayIn`/`PayOut`. Sabab: ega "bugun qarzdan qancha tushdi" degan savolga hisobotdan to'g'ridan-to'g'ri javob oladi; qarz to'lovi kassa kirimiga qo'shib yuborilsa bu son yo'qoladi. |
 
@@ -831,13 +866,13 @@ qabul mezonlari shu hujjatga qo'shiladi. Ish "yo'l-yo'lakay" hujjatni to'ldiradi
 
 | ID | Qoida |
 |---|---|
-| `MAKAT-01` | Ma'lumotnoma katalog tashqi manbadan lokal jadvalga ko'chirilgan mahsulot takliflaridir; u do'kon katalogi emas. Undagi qator foydalanuvchi mahsulot yaratishni tasdiqlamaguncha `products` jadvaliga kirmaydi. |
+| `MAKAT-01` | Ma'lumotnoma — tashqi global katalogdan keladigan mahsulot **takliflari**; u do'kon katalogi emas. Undagi qator foydalanuvchi mahsulot yaratishni tasdiqlamaguncha `products` jadvaliga kirmaydi. Do'kon bazasida ma'lumotnoma jadvali saqlanmaydi. |
 | `MAKAT-02` | Shtrix kod qidirish tartibi qat'iy: avval do'kon katalogi, faqat u yerda topilmasa va imkoniyat yoqilgan bo'lsa ma'lumotnoma, undan keyin topilmadi holati. |
 | `MAKAT-03` | Do'kon katalogida mavjud shtrix kod bilan yangi mahsulot yaratilmaydi. Foydalanuvchiga shtrix kod qaysi mahsulotga tegishli ekani aniq ko'rsatiladi. |
-| `MAKAT-04` | Ma'lumotnomadagi sotish narxi faqat `AutoFillPrice` yoqilganida tahrirlanadigan taklif sifatida ko'rsatiladi. Standart holatda u qo'llanmaydi; tannarx ma'lumotnomadan hech qachon olinmaydi. |
-| `MAKAT-05` | Sinxronizatsiya barcode bo'yicha upsert qiladi va manbada yo'q yoki vaqtincha olinmagan mavjud qatorlarni o'chirmaydi. Bo'sh yoki yiqilgan manba lokal ma'lumotnomani yo'qotmaydi. |
+| `MAKAT-04` | **Ma'lumotnomada narx umuman yo'q** (`GKAT-02`). Na sotish narxi, na tannarx undan olinmaydi — narx vaqtga va joyga bog'liq, boshqa do'konning narxi esa uning tijorat siri. Narx maydonlari doim bo'sh ochiladi. |
+| `MAKAT-05` | Ma'lumotnoma uch rejimda ishlaydi: **onlayn** (backend ochiq endpointdan so'raydi), **fayl** (egasi sozlamalardan yuklagan paket) va **o'chiq**. **Avtomatik sinxronizatsiya yo'q** — kunlik tekshiruv, versiya solishtirish va fonda yuklab olish qurilmaydi. Manba ishlamasa natija «topilmadi» bo'ladi va savdo ishlashda davom etadi. |
 | `MAKAT-06` | Birlik, kategoriya va ishlab chiqaruvchi faqat nomi mavjud katalog yozuviga mos kelsa tanlanadi. Mos yozuv bo'lmasa yangi katalog yozuvi jimgina yaratilmaydi, matn taklif sifatida qoladi. |
-| `MAKAT-07` | Ma'lumotnoma standart holatda o'chiq. Manba sozlamalari, ustun moslashtirish va sinxronizatsiya natijasi egaga tegishli sozlamalar orqali boshqariladi; bu tarif moduli emas. |
+| `MAKAT-07` | Ma'lumotnoma rejimi, endpoint manzili va yuklangan paket egaga tegishli sozlamalar orqali boshqariladi; bu tarif moduli emas. Fayl yuklash va o'chirish auditga yoziladi. |
 
 ### Qabul mezonlari
 
@@ -845,13 +880,14 @@ qabul mezonlari shu hujjatga qo'shiladi. Ish "yo'l-yo'lakay" hujjatni to'ldiradi
 > «Suv» mavjud bo'lsa, shu kod kiritilganda ma'lumotnoma so'ralmaydi va yaratish
 > to'xtatiladi; foydalanuvchiga kod «Suv» mahsulotiga tegishli ekani ko'rsatiladi.
 
-> **`MAKAT-04`.** Ma'lumotnomada narx 12 000 bo'lsa, `AutoFillPrice` o'chiq holatda
-> yaratish formasi narxsiz ochiladi. Sozlama yoqilganda 12 000 «ma'lumotnomadan» belgisi
-> bilan taklif qilinadi va foydalanuvchi uni o'zgartira oladi. Tannarx har ikki holatda bo'sh.
+> **`MAKAT-04`.** Ma'lumotnomadan mahsulot qo'shilganda yaratish formasi **narxsiz** ochiladi:
+> na sotish narxi, na tannarx to'ldiriladi. Nom, brend, kategoriya, birlik va qadoq soni
+> to'ldiriladi.
 
-> **`MAKAT-05`.** Lokal ma'lumotnomada 100 qator turganda tashqi manba bo'sh javob
-> qaytarsa yoki vaqtincha ochilmasa, sinxronizatsiyadan keyin ham o'sha 100 qator saqlanadi.
-> Bir manbada bir barcode ikki marta kelsa lokal jadvalda u bitta qator bo'lib qoladi.
+> **`MAKAT-05`.** Onlayn rejimda endpoint javob bermasa yoki fayl rejimida paket
+> o'chirilgan bo'lsa, skanerlash natijasi «topilmadi» bo'ladi — xato ko'rsatilmaydi va
+> savdo to'xtamaydi. Yuklangan paket imzosi noto'g'ri bo'lsa u ishlatilmaydi, **eski paket
+> saqlanib qoladi** va sozlamalarda sabab ko'rsatiladi.
 
 ---
 
@@ -895,6 +931,167 @@ qabul mezonlari shu hujjatga qo'shiladi. Ish "yo'l-yo'lakay" hujjatni to'ldiradi
 
 ---
 
+## 13a. Litsenziya holati
+
+Litsenziya — do'kon qaysi modullardan foydalana olishini belgilaydigan yagona haqiqat.
+Ikkita litsenziya qatori bo'lsa, qaysi biri amal qilishi aniqlanmagan holatga tushadi:
+bir so'rov birinchisini, boshqasi ikkinchisini o'qishi mumkin. Shuning uchun yagonalik
+kod darajasida emas, **baza darajasida** kafolatlanadi.
+
+| ID | Qoida |
+|---|---|
+| `LITS-01` | Litsenziya holati o'rnatishda aynan **bitta qator**. Ikkinchi qator qo'shish bazaning o'zi tomonidan rad etiladi — bu kod tekshiruviga qoldirilmaydi. |
+| `LITS-02` | Litsenziyani o'qiydigan kod hech qachon "birinchi qator"ni taxmin qilib olmaydi; qator yagona bo'lgani uchun tanlov muammosi umuman tug'ilmaydi. |
+| `LITS-03` | Litsenziya qatori seed paytida yaratiladi va keyin faqat yangilanadi, hech qachon qayta yaratilmaydi. Bazani qayta tiklash (test yoki dev reseed) ham yagonalikni buzmaydi. |
+
+### Qabul mezonlari
+
+> **`LITS-01`.** Berilgan: o'rnatishda litsenziya qatori mavjud.
+> Qachonki: ikkinchi litsenziya qatori qo'shishga urinilsa,
+> U holda: baza cheklovi buni rad etadi va tranzaksiya yiqiladi. Bu xatti-harakat
+> qaysi kod yo'lidan urinilganiga bog'liq emas.
+
+> **`LITS-03`.** Berilgan: baza to'liq tozalanib qayta seed qilindi (testlardagi kabi).
+> Qachonki: seed qayta ishga tushsa,
+> U holda: litsenziya qatori yana bitta bo'ladi va cheklov buzilmaydi —
+> ya'ni yagonalik identifikator ketma-ketligining holatiga bog'liq emas.
+
+---
+
+## 14c. Ombor harakati jurnali
+
+Jurnalning maqsadi bitta savolga javob berish: **"bu mahsulot qayerdan kelib qayerga ketdi?"**
+Jurnal yarim to'ldirilgan bo'lsa u ishonchli ko'rinadi, lekin javobi noto'g'ri bo'ladi —
+shuning uchun to'liqlik shu bo'limning asosiy talabi.
+
+| ID | Qoida |
+|---|---|
+| `OMBOR-01` | `stocks` dagi miqdorni o'zgartiradigan **har qanday** yo'l aynan bitta harakat qatori yozadi. Istisno yo'q: savdo, qaytarish, kirim, ko'chirish, tuzatish, hamkor mukofoti, savdoni bekor qilish — hammasi. Yozish saqlash nuqtasida bajariladi, har bir handler alohida eslab qolishi shart emas (`NARX-14` dagi narx tarixi bilan bir xil yondashuv). |
+| `OMBOR-02` | Harakat qatori **o'zgarmas**: yaratilgandan keyin tahrirlanmaydi va o'chirilmaydi. Xato harakat teskari harakat bilan tuzatiladi, tahrir bilan emas. |
+| `OMBOR-03` | Har harakatda sabab bo'ladi: `Kind` (nima bo'ldi) va `SourceType` + `SourceId` (qaysi hujjat sababchi). Sababi aniqlanmagan harakat yozilmaydi — bunday holat xato hisoblanadi va aniq xato bilan to'xtatiladi, jimgina "boshqa" deb yozilmaydi. |
+| `OMBOR-04` | Karantin, brak va ta'minotchiga da'vo qoldiqlari **alohida saqlanmaydi** — ular harakatlardan hisoblanadi. Ikkinchi hisoblagich saqlash ikki manba yaratadi va ular bir-biridan uzilib qoladi. |
+| `OMBOR-05` | Bitta variant va ombor bo'yicha barcha harakatlar yig'indisi o'sha variantning `stocks` dagi joriy miqdoriga **teng bo'lishi shart**. Bu jurnalning to'liqligini isbotlaydigan asosiy tekshiruv. |
+| `OMBOR-06` | Harakat tarixi filialga bog'langan (`IBranchScoped`): foydalanuvchi faqat o'ziga ruxsat berilgan filial harakatlarini ko'radi. Ko'rish `stocks.view` ruxsatini talab qiladi. |
+| `OMBOR-07` | **Boshlang'ich qoldiq.** Jurnal allaqachon stoki bor bazaga kiritilganda, har bir noldan farqli stok qatori uchun bitta **boshlang'ich harakat** yoziladi va shu bilan `OMBOR-05` yig'indisi to'g'ri bo'ladi. Bu harakat **stok miqdorini o'zgartirmaydi** — u mavjud holatni jurnalga kiritadi, xolos. Amal **idempotent**: ikkinchi marta ishga tushirilsa hech narsa yozmaydi. Boshlang'ich harakat alohida turda (`Opening`) yoziladi, ya'ni uni haqiqiy savdo yoki kirimdan ajratib bo'ladi. Amal alohida ruxsat talab qiladi va auditga yoziladi. |
+
+### Qabul mezonlari
+
+> **`OMBOR-01` / `OMBOR-05`.** Berilgan: omborda A mahsulotidan 0 ta.
+> Qachonki: 50 ta kirim qilinsa, 3 tasi sotilsa, 1 tasi qaytarilsa va 2 tasi brakka chiqarilsa,
+> U holda: jurnalda **4 ta** harakat bo'ladi, ularning yig'indisi `+50 −3 +1 −2 = 46`
+> va `stocks` dagi miqdor ham **46** bo'ladi.
+
+> **`OMBOR-02`.** Yozilgan harakatni tahrirlash yoki o'chirishga urinish rad etiladi.
+> Sotuvni bekor qilish eski harakatni o'chirmaydi — teskari yo'nalishdagi **yangi** harakat yozadi.
+
+> **`OMBOR-03`.** Sababi e'lon qilinmagan holda stok o'zgartirilsa, saqlash aniq xato bilan
+> to'xtaydi. Jurnalda `Kind` bo'sh yoki "noma'lum" bo'lgan qator **hech qachon** paydo bo'lmaydi.
+
+> **`OMBOR-04`.** Karantindagi qoldiq so'ralganda javob harakatlardan hisoblanadi.
+> Alohida saqlangan hisoblagich yo'q, shuning uchun u haqiqatdan uzilib qola olmaydi.
+
+---
+
+## 14d. Shaxs va rollar
+
+Mijoz, ta'minotchi va hamkor — alohida odamlar emas, **bitta shaxsning rollari**. Ism,
+telefon, email va manzil faqat shaxsda saqlanadi; rol jadvallari faqat o'z sozlamalarini
+saqlaydi. Aks holda bir odamning ismi ikki joyda turadi va ular bir-biridan uziladi —
+bu `parties`/`customers` da allaqachon sodir bo'lgan va tuzatilgan.
+
+| ID | Qoida |
+|---|---|
+| `SHAXS-01` | Bir biznes ichida **telefon raqami shaxsni aniqlaydi**. Ism, telefon, email va manzil faqat `parties` da saqlanadi. Rol jadvallari (`customers`, `suppliers`, `partner_profiles`) bu maydonlarni takrorlamaydi. |
+| `SHAXS-02` | **Ikkita ta'minotchining bir xil telefon raqami bo'la olmaydi.** Mavjud raqam bilan yangi ta'minotchi yaratishga urinish `party_phone_exists` bilan rad etiladi va mavjud yozuv ko'rsatiladi. Bu bugungi xulqdan farq qiladi — hozir ta'minotchi raqami umuman tekshirilmaydi. Sabab: bir ta'minotchi ikki marta kiritilsa uning qarzi ikkiga bo'linadi va hech qaysi biri haqiqiy qoldiqni ko'rsatmaydi. |
+| `SHAXS-03` | **Telefoni ko'rsatilmagan** mijoz yoki ta'minotchi har doim o'z shaxsini oladi: unikallik faqat to'ldirilgan raqamga tegishli. Telefonsiz ishlash to'siqqa aylanmasligi kerak. |
+| `SHAXS-04` | `AllowSharedParty` sozlamasi (standart: **o'chiq**) bitta shaxs bir vaqtda bir nechta rolni egallashi mumkinmi degan savolni hal qiladi. **O'chiq:** mavjud shaxsga ikkinchi rol biriktirish `party_role_conflict` bilan rad etiladi va qaysi rol band qilib turgani aytiladi. **Yoniq:** o'sha shaxsga ikkinchi rol qo'shiladi — ismi va aloqasi bitta joyda qoladi. Bu tarif moduli emas, do'konning ish uslubi (`SOZ-08`). |
+| `SHAXS-05` | Shaxs ma'lumoti qaysi roldan tahrirlansa ham **bitta joyda** o'zgaradi. Ikkala rol ekranida ham o'sha zahoti yangi qiymat ko'rinadi. |
+
+### Qabul mezonlari
+
+> **`SHAXS-02`.** Berilgan: `+998901112233` raqamli ta'minotchi mavjud.
+> Qachonki: o'sha raqam bilan yangi ta'minotchi yaratilsa,
+> U holda: amal `party_phone_exists` bilan rad etiladi va mavjud ta'minotchi nomi ko'rsatiladi.
+> Ikkinchi yozuv **yaratilmaydi**.
+
+> **`SHAXS-03`.** Berilgan: telefoni ko'rsatilmagan ikkita ta'minotchi.
+> Qachonki: ikkalasi ham saqlansa,
+> U holda: ikkalasi ham yaratiladi — telefonsizlik to'qnashuv hisoblanmaydi.
+
+> **`SHAXS-04`.** Berilgan: `+998901112233` raqamli **mijoz** mavjud, `AllowSharedParty` o'chiq.
+> Qachonki: o'sha raqam bilan ta'minotchi yaratilsa,
+> U holda: `party_role_conflict` bilan rad etiladi, mijoz tegilmaydi.
+> Sozlama yoqilganda: bitta `parties` qatori ham `customers`, ham `suppliers` qatorini
+> ko'taradi va istalgan ekrandan ism o'zgartirilsa ikkalasida ham o'zgaradi.
+
+---
+
+## 14e. POS plitkalari tartibi (mashhurlik)
+
+| ID | Qoida |
+|---|---|
+| `MASH-01` | POS plitkalari **mashhurlik** bo'yicha tartiblanadi. O'lchov — mahsulot nechta **alohida savdoda** uchragani, sotilgan miqdor emas: 4 xil savdoda uchragan mahsulot bitta savdoda 100 dona ketganidan ko'ra ko'proq "qo'l uriladigan" hisoblanadi. |
+| `MASH-02` | Hisob oynasi — **oxirgi 30 kun**. Oyna qisqa bo'lsa tartib sakraydi, uzun bo'lsa mavsum o'zgarishiga ergashmaydi; 30 kun mavsum tugagach bir oy ichida qishki mahsulotni o'zi pastga tushiradi. |
+| `MASH-03` | Tartib **filial kesimida** hisoblanadi. Bir filialning savdosi boshqasining plitkalar tartibiga ta'sir qilmaydi. |
+| `MASH-04` | Savdo tarixi yo'q mahsulot **yo'qolmaydi**: u mashhurlar blokidan keyin, alifbo tartibida turadi. Bekor qilingan (`Voided`) savdo hisobga olinmaydi. |
+| `MASH-05` | Qidiruv tartibi o'zgarmaydi. Qidiruv matni kiritilgan zahoti nom-mosligi tartibi ishlaydi, mashhurlik qo'llanilmaydi. |
+| `MASH-06` | Mashhurlik — **ko'rinish** tartibi, ma'lumot emas: u savdo yozish yo'liga hech narsa qo'shmaydi va alohida jadval talab qilmaydi. Natija xotirada 10–15 daqiqa keshlanadi; bir necha daqiqa eskirgan tartib hech narsa turmaydi. |
+| `MASH-07` | Bu tartib **yagona**: POS'da saralash tanlagichi, filtri yoki almashtirgichi yo'q. Katalog va mahsulot boshqaruvi ekranlari alifbo tartibida qoladi. |
+| `MASH-08` | **Tarozi barkodi serverda o'qiladi.** Tarozi chop etgan barkod ichida mahsulot kodi va og'irlik yozilgan bo'ladi. Uni klient emas, server ochadi — aks holda bitta yorliq uch klientda uch xil ishlaydi. Tartib qat'iy: **avval do'kon katalogidagi aniq barkod** tekshiriladi, faqat u topilmasa og'irlik formati o'qiladi. Aks holda barkodi tasodifan tarozi prefiksi bilan boshlanadigan haqiqiy mahsulot noto'g'ri o'qiladi. |
+
+### Qabul mezonlari
+
+> **`MASH-01`.** «Suv» 4 ta alohida savdoda 1 donadan sotilgan, «Un» bitta savdoda 100 dona
+> sotilgan. Plitkalarda **«Suv» «Un»dan yuqorida** turadi.
+
+> **`MASH-02` / `MASH-04`.** 40 kun oldin ko'p sotilgan, oxirgi 30 kunda sotilmagan mahsulot
+> mashhurlar blokidan chiqadi va alifbo qismiga tushadi — ro'yxatdan **yo'qolmaydi**.
+> Hech qachon sotilmagan yangi mahsulot ham ro'yxatda, mashhurlardan keyin, alifbo o'rnida.
+
+> **`MASH-05`.** «suv» deb qidirilganda natija tartibi mashhurlik yoqilmagan holatdagi bilan
+> **bir xil** bo'ladi.
+
+---
+
+## 14f. Brak va chiqim
+
+Omborda tovar sinadi, muddati o'tadi, yo'qoladi. Hozir bunday tovarni chiqarishning
+**birinchi darajali yo'li yo'q** — u faqat mijoz qaytarishi orqali brakka tusha oladi, ya'ni
+jurnal «nima qaytarilib brakka chiqdi» degan savolga javob beradi, «biz nimani brakka
+chiqardik» degan savolga esa yo'q.
+
+Ayni paytda hamma do'kon ham buni yuritmaydi: kimdir sinib qolgan tovarni shunchaki
+e'tibordan qoldiradi. Shuning uchun bo'lim **siyosat bilan boshqariladi**.
+
+| ID | Qoida |
+|---|---|
+| `BRAK-01` | Chiqim — **alohida amal**: ombor, mahsulot, miqdor, sabab (sindi, muddati o'tdi, yo'qoldi, o'g'irlandi) va izoh. Sabab ro'yxatdan tanlanadi, erkin matn emas — aks holda hisobot chiqmaydi. |
+| `BRAK-02` | Chiqim `stocks` miqdorini kamaytiradi va `OMBOR-01` bo'yicha bitta harakat yozadi. Tovar yo'qolib ketmaydi — u **Brak** yoki **Ta'minotchiga da'vo** joyiga o'tadi va qoldig'i harakatlardan hisoblanadi (`OMBOR-04`). |
+| `BRAK-03` | **Ta'minotchiga qaytarish imkoni partiyadan aniqlanadi.** Har partiya qaysi kirimdan kelganini biladi (`Stock.SupplyId` → ta'minotchi). Ta'minotchi qaytarishni qabul qilsa — «Ta'minotchiga qaytarish» varianti chiqadi; aks holda faqat «Brak». Har mahsulotga qo'lda belgi qo'yilmaydi. |
+| `BRAK-04` | Ta'minotchi qaytarishni qabul qiladimi — bu **ta'minotchi sozlamasi** (`AcceptsReturns`, standart: o'chiq). Brend tovarlari (EPA, Dusel, Vesta, Veral) odatda qabul qilinadi; aylanma yo'l bilan kelgan tovarni qaytarib bo'lmaydi. |
+| `BRAK-05` | Ta'minotchiga qaytarilgan tovar uning **hisobiga tushadi**: qarz kamayadi yoki haqdorlik paydo bo'ladi. Oddiy brak esa hisobga tegmaydi — u sof zarar. |
+| `BRAK-06` | Bo'lim `TrackWriteOff` siyosati bilan boshqariladi (standart: **o'chiq**). O'chiq bo'lsa chiqim ekrani, ruxsati va hisoboti ko'rinmaydi va mavjud xulq o'zgarmaydi. Yoqilganda esa faqat ruxsati bor xodim chiqim qila oladi. |
+| `BRAK-07` | Chiqim **orqaga qaytarilmaydi**, faqat teskari amal bilan tuzatiladi (`OMBOR-02`). Xato chiqim qilingan tovar «qaytarib kiritish» bilan tiklanadi va ikkala harakat ham jurnalda qoladi. |
+
+### Qabul mezonlari
+
+> **`BRAK-03` / `BRAK-04`.** Berilgan: A partiya `AcceptsReturns` yoqilgan ta'minotchidan,
+> B partiya yoqilmaganidan kelgan.
+> Qachonki: ikkalasi ham chiqimga qo'yilsa,
+> U holda: A uchun ikkala variant ham (Brak / Ta'minotchiga qaytarish) chiqadi,
+> B uchun **faqat Brak** chiqadi.
+
+> **`BRAK-05`.** Ta'minotchiga 100 000 so'mlik tovar qaytarilsa, o'sha ta'minotchining
+> qarzi 100 000 ga kamayadi. Xuddi shu tovar oddiy brak qilinsa hisob **tegilmaydi**.
+
+> **`BRAK-06`.** `TrackWriteOff` o'chiq bo'lsa chiqim endpointi `403` qaytaradi va menyuda
+> bo'lim ko'rinmaydi. Yoqilganda mavjud qoldiqlar o'zgarmaydi — faqat yangi imkoniyat ochiladi.
+
+> **`BRAK-02`.** 10 dona tovardan 2 tasi brakka chiqarilsa: `stocks` 8 bo'ladi, jurnalda
+> `−2` harakat paydo bo'ladi, brak qoldig'i 2 ga oshadi va `OMBOR-05` buzilmaydi.
+
+---
+
 ## 15. Oflayn rejim va sinxronizatsiya
 
 Oflayn rejim — **vakolat (lease)** modeli: biznesga bir vaqtda bitta qurilma, bitta ombor.
@@ -934,7 +1131,7 @@ faqat qulaylik, replay'da hamma biznes qoidalari qayta tekshiriladi.
 |---|---|
 | `OFF-20` | Oflayn faqat **oddiy to'lov** qabul qilinadi: tender qatorlari + avto-taqsimot. Kechirim (write-off), aniq savdoga qo'lda taqsimot va mijozga pul berish oflayn qabul qilinmaydi. |
 | `OFF-21` | Replay'da taqsimot `QARZ-03` bo'yicha serverdagi **joriy** qarzga qilinadi; **ortiqcha summa avansga o'tadi**. To'lov "qarzdan oshib ketdi" deb rad etilmaydi — pul qabul qilingan, u hech qachon noto'g'ri bo'lmaydi. |
-| `OFF-22` | Oflayn to'lovni yaratgan foydalanuvchi hujjatda muallif bo'ladi (`ActorUserId`). Replay'da muallif faolligi va to'lov qabul qilish ruxsati qayta tekshiriladi; sinxronlashayotgan foydalanuvchi boshqa odam bo'lsa ham to'lov o'z muallifi nomidan o'tadi. |
+| `OFF-23` | Oflayn to'lovni yaratgan foydalanuvchi hujjatda muallif bo'ladi (`ActorUserId`). Replay'da muallif faolligi va to'lov qabul qilish ruxsati qayta tekshiriladi; sinxronlashayotgan foydalanuvchi boshqa odam bo'lsa ham to'lov o'z muallifi nomidan o'tadi. |
 
 ### Oflayn kirim (ta'minot)
 
