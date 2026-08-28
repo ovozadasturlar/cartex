@@ -28,8 +28,18 @@ public sealed class SyncService(IAgentApi agentApi, ISalesApi salesApi, ICustome
         _watching = true;
         Connectivity.Current.ConnectivityChanged += async (_, e) =>
         {
-            if (e.NetworkAccess == NetworkAccess.Internet && await db.CountOutboxAsync("pending") > 0)
-                await SyncAsync();
+            // Bu event handler "async void"ga tenglashadi — istisno tutilmasa hech qayerga
+            // uzatilmaydi, faqat jarayonni qulatadi. SQLite (CountOutboxAsync) yiqilsa ham
+            // ilova omon qolishi uchun shu yerda tutiladi.
+            try
+            {
+                if (e.NetworkAccess == NetworkAccess.Internet && await db.CountOutboxAsync("pending") > 0)
+                    await SyncAsync();
+            }
+            catch (Exception exception)
+            {
+                System.Diagnostics.Debug.WriteLine(exception);
+            }
         };
     }
 
@@ -97,6 +107,10 @@ public sealed class SyncService(IAgentApi agentApi, ISalesApi salesApi, ICustome
             }
             catch (ApiException ex) when ((int)ex.StatusCode is >= 400 and < 500)
             {
+                // 4xx — server rad etdi, savdo bo'lmaydi: optimistik qoldiq/qarz o'zgarishi darhol
+                // qaytariladi. 5xx/tarmoq xatosida qaytarilmaydi — savdo hali o'tishi mumkin.
+                if (item.Kind is "sale" or "checkout" or "repay")
+                    await RollbackAsync(item);
                 item.Status = "error";
                 item.Error = DescribeError(ex);
                 await db.UpdateOutboxAsync(item);
@@ -116,7 +130,10 @@ public sealed class SyncService(IAgentApi agentApi, ISalesApi salesApi, ICustome
             case "sale":
             {
                 var d = JsonSerializer.Deserialize<SaleDraft>(item.PayloadJson)!;
-                var items = d.Items.Select(i => new CreateSaleItemRequest(i.VariantId, i.Quantity, i.UnitPrice)).ToList();
+                // NARX-13/OFF-10: dala narxi qurilmada muhrlangan — u qo'lda o'zgartirilgan narx emas,
+                // shuning uchun ExpectedUnitPrice bilan yuboriladi va server uni siljish sifatida
+                // qabul qiladi (Sales.PriceOverride talab qilinmaydi).
+                var items = d.Items.Select(i => new CreateSaleItemRequest(i.VariantId, i.Quantity) { ExpectedUnitPrice = i.UnitPrice }).ToList();
                 var result = await salesApi.CreateAsync(new CreateSaleRequest(d.WarehouseId, d.CustomerId, d.PaidCash, 0, 0, items)
                 {
                     DebtDueDate = d.DebtDueDate,
@@ -159,47 +176,53 @@ public sealed class SyncService(IAgentApi agentApi, ISalesApi salesApi, ICustome
 
     public async Task DeleteAsync(OutboxItem item)
     {
-        if (item.Status != "done")
-        {
-            switch (item.Kind)
-            {
-                case "sale":
-                {
-                    var d = JsonSerializer.Deserialize<SaleDraft>(item.PayloadJson)!;
-                    foreach (var line in d.Items)
-                        await db.AdjustStockAsync(line.VariantId, line.Quantity);
-                    var total = d.Items.Sum(i => i.Quantity * i.UnitPrice);
-                    if (d.CustomerId is { } customerId && total > d.PaidCash)
-                        await db.AdjustDebtAsync(customerId, -(total - d.PaidCash));
-                    break;
-                }
-                case "repay":
-                {
-                    var r = JsonSerializer.Deserialize<RepayDraft>(item.PayloadJson)!;
-                    await db.AdjustDebtAsync(r.CustomerId, r.Amount);
-                    break;
-                }
-                case "cart":
-                {
-                    var o = JsonSerializer.Deserialize<OrderDraft>(item.PayloadJson)!;
-                    await db.DeleteOrderAsync(o.LocalId);
-                    break;
-                }
-                case "checkout":
-                {
-                    var c = JsonSerializer.Deserialize<CheckoutDraft>(item.PayloadJson)!;
-                    foreach (var line in c.Items)
-                        await db.AdjustStockAsync(line.VariantId, line.Quantity);
-                    var debt = c.Total - c.PaidCash;
-                    if (c.CustomerId is { } customerId && debt > 0)
-                        await db.AdjustDebtAsync(customerId, -debt);
-                    await db.SetOrderStatusByCodeAsync(c.Code, "synced");
-                    break;
-                }
-            }
-        }
+        // Yuborilmagan (pending) qatorning optimistik ta'siri qaytariladi. "error" holatidagi
+        // sale/checkout/repay allaqachon 4xx paytida qaytarilgan — ikki marta qaytarilmaydi;
+        // cart esa 4xx da qaytarilmaydi, shuning uchun uning buyurtmasi shu yerda o'chiriladi.
+        if (item.Status == "pending" || (item.Status == "error" && item.Kind == "cart"))
+            await RollbackAsync(item);
         await db.DeleteOutboxAsync(item.Id);
         RaiseState();
+    }
+
+    private async Task RollbackAsync(OutboxItem item)
+    {
+        switch (item.Kind)
+        {
+            case "sale":
+            {
+                var d = JsonSerializer.Deserialize<SaleDraft>(item.PayloadJson)!;
+                foreach (var line in d.Items)
+                    await db.AdjustStockAsync(line.VariantId, line.Quantity);
+                var total = d.Items.Sum(i => i.Quantity * i.UnitPrice);
+                if (d.CustomerId is { } customerId && total > d.PaidCash)
+                    await db.AdjustDebtAsync(customerId, -(total - d.PaidCash));
+                break;
+            }
+            case "repay":
+            {
+                var r = JsonSerializer.Deserialize<RepayDraft>(item.PayloadJson)!;
+                await db.AdjustDebtAsync(r.CustomerId, r.Amount);
+                break;
+            }
+            case "cart":
+            {
+                var o = JsonSerializer.Deserialize<OrderDraft>(item.PayloadJson)!;
+                await db.DeleteOrderAsync(o.LocalId);
+                break;
+            }
+            case "checkout":
+            {
+                var c = JsonSerializer.Deserialize<CheckoutDraft>(item.PayloadJson)!;
+                foreach (var line in c.Items)
+                    await db.AdjustStockAsync(line.VariantId, line.Quantity);
+                var debt = c.Total - c.PaidCash;
+                if (c.CustomerId is { } customerId && debt > 0)
+                    await db.AdjustDebtAsync(customerId, -debt);
+                await db.SetOrderStatusByCodeAsync(c.Code, "synced");
+                break;
+            }
+        }
     }
 
     private async Task PullAsync()

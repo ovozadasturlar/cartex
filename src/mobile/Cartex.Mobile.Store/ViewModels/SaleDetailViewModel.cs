@@ -11,7 +11,8 @@ namespace Cartex.Mobile.Store.ViewModels;
 
 public partial class SaleDetailViewModel(
     ISalesApi salesApi,
-    MobilePrintDispatcher printDispatcher) : ObservableObject, IQueryAttributable
+    MobilePrintDispatcher printDispatcher,
+    CartStore cart) : ObservableObject, IQueryAttributable
 {
     public ObservableCollection<SaleDetailItemRow> Items { get; } = [];
     public ObservableCollection<SaleDetailPaymentRow> Payments { get; } = [];
@@ -36,6 +37,7 @@ public partial class SaleDetailViewModel(
     [ObservableProperty] private bool _canResend;
     [ObservableProperty] private bool _canOpenCustomer;
     [ObservableProperty] private bool _canCreateReturn;
+    [ObservableProperty] private bool _canCorrect;
 
     public bool HasCustomer => !string.IsNullOrWhiteSpace(CustomerName);
     public bool HasDiscount => !string.IsNullOrWhiteSpace(DiscountText);
@@ -117,6 +119,56 @@ public partial class SaleDetailViewModel(
         ? Shell.Current.GoToAsync($"sale/return?id={_sale.Id}")
         : Task.CompletedTask;
 
+    // Savdoni tuzatish: eski savdo sababi bilan bekor qilinadi va uning qatorlari savatga
+    // qaytariladi - kassir xatoni tuzatib qayta yakunlaydi (desktopdagi bilan bir xil yo'l).
+    [RelayCommand]
+    private async Task CorrectAsync()
+    {
+        if (_sale is not { } sale || !CanCorrect || IsBusy) return;
+        var reason = await Shell.Current.CurrentPage.DisplayPromptAsync(
+            Loc.Instance["correct_sale"], Loc.Instance["correct_sale_confirm"],
+            Loc.Instance["ok"], Loc.Instance["cancel"], Loc.Instance["correct_sale_reason"]);
+        if (string.IsNullOrWhiteSpace(reason)) return;
+
+        IsBusy = true;
+        try
+        {
+            await salesApi.VoidAsync(sale.Id, new VoidSaleRequest(reason.Trim()));
+            cart.Restore(
+                sale.Items.Select(x => new CartLine
+                {
+                    VariantId = x.VariantId,
+                    ProductName = x.ProductName,
+                    UnitName = x.UnitName,
+                    OriginalPrice = x.UnitPrice,
+                    UnitPrice = x.EnteredUnitPrice > 0 ? x.EnteredUnitPrice : x.UnitPrice,
+                    Quantity = x.Quantity,
+                    AllowsFractional = x.AllowsFractional
+                }),
+                sale.CustomerId,
+                sale.CustomerName,
+                sale.Note,
+                // To'lov, chegirma va valyuta ham qaytadi: kassir hammasini qaytadan
+                // terib chiqmaydi, faqat xatoni tuzatadi (desktop bilan bir xil).
+                new CheckoutDraft(
+                    sale.PaidCash,
+                    sale.PaidCard,
+                    sale.PaidBonus,
+                    sale.ManualDiscountAmount,
+                    sale.CreditAmount > 0,
+                    sale.PaidAdvance > 0,
+                    sale.DebtCurrency,
+                    sale.DebtDueDate?.ToDateTime(TimeOnly.MinValue),
+                    sale.Payments
+                        .Select(x => new CheckoutPaymentDraft(x.Method, x.Currency, x.Amount))
+                        .ToList()));
+            Ui.Toast(Loc.Instance["sale_voided"]);
+            await Shell.Current.GoToAsync("cart");
+        }
+        catch (Exception exception) { Ui.Toast(Describe(exception)); }
+        finally { IsBusy = false; }
+    }
+
     private async Task LoadAsync()
     {
         if (_saleId <= 0 || IsLoading) return;
@@ -154,6 +206,7 @@ public partial class SaleDetailViewModel(
             CanResend = sale.AllowedActions.Contains("resendReceipt");
             CanOpenCustomer = sale.AllowedActions.Contains("openCustomer");
             CanCreateReturn = sale.AllowedActions.Contains("createReturn");
+            CanCorrect = sale.AllowedActions.Contains("correctSale");
             IsLoaded = true;
         }
         catch (Exception ex)

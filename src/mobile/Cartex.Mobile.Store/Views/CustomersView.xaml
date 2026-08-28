@@ -82,7 +82,7 @@
             </Grid>
         </RefreshView>
 
-        <Grid Grid.RowSpan="2" BackgroundColor="#CC000000" IsVisible="{Binding IsCreateModalOpen}">
+        <Grid Grid.RowSpan="2" BackgroundColor="#CC000000" IsVisible="{Binding IsCreateModalOpen}" svc:AutoFocus.OnVisible="True">
             <Grid.GestureRecognizers>
                 <TapGestureRecognizer Command="{Binding CloseCreateModalCommand}" />
             </Grid.GestureRecognizers>
@@ -129,7 +129,7 @@
             </Border>
         </Grid>
 
-        <Grid Grid.RowSpan="2" BackgroundColor="#CC000000" IsVisible="{Binding IsOfflinePayOpen}">
+        <Grid Grid.RowSpan="2" BackgroundColor="#CC000000" IsVisible="{Binding IsOfflinePayOpen}" svc:AutoFocus.OnVisible="True">
             <Grid.GestureRecognizers>
                 <TapGestureRecognizer Command="{Binding CloseOfflinePayCommand}" />
             </Grid.GestureRecognizers>

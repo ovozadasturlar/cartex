@@ -13,12 +13,11 @@ namespace Cartex.Mobile.Store.ViewModels;
 public partial class CartViewModel : AccessAwareViewModel
 {
     private readonly CartStore _cart;
-    private readonly ICustomersApi _customersApi;
     private readonly IPartnersApi _partnersApi;
     private readonly MobileOfflineService _offline;
 
     public RangeObservableCollection<CartLine> Lines { get; } = [];
-    public ObservableCollection<CustomerDto> Customers { get; } = [];
+    public MobileCustomerPicker CustomerPicker { get; }
     public ObservableCollection<ParticipantRoleSelectionRow> ParticipantRoles { get; } = [];
     public ObservableCollection<PartnerDto> PartnerResults { get; } = [];
 
@@ -30,16 +29,11 @@ public partial class CartViewModel : AccessAwareViewModel
     [ObservableProperty] private string _totalText = "";
     [ObservableProperty] private string? _customerName;
     [ObservableProperty] private bool _hasCustomer;
-    [ObservableProperty] private string _customerSearch = "";
-    [ObservableProperty] private bool _hasCustomers;
     [ObservableProperty] private bool _hasPartnerResults;
     [ObservableProperty] private bool _isParticipantModalOpen;
     [ObservableProperty] private ParticipantRoleSelectionRow? _selectedParticipantRole;
     [ObservableProperty] private string _participantSearch = "";
     
-    [ObservableProperty] private bool _isCustomerModalOpen;
-    [ObservableProperty] private string _newCustomerName = "";
-    [ObservableProperty] private string _newCustomerPhone = "";
     [ObservableProperty] private bool _isBusy;
 
     [ObservableProperty] private bool _isProductModalOpen;
@@ -49,6 +43,8 @@ public partial class CartViewModel : AccessAwareViewModel
     [ObservableProperty] private string _selectedPriceText = "";
     [ObservableProperty] private string _selectedOriginalPriceText = "";
     [ObservableProperty] private bool _hasPriceOverride;
+    [ObservableProperty] private string _selectedAmountText = "";
+    [ObservableProperty] private bool _canEnterAmount;
 
     partial void OnSelectedProductChanged(CartLine? value) => SyncSelectedTexts();
 
@@ -59,6 +55,8 @@ public partial class CartViewModel : AccessAwareViewModel
     {
         SelectedQuantityText = SelectedProduct?.Quantity.ToString("0.###") ?? "0";
         SelectedPriceText = SelectedProduct?.UnitPrice.ToString("0.##") ?? "0";
+        SelectedAmountText = SelectedProduct?.LineTotal.ToString("0") ?? "0";
+        CanEnterAmount = SelectedProduct?.AllowsAmountEntry == true;
         RefreshPriceState();
     }
 
@@ -70,7 +68,6 @@ public partial class CartViewModel : AccessAwareViewModel
             : "";
     }
 
-    private CancellationTokenSource? _searchCts;
     private CancellationTokenSource? _partnerSearchCts;
     private readonly ImageUrlBuilder _images;
     private bool _rolesLoaded;
@@ -90,10 +87,11 @@ public partial class CartViewModel : AccessAwareViewModel
         MobileOfflineService offline) : base(access)
     {
         _cart = cart;
-        _customersApi = customersApi;
         _partnersApi = partnersApi;
         _images = images;
         _offline = offline;
+        CustomerPicker = new MobileCustomerPicker(customersApi, offline, access,
+            (id, name) => _cart.SetCustomer(id, name));
         ObserveAccess(nameof(CanUseCart), nameof(CanOverridePrice));
     }
 
@@ -153,64 +151,26 @@ public partial class CartViewModel : AccessAwareViewModel
         TotalText = $"{_cart.Total:N0} UZS";
         CustomerName = _cart.CustomerName;
         HasCustomer = !string.IsNullOrEmpty(_cart.CustomerName);
+        CustomerPicker.Sync(_cart.CustomerId, _cart.CustomerName);
         foreach (var role in ParticipantRoles)
             role.Replace(_cart.Participants);
         OnPropertyChanged(nameof(CanUseBuyerForSelectedRole));
     }
 
-    partial void OnCustomerSearchChanged(string value) => _ = SearchCustomersAsync(value);
     partial void OnParticipantSearchChanged(string value) => _ = SearchPartnersAsync(value);
     partial void OnSelectedParticipantRoleChanged(ParticipantRoleSelectionRow? value) =>
         OnPropertyChanged(nameof(CanUseBuyerForSelectedRole));
 
-    private async Task SearchCustomersAsync(string term)
-    {
-        var cts = Debounce.Restart(ref _searchCts);
-        if (string.IsNullOrWhiteSpace(term))
-        {
-            Customers.Clear();
-            HasCustomers = false;
-            return;
-        }
-        try
-        {
-            await Task.Delay(350, cts.Token);
-            IReadOnlyList<CustomerDto> rows;
-            if (_offline.ShouldUseOffline)
-                rows = await _offline.SearchCustomersAsync(term, 10);
-            else
-            {
-                var response = await _customersApi.QueryAsync(QueryRequest.Create().Page(1, 10).Search(term).Build());
-                rows = response.Content ?? [];
-            }
-            if (cts.IsCancellationRequested) return;
-            Customers.Clear();
-            foreach (var customer in rows)
-                Customers.Add(customer);
-            HasCustomers = Customers.Count > 0;
-        }
-        catch (OperationCanceledException) { }
-        catch
-        {
-            _offline.MarkServerUnavailable();
-            if (!_offline.IsEnabled || cts.IsCancellationRequested) return;
-            Customers.Clear();
-            foreach (var customer in await _offline.SearchCustomersAsync(term, 10))
-                Customers.Add(customer);
-            HasCustomers = Customers.Count > 0;
-        }
-    }
-
     [RelayCommand]
     private void Increment(CartLine line) =>
-        _cart.SetQuantity(line.VariantId, line.Quantity + 1m);
+        _cart.SetQuantity(line, line.Quantity + 1m);
 
     [RelayCommand]
     private void Decrement(CartLine line)
     {
         var next = Math.Max(1m, line.Quantity - 1m);
         if (next < line.Quantity)
-            _cart.SetQuantity(line.VariantId, next);
+            _cart.SetQuantity(line, next);
     }
     
     [RelayCommand]
@@ -236,7 +196,7 @@ public partial class CartViewModel : AccessAwareViewModel
     [RelayCommand]
     private void Remove(CartLine line)
     {
-        _cart.Remove(line.VariantId);
+        _cart.Remove(line);
         if (SelectedProduct == line)
             IsProductModalOpen = false;
     }
@@ -247,18 +207,6 @@ public partial class CartViewModel : AccessAwareViewModel
         if (SelectedProduct is not null)
             Remove(SelectedProduct);
     }
-
-    [RelayCommand]
-    private void PickCustomer(CustomerDto customer)
-    {
-        _cart.SetCustomer(customer.Id, customer.FullName);
-        CustomerSearch = "";
-        Customers.Clear();
-        HasCustomers = false;
-    }
-
-    [RelayCommand]
-    private void ClearCustomer() => _cart.SetCustomer(null, null);
 
     [RelayCommand]
     private void OpenParticipantModal(ParticipantRoleSelectionRow role)
@@ -343,44 +291,6 @@ public partial class CartViewModel : AccessAwareViewModel
         finally { IsBusy = false; }
     }
 
-    [RelayCommand]
-    private void OpenCustomerModal()
-    {
-        NewCustomerName = CustomerSearch;
-        NewCustomerPhone = "";
-        IsCustomerModalOpen = true;
-    }
-
-    [RelayCommand]
-    private void CloseCustomerModal() => IsCustomerModalOpen = false;
-
-    [RelayCommand]
-    private async Task SaveCustomerAsync()
-    {
-        if (string.IsNullOrWhiteSpace(NewCustomerName) || string.IsNullOrWhiteSpace(NewCustomerPhone))
-        {
-            Ui.Toast(Loc.Instance["err_fill_all"]);
-            return;
-        }
-        IsBusy = true;
-        try
-        {
-            if (_offline.ShouldUseOffline)
-            {
-                Ui.Toast(Loc.Instance["offline_mutation_blocked"]);
-                return;
-            }
-            var request = new CreateCustomerRequest(NewCustomerName, NewCustomerPhone, null, 0);
-            var id = await _customersApi.CreateAsync(request);
-            _cart.SetCustomer(id, NewCustomerName);
-            IsCustomerModalOpen = false;
-            CustomerSearch = "";
-            HasCustomers = false;
-        }
-        catch { Ui.Toast(Loc.Instance["err_no_connection"]); }
-        finally { IsBusy = false; }
-    }
-
     // Ochiq swipe'ni yopish uchun qator bosilganda chaqiriladi; sahifa biror drawer
     // yopilganini qaytaradi — u holda bosish faqat yopish deb qabul qilinadi.
     public Func<bool>? RowInteracted { get; set; }
@@ -432,8 +342,8 @@ public partial class CartViewModel : AccessAwareViewModel
                 out var quantity,
                 out var error))
         {
-            _cart.SetQuantity(SelectedProduct.VariantId, quantity);
-            SelectedQuantityText = QuantityInput.Format(quantity);
+            _cart.SetQuantity(SelectedProduct, quantity);
+            SelectedQuantityText = QuantityInput.Format(SelectedProduct.Quantity);
         }
         else
         {
@@ -452,13 +362,16 @@ public partial class CartViewModel : AccessAwareViewModel
     {
         if (SelectedProduct is null || !CanOverridePrice) return;
         var previous = SelectedProduct.UnitPrice;
+        // Maydon bo'sh qoldirilsa xato emas, narx nolga tushadi. Narxsiz qator savdoni
+        // yakunlashda to'xtatiladi - bepul mahsulot sotuvga qo'yilmaydi.
+        if (string.IsNullOrWhiteSpace(SelectedPriceText)) SelectedPriceText = "0";
         if (decimal.TryParse(
                 SelectedPriceText.Trim().Replace(',', '.'),
                 System.Globalization.NumberStyles.Number,
                 System.Globalization.CultureInfo.InvariantCulture,
                 out var price)
             && price >= 0
-            && _cart.SetPrice(SelectedProduct.VariantId, price))
+            && _cart.SetPrice(SelectedProduct, price))
         {
             SelectedPriceText = price.ToString("0.##");
             // Tahrir yopilish asnosida chala terilgan narx ham saqlanib qolishi mumkin —
@@ -471,6 +384,24 @@ public partial class CartViewModel : AccessAwareViewModel
             SelectedPriceText = SelectedProduct.UnitPrice.ToString("0.##");
         }
         RefreshPriceState();
+    }
+
+    // Summadan miqdor: kassir "20 ming so'mlik" deb yozadi, miqdorni tizim hisoblaydi.
+    [RelayCommand]
+    private void SetAmountFromText()
+    {
+        if (SelectedProduct is null || !CanEnterAmount) return;
+        if (decimal.TryParse(
+                SelectedAmountText.Trim().Replace(',', '.'),
+                System.Globalization.NumberStyles.Number,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out var amount)
+            && _cart.SetAmount(SelectedProduct, amount) is { } quantity)
+        {
+            SelectedQuantityText = quantity.ToString("0.###");
+            Ui.Toast($"{quantity:0.###} {SelectedProduct.UnitName}");
+        }
+        SelectedAmountText = SelectedProduct.LineTotal.ToString("0");
     }
 
     [RelayCommand]

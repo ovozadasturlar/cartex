@@ -61,6 +61,12 @@ public partial class ScanView : ContentView, ISectionView
             return true;
         }
 
+        if (_vm.ReferenceVisible)
+        {
+            _vm.CloseReferenceCommand.Execute(null);
+            return true;
+        }
+
         if (_vm.SearchOpen)
         {
             _vm.CloseSearchCommand.Execute(null);
@@ -105,8 +111,9 @@ public partial class ScanView : ContentView, ISectionView
     {
         if (e.PropertyName == nameof(ScanViewModel.ProductActionsExpanded) && !_vm.ProductActionsExpanded)
             MainThread.BeginInvokeOnMainThread(() => _ = CollapseProductActionsAsync());
-        if (e.PropertyName == nameof(ScanViewModel.OverlayVisible) && MainPage.Current is { } page)
-            page.BarVisible = !_vm.OverlayVisible;
+        if (e.PropertyName is nameof(ScanViewModel.OverlayVisible) or nameof(ScanViewModel.ReferenceVisible)
+            && MainPage.Current is { } page)
+            page.BarVisible = !_vm.OverlayVisible && !_vm.ReferenceVisible;
     }
 
     private async Task CollapseProductActionsAsync()

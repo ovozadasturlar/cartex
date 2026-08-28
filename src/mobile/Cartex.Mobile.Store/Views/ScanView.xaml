@@ -113,6 +113,27 @@
                    TextColor="White" FontSize="14" HorizontalTextAlignment="Center" />
         </Border>
 
+        <Border VerticalOptions="Start" HorizontalOptions="Center" Margin="0,14,0,0" Padding="0"
+                WidthRequest="40" HeightRequest="40"
+                StrokeThickness="0" StrokeShape="RoundRectangle 20"
+                BackgroundColor="#B3000000" InputTransparent="True"
+                IsVisible="{Binding ScanIndicator.IsVisible}">
+            <Grid>
+                <ActivityIndicator WidthRequest="20" HeightRequest="20" Color="White"
+                                   HorizontalOptions="Center" VerticalOptions="Center"
+                                   IsRunning="{Binding ScanIndicator.IsBusy}"
+                                   IsVisible="{Binding ScanIndicator.IsBusy}" />
+                <Label FontFamily="MDI" Text="{StaticResource IcCheckPlain}" FontSize="22"
+                       HorizontalOptions="Center" VerticalOptions="Center"
+                       TextColor="{StaticResource SuccessDark}"
+                       IsVisible="{Binding ScanIndicator.IsFound}" />
+                <Label FontFamily="MDI" Text="{StaticResource IcClose}" FontSize="22"
+                       HorizontalOptions="Center" VerticalOptions="Center"
+                       TextColor="#9FA8A3"
+                       IsVisible="{Binding ScanIndicator.IsMissing}" />
+            </Grid>
+        </Border>
+
         <!-- Natijalar qidiruv maydonining bevosita ostidan ochiladi. Yuqori chekinish sarlavha
              balandligiga teng: 12 tepa + 52 tugma + 10 oraliq + 48 maydon + 12 oraliq. Pastda esa
              tab paneli (29 + 62) turadi — natijalarning oxirgi qatori uning ostida qolib ketmasin. -->
@@ -336,5 +357,46 @@
                 </VerticalStackLayout>
             </Border>
         </Grid>
+
+        <Border Style="{StaticResource Card}" Padding="0" VerticalOptions="End" Margin="12,0,12,104"
+                IsVisible="{Binding ReferenceVisible}">
+            <Grid RowDefinitions="Auto,Auto,Auto">
+                <Grid HeightRequest="178" BackgroundColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource SurfaceDark}}">
+                    <ctl:Thumb Source="{Binding ReferenceImageUrl}" Size="200" Stretch="True" Radius="0" />
+                    <Button FontFamily="MDI" Text="{StaticResource IcClose}" FontSize="18" Padding="0"
+                            WidthRequest="40" HeightRequest="40" CornerRadius="20"
+                            VerticalOptions="Start" HorizontalOptions="Start" Margin="10,10,0,0"
+                            BackgroundColor="#CC000000" TextColor="White"
+                            Command="{Binding CloseReferenceCommand}" />
+                </Grid>
+
+                <VerticalStackLayout Grid.Row="1" Padding="16,12,16,8" Spacing="6">
+                    <Label Text="{Binding ReferenceName}" FontSize="20" FontAttributes="Bold"
+                           LineBreakMode="TailTruncation" MaxLines="2"
+                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                    <Label Text="{svc:T catalog_reference_hint}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding ReferenceFields}" Spacing="2">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ReferenceField">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                    <Label Text="{Binding Label}" Style="{StaticResource MutedLabel}" />
+                                    <Label Grid.Column="1" Text="{Binding Value}" HorizontalTextAlignment="End"
+                                           LineBreakMode="TailTruncation"
+                                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                </Grid>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Grid.Row="2" Padding="16,0,16,16" Spacing="10">
+                    <Button Text="{svc:T add}" Style="{StaticResource BtnPrimary}"
+                            Command="{Binding AddReferenceCommand}"
+                            IsVisible="{Binding CanCreateProduct}" />
+                    <Button Text="{svc:T cancel}" Style="{StaticResource BtnOutline}"
+                            Command="{Binding CloseReferenceCommand}" />
+                </VerticalStackLayout>
+            </Grid>
+        </Border>
     </Grid>
 </ContentView>

@@ -161,6 +161,10 @@ public static class MauiProgram
         }
         Resolve<SessionStore>().Clear();
         Resolve<AccessState>().Clear();
+        // Savat va kirim savati Preferences'da saqlanadi va konstruktordan tiklanadi —
+        // shu yerda tozalanmasa keyingi operator oldingisining savatini meros qilib olardi.
+        Resolve<CartStore>().Clear();
+        Resolve<SupplyCartStore>().Clear();
         MainThread.BeginInvokeOnMainThread(() => _ = NavigateToLoginAsync());
     }
 

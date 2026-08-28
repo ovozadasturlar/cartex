@@ -110,7 +110,14 @@ public sealed class MobileOfflineStore
     private Task? _init;
     private byte[] _key = [];
 
-    public Task InitializeAsync() => _init ??= InitializeCoreAsync();
+    // Yiqilgan Task keshlanmaydi: bir martalik keystore/SQLite xatosi butun jarayon davomida
+    // "oflayn keshi buzilgan" holatda qolib ketmasin — keyingi chaqiruv qayta urinishi kerak.
+    public Task InitializeAsync()
+    {
+        var init = _init;
+        if (init is { IsFaulted: false, IsCanceled: false }) return init;
+        return _init = InitializeCoreAsync();
+    }
 
     private async Task InitializeCoreAsync()
     {

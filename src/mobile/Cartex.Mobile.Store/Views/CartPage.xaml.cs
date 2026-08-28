@@ -13,9 +13,9 @@ public partial class CartPage : ContentPage
         InitializeComponent();
         BindingContext = _vm = vm;
         _vm.RowInteracted = CloseOpenSwipe;
-        _vm.PropertyChanged += (_, e) =>
+        _vm.CustomerPicker.PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName == nameof(CartViewModel.IsCustomerModalOpen) && !_vm.IsCustomerModalOpen)
+            if (e.PropertyName == nameof(MobileCustomerPicker.IsFormOpen) && !_vm.CustomerPicker.IsFormOpen)
                 KeyboardDismissal.Hide();
         };
     }
@@ -42,9 +42,9 @@ public partial class CartPage : ContentPage
             return true;
         }
 
-        if (_vm.IsCustomerModalOpen)
+        if (_vm.CustomerPicker.IsFormOpen)
         {
-            _vm.CloseCustomerModalCommand.Execute(null);
+            _vm.CustomerPicker.CloseFormCommand.Execute(null);
             return true;
         }
 
@@ -111,6 +111,17 @@ public partial class CartPage : ContentPage
     private void OnPriceEntryUnfocused(object? sender, FocusEventArgs e)
     {
         _vm.SetPriceFromTextCommand.Execute(null);
+    }
+
+    private void OnAmountEntryCompleted(object? sender, EventArgs e)
+    {
+        _vm.SetAmountFromTextCommand.Execute(null);
+        KeyboardDismissal.Hide();
+    }
+
+    private void OnAmountEntryUnfocused(object? sender, FocusEventArgs e)
+    {
+        _vm.SetAmountFromTextCommand.Execute(null);
     }
 
     private void OnOutsideTapped(object? sender, TappedEventArgs e) => CloseOpenSwipe();

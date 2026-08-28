@@ -51,6 +51,10 @@ public partial class App : Application
 			AppLock.Disable();
 			var services = IPlatformApplication.Current!.Services;
 			services.GetRequiredService<AccessState>().Clear();
+			// Savat va kirim savati Preferences'da saqlanadi va konstruktordan tiklanadi —
+			// shu yerda tozalanmasa keyingi operator oldingisining savatini meros qilib olardi.
+			services.GetRequiredService<Services.CartStore>().Clear();
+			services.GetRequiredService<Services.SupplyCartStore>().Clear();
 			await services.GetRequiredService<Services.OrderingHubService>().StopAsync();
 			await services.GetRequiredService<Services.SmsGatewayHostService>().StopAsync();
 			await services.GetRequiredService<Services.MobileHubHostService>().ApplyAsync();

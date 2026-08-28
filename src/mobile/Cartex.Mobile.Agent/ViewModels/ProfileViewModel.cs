@@ -91,7 +91,9 @@ public partial class ProfileViewModel(MobileAuthService auth, AccessState access
     private async Task LogoutAsync()
     {
         var page = Shell.Current.CurrentPage;
-        if (await db.CountOutboxAsync("pending") > 0)
+        // "error" holatidagilar ham yuborilmagan — ClearCacheAsync ularni ham o'chirib
+        // tashlaydi, shuning uchun faqat "pending"ni tekshirish pul yo'qotardi.
+        if (await db.CountOutboxAsync("pending") + await db.CountOutboxAsync("error") > 0)
         {
             await page.DisplayAlertAsync(Loc.Instance["logout_blocked_title"], Loc.Instance["logout_blocked_msg"], Loc.Instance["ok"]);
             return;

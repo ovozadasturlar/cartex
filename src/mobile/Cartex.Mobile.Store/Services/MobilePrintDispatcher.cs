@@ -66,7 +66,7 @@ public sealed class MobilePrintDispatcher(
             null,
             $"issue-note:{issueId}:mobile:{Guid.NewGuid():N}");
 
-    private Task CreateAsync(
+    private async Task CreateAsync(
         PrintJobKind kind,
         string sourceType,
         string sourceId,
@@ -79,7 +79,7 @@ public sealed class MobilePrintDispatcher(
         if (auth.DefaultBranchId is not long branchId)
             throw new InvalidOperationException(Loc.Instance["warehouse_none"]);
 
-        return printingApi.CreateJobAsync(new CreatePrintJobRequest(
+        var job = await printingApi.CreateJobAsync(new CreatePrintJobRequest(
             branchId,
             kind,
             sourceType,
@@ -91,5 +91,11 @@ public sealed class MobilePrintDispatcher(
             idempotencyKey,
             auth.DeviceId,
             auth.DeviceName));
+
+        // Server hech bir hostga tayinlay olmagan bo'lsa telefon "yuborildi" deb aldamaydi.
+        if (job.Status == PrintJobStatus.Pending && job.AssignedNodeId is null)
+            throw new InvalidOperationException(Loc.Instance["print_no_online_printer"]);
+        if (job.Status == PrintJobStatus.Rejected)
+            throw new InvalidOperationException(job.ErrorMessage ?? Loc.Instance["print_no_online_printer"]);
     }
 }

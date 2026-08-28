@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Text.RegularExpressions;
 using Cartex.ApiClient.Api;
 using Cartex.ApiClient.Querying;
 using Cartex.Hub;
@@ -7,9 +6,13 @@ using Cartex.Mobile.Core;
 using Cartex.Mobile.Store.Services;
 using Cartex.Shared.Models.Auth;
 using Cartex.Shared.Models.Barcodes;
+using Cartex.Shared.Models.Catalog;
 using Cartex.Shared.Models.Common;
+using Cartex.Shared.Models.Customers;
+using Cartex.Shared.Models.Prepacks;
 using Cartex.Shared.Models.Products;
 using Cartex.Shared.Models.Rates;
+using Cartex.Shared.Models.Scan;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
@@ -21,6 +24,7 @@ public partial class ScanViewModel : AccessAwareViewModel
     private const int SearchPageSize = 30;
 
     private readonly ISessionsApi _sessionsApi;
+    private readonly IScanApi _scanApi;
     private readonly IProductsApi _productsApi;
     private readonly IRatesApi _ratesApi;
     private readonly IBarcodesApi _barcodesApi;
@@ -40,6 +44,9 @@ public partial class ScanViewModel : AccessAwareViewModel
     [ObservableProperty] private bool _overlayVisible;
     [ObservableProperty] private bool _unknownBarcodeVisible;
     [ObservableProperty] private string _unknownBarcode = "";
+    [ObservableProperty] private bool _referenceVisible;
+    [ObservableProperty] private string _referenceName = "";
+    [ObservableProperty] private string? _referenceImageUrl;
     [ObservableProperty] private string _productName = "";
     [ObservableProperty] private string _priceText = "";
     [ObservableProperty] private string _stockText = "";
@@ -67,7 +74,10 @@ public partial class ScanViewModel : AccessAwareViewModel
     public ObservableCollection<SearchRow> SearchResults { get; } = [];
     public ObservableCollection<SearchCategory> SearchCategories { get; } = [];
     public ObservableCollection<BarcodeChoice> BarcodeChoices { get; } = [];
+    public ObservableCollection<ReferenceField> ReferenceFields { get; } = [];
+    public ScanIndicator ScanIndicator { get; } = new();
     public bool CanUseCart => Access.CanUseCart;
+    public bool CanCreateProduct => Access.CanCreateProduct;
     public bool CanPrintBarcode => Access.CanPrintBarcode && _printDispatcher.CanPrintBarcode;
     public bool CanEditProduct => Access.CanEditProduct;
     public bool CanReceiveStock => Access.CanReceiveStock;
@@ -81,6 +91,7 @@ public partial class ScanViewModel : AccessAwareViewModel
     public int BarcodePreviewNameLines => _labelSettings.Current.NameLines;
 
     private ProductLookupDto? _product;
+    private CatalogProductDto? _reference;
     private bool _allowsFractional;
     private bool _handled;
     private string? _lastValue;
@@ -95,10 +106,11 @@ public partial class ScanViewModel : AccessAwareViewModel
     private string? _activeBarcode;
     private string? _productSku;
 
-    public ScanViewModel(ISessionsApi sessionsApi, IProductsApi productsApi, IRatesApi ratesApi, IBarcodesApi barcodesApi, ICategoriesApi categoriesApi, WarehouseContext warehouse, AccessState access, CartStore cart, SupplyCartStore supplyCart, ImageUrlBuilder images, MobilePrintDispatcher printDispatcher, BarcodeLabelSettingsCache labelSettings, MobileOfflineService offline, SessionStore session, StoreSignOut signOut)
+    public ScanViewModel(ISessionsApi sessionsApi, IScanApi scanApi, IProductsApi productsApi, IRatesApi ratesApi, IBarcodesApi barcodesApi, ICategoriesApi categoriesApi, WarehouseContext warehouse, AccessState access, CartStore cart, SupplyCartStore supplyCart, ImageUrlBuilder images, MobilePrintDispatcher printDispatcher, BarcodeLabelSettingsCache labelSettings, MobileOfflineService offline, SessionStore session, StoreSignOut signOut)
         : base(access)
     {
         _sessionsApi = sessionsApi;
+        _scanApi = scanApi;
         _productsApi = productsApi;
         _ratesApi = ratesApi;
         _barcodesApi = barcodesApi;
@@ -115,8 +127,8 @@ public partial class ScanViewModel : AccessAwareViewModel
         _cartCount = cart.Count;
         _supplyCartCount = supplyCart.Count;
         WeakReferenceMessenger.Default.Register<ScanViewModel, ProductChangedMessage>(this, static (recipient, message) => _ = recipient.RefreshProductAsync(message.Value));
-        ObserveAccess(nameof(CanUseCart), nameof(CanEditProduct), nameof(CanReceiveStock), nameof(CanSearchProducts),
-            nameof(CanPrintBarcode), nameof(HasProductActions));
+        ObserveAccess(nameof(CanUseCart), nameof(CanEditProduct), nameof(CanCreateProduct), nameof(CanReceiveStock),
+            nameof(CanSearchProducts), nameof(CanPrintBarcode), nameof(HasProductActions));
     }
 
     public void Appear()
@@ -145,7 +157,7 @@ public partial class ScanViewModel : AccessAwareViewModel
 
     public async Task HandleAsync(string value)
     {
-        if (_handled || OverlayVisible || UnknownBarcodeVisible || SearchOpen) return;
+        if (_handled || OverlayVisible || UnknownBarcodeVisible || ReferenceVisible || SearchOpen) return;
         KeyboardDismissal.Hide();
         if (value == _lastValue && (DateTime.UtcNow - _lastAt).TotalSeconds < 1.5) return;
         _handled = true;
@@ -153,22 +165,38 @@ public partial class ScanViewModel : AccessAwareViewModel
         _lastAt = DateTime.UtcNow;
         IsDetecting = false;
 
-        if (value.StartsWith("cartexqr:", StringComparison.OrdinalIgnoreCase))
-            await ApproveQrAsync(value["cartexqr:".Length..]);
-        else if (QrActions.TryServer(value, out var serverUrl))
-            await ConnectServerAsync(serverUrl);
-        // HUB QR'i bulut serveri QR'i emas: boshqa prefiks, boshqa protokol va boshqa ishonch.
-        else if (HubQr.TryParse(value, out var hubEndpoint))
-            await LinkHubAsync(hubEndpoint);
-        else if (QrActions.IsWifi(value))
+        // Chaqiruvchi (ScanView) natijani kutmaydi va try/catch qilmaydi, shuning uchun bu
+        // yerda chiqqan har qanday istisno tutilishi shart: aks holda `_handled` abadiy
+        // true qolib, skaner qayta ishga tushmaguncha o'lik turib qolardi.
+        try
         {
-            await QrActions.HandleWifiAsync(value);
-            Resume();
+            if (value.StartsWith("cartexqr:", StringComparison.OrdinalIgnoreCase))
+                await ApproveQrAsync(value["cartexqr:".Length..]);
+            else if (QrActions.TryServer(value, out var serverUrl))
+                await ConnectServerAsync(serverUrl);
+            // HUB QR'i bulut serveri QR'i emas: boshqa prefiks, boshqa protokol va boshqa ishonch.
+            else if (HubQr.TryParse(value, out var hubEndpoint))
+                await LinkHubAsync(hubEndpoint);
+            else if (QrActions.IsWifi(value))
+            {
+                await QrActions.HandleWifiAsync(value);
+                Resume();
+            }
+            else
+                await LookupAsync(value);
         }
-        else if (HandoffCode().IsMatch(value))
-            await OpenHandoffAsync(value);
-        else
-            await LookupAsync(value);
+        catch (Exception ex)
+        {
+            await FlashAsync(ex is Refit.ApiException api ? ApiErrors.Describe(api) : Loc.Instance["err_no_connection"]);
+        }
+        finally
+        {
+            // Qo'shimcha kafolat: yuqoridagi yo'llarning biri Resume/FlashAsync chaqirishni
+            // unutib qoldirsa ham (masalan server almashtirish muvaffaqiyatli tugaganda),
+            // ekranda ochiq panel yo'q bo'lsa `_handled` shu yerda true qolib ketmaydi.
+            if (_handled && !OverlayVisible && !UnknownBarcodeVisible && !ReferenceVisible && !SearchOpen)
+                Resume();
+        }
     }
 
     private async Task ApproveQrAsync(string code)
@@ -242,6 +270,7 @@ public partial class ScanViewModel : AccessAwareViewModel
         _session.ServerUrl = url;
         await Shell.Current.GoToAsync("//login");
         Ui.Toast(Loc.Instance["server_switch_login"]);
+        Resume();
     }
 
     // HUB-11: e'lonni bloklaydigan tarmoqda ulanishning qo'l bilan boriladigan yo'li.
@@ -289,7 +318,7 @@ public partial class ScanViewModel : AccessAwareViewModel
         Resume();
     }
 
-    private async Task LookupAsync(string barcode)
+    private async Task LookupAsync(string code)
     {
         if (!await _warehouse.EnsureSelectedAsync())
         {
@@ -300,40 +329,52 @@ public partial class ScanViewModel : AccessAwareViewModel
         await _offline.StartAsync();
         if (_offline.ShouldUseOffline)
         {
-            await LookupOfflineAsync(barcode);
+            await LookupOfflineAsync(code);
             return;
         }
+
+        ScanResultDto result;
         try
         {
-            var product = await _productsApi.GetByBarcodeAsync(barcode, _warehouse.WarehouseId!.Value, forSale: false);
-            ProductActionsExpanded = false;
-            _product = product;
-            _activeBarcode = barcode;
-            _productSku = null;
-            ConfigureQuantity(product, product.PackQty > 0 ? product.PackQty : 1);
-            ProductName = product.ProductName;
-            PriceText = FormatPrice(product);
-            StockText = StockTextFor(product.OnHand, product.UnitName, product.VariantId);
-            OverlayVisible = true;
-            Ui.Vibrate();
-
-            ImageUrl = _images.FromKey(product.ImageKey, thumb: false);
-        }
-        catch (Refit.ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
-        {
-            await HandleUnknownBarcodeAsync(barcode);
+            result = await ScanIndicator.TrackAsync(
+                _scanApi.ScanAsync(code, _warehouse.WarehouseId!.Value),
+                found => found.Kind != ScanKind.None);
         }
         catch (Refit.ApiException ex)
         {
             await FlashAsync(ApiErrors.Describe(ex));
+            return;
         }
         catch
         {
             _offline.MarkServerUnavailable();
             if (_offline.IsEnabled)
-                await LookupOfflineAsync(barcode);
+                await LookupOfflineAsync(code);
             else
                 await FlashAsync(Loc.Instance["err_no_connection"]);
+            return;
+        }
+
+        switch (result)
+        {
+            case { Kind: ScanKind.Product, Product: { } product }:
+                ShowProduct(product, code, _images.FromKey(product.ImageKey, thumb: false), result.Quantity);
+                return;
+            case { Kind: ScanKind.Cart, Cart: { } cart }:
+                await OpenHandoffAsync(cart.AggregateCode);
+                return;
+            case { Kind: ScanKind.Customer, Customer: { } customer }:
+                AttachCustomer(customer);
+                return;
+            case { Kind: ScanKind.Prepack, Prepack: { } prepack }:
+                await AddPrepackAsync(prepack);
+                return;
+            case { Kind: ScanKind.Reference, Reference: { } reference }:
+                ShowReference(reference);
+                return;
+            default:
+                await HandleUnknownBarcodeAsync(code);
+                return;
         }
     }
 
@@ -347,17 +388,90 @@ public partial class ScanViewModel : AccessAwareViewModel
             await FlashAsync(Loc.Instance["offline_product_not_cached"]);
             return;
         }
+        ShowProduct(product, barcode, null);
+    }
+
+    private async Task AddPrepackAsync(PrepackLookupDto prepack)
+    {
+        if (!CanUseCart)
+        {
+            await FlashAsync(Loc.Instance["prepack_desktop_only"]);
+            return;
+        }
+        if (!_cart.AddPrepack(prepack))
+        {
+            await FlashAsync(Loc.Instance["prepack_in_cart"]);
+            return;
+        }
+        Ui.Vibrate();
+        Ui.Toast(Loc.Instance["added_to_cart"]);
+        Resume();
+    }
+
+    private void ShowProduct(ProductLookupDto product, string barcode, string? imageUrl, decimal? scannedQuantity = null)
+    {
         ProductActionsExpanded = false;
         _product = product;
         _activeBarcode = barcode;
         _productSku = null;
-        ConfigureQuantity(product, product.PackQty > 0 ? product.PackQty : 1);
+        ConfigureQuantity(product, scannedQuantity ?? (product.PackQty > 0 ? product.PackQty : 1));
         ProductName = product.ProductName;
         PriceText = FormatPrice(product);
         StockText = StockTextFor(product.OnHand, product.UnitName, product.VariantId);
-        ImageUrl = null;
+        ImageUrl = imageUrl;
         OverlayVisible = true;
         Ui.Vibrate();
+    }
+
+    private void AttachCustomer(CustomerDto customer)
+    {
+        if (CanUseCart)
+        {
+            _cart.SetCustomer(customer.Id, customer.FullName);
+            Ui.Vibrate();
+            Ui.Toast(customer.FullName);
+        }
+        Resume();
+    }
+
+    private void ShowReference(CatalogProductDto reference)
+    {
+        _reference = reference;
+        ReferenceName = reference.Name;
+        ReferenceImageUrl = reference.ImageUrl;
+        ReferenceFields.Clear();
+        AddReferenceField("manufacturer", reference.Manufacturer);
+        AddReferenceField("category", reference.CategoryChild ?? reference.CategoryParent);
+        AddReferenceField("model", reference.Model);
+        AddReferenceField("unit", reference.Unit);
+        AddReferenceField("barcode", reference.Barcode);
+        ReferenceVisible = true;
+        Ui.Vibrate();
+    }
+
+    private void AddReferenceField(string key, string? value)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+            ReferenceFields.Add(new ReferenceField(Loc.Instance[key], value));
+    }
+
+    [RelayCommand]
+    private void CloseReference() => Resume();
+
+    [RelayCommand]
+    private async Task AddReferenceAsync()
+    {
+        if (BlockOnlineMutationWhileOffline()) { Resume(); return; }
+        if (_reference is not { } reference) return;
+
+        ReferenceVisible = false;
+        await Shell.Current.GoToAsync("product/edit", new ShellNavigationQueryParameters
+        {
+            ["id"] = 0L,
+            ["barcode"] = reference.Barcode,
+            ["reference"] = reference
+        });
+        Resume();
     }
 
     private async Task HandleUnknownBarcodeAsync(string barcode)
@@ -925,12 +1039,12 @@ public partial class ScanViewModel : AccessAwareViewModel
         BarcodeChoices.Clear();
         UnknownBarcodeVisible = false;
         UnknownBarcode = "";
+        ReferenceVisible = false;
+        ReferenceFields.Clear();
+        _reference = null;
         if (!SearchOpen)
             IsDetecting = true;
     }
-
-    [GeneratedRegex("^[0-9a-f]{32}$", RegexOptions.None, matchTimeoutMilliseconds: 200)]
-    private static partial Regex HandoffCode();
 
     partial void OnPrintCopiesChanged(int value) => OnPropertyChanged(nameof(PrintTotalText));
     partial void OnPrintWithPriceChanged(bool value) => OnPropertyChanged(nameof(BarcodePreviewPrice));
@@ -958,6 +1072,8 @@ public sealed partial class SearchCategory(long id, string name) : ObservableObj
     public string Name { get; } = name;
     [ObservableProperty] private bool _isSelected;
 }
+
+public sealed record ReferenceField(string Label, string Value);
 
 public sealed record SearchRow(ProductDto Product, ImageUrlBuilder Images)
 {

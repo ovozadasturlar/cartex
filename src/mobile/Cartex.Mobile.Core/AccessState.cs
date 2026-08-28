@@ -94,6 +94,8 @@ public sealed class AccessState
         || CanEditProduct || CanPrintBarcode;
     public bool CanViewCustomers => Has("customers.view");
     public bool CanCreateCustomer => Has("customers.create");
+    public bool CanDeleteCustomer => Has("customers.delete");
+    public bool CanEnterOpeningBalance => Has("customers.openingBalance");
     public bool CanReceiveCustomerPayment => Has("customer_payments.create");
     public bool CanViewCustomerPayments => Has("customer_payments.view");
     public bool CanWriteOffDebt => Has("customer_payments.writeOffDebt")

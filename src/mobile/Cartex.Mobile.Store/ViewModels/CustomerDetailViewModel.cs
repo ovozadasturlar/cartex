@@ -48,6 +48,21 @@ public partial class CustomerDetailViewModel(
     [ObservableProperty] private string _writeOffReason = "";
     [ObservableProperty] private CurrencyDto? _selectedCurrency;
 
+    // QARZ-24: hali hech qanday operatsiya bo'lmagan mijozni butunlay o'chirish va uning
+    // boshlang'ich qoldig'ini tuzatish mumkin. Ikkalasini ham server hal qiladi.
+    [ObservableProperty] private bool _isUntouched;
+    [ObservableProperty] private bool _isOpeningOpen;
+    [ObservableProperty] private string _openingAmount = "";
+    [ObservableProperty] private int _openingKindIndex;
+
+    public ObservableCollection<string> OpeningKinds { get; } =
+        [Loc.Instance["opening_kind_debt"], Loc.Instance["opening_kind_credit"]];
+
+    public bool CanDelete => Access.CanDeleteCustomer;
+    public bool CanEditOpeningBalance => IsUntouched && Access.CanEnterOpeningBalance;
+
+    partial void OnIsUntouchedChanged(bool value) => OnPropertyChanged(nameof(CanEditOpeningBalance));
+
     public bool IsOverview => SelectedTab == "overview";
     public bool IsTimeline => SelectedTab == "timeline";
     public bool IsSales => SelectedTab == "sales";
@@ -247,6 +262,65 @@ public partial class CustomerDetailViewModel(
     private void ClosePayment() => IsPaymentOpen = false;
 
     [RelayCommand]
+    private void OpenOpeningBalance()
+    {
+        if (!CanEditOpeningBalance || Customer is not { } customer) return;
+        OpeningAmount = Math.Abs(customer.OpeningBalance).ToString("0.##");
+        OpeningKindIndex = customer.OpeningBalance < 0 ? 1 : 0;
+        IsOpeningOpen = true;
+    }
+
+    [RelayCommand]
+    private void CloseOpeningBalance() => IsOpeningOpen = false;
+
+    [RelayCommand]
+    private async Task SaveOpeningBalanceAsync()
+    {
+        if (Customer is not { } customer || IsBusy) return;
+        IsBusy = true;
+        try
+        {
+            var amount = decimal.TryParse(OpeningAmount.Trim().Replace(',', '.'),
+                System.Globalization.NumberStyles.Number,
+                System.Globalization.CultureInfo.InvariantCulture, out var parsed) ? parsed : 0m;
+            await customersApi.UpdateAsync(customer.Id, new UpdateCustomerRequest(
+                customer.FullName, customer.Phone, customer.CardBarcode, customer.DiscountPct,
+                customer.Email, customer.LastName, customer.Address, customer.CreditLimit,
+                customer.NotificationsOptOut, customer.PreferredLanguage, customer.Note,
+                customer.AllowMarketingSms,
+                OpeningKindIndex == 1 ? -amount : amount,
+                customer.OpeningCurrency));
+            IsOpeningOpen = false;
+            await LoadAsync();
+        }
+        catch (Refit.ApiException exception) { Ui.Toast(ApiErrors.Describe(exception)); }
+        catch { Ui.Toast(Loc.Instance["err_no_connection"]); }
+        finally { IsBusy = false; }
+    }
+
+    // QARZ-24: adashib kiritilgan mijoz butunlay o'chiriladi; operatsiya bo'lgan bo'lsa
+    // server rad etadi va sababini aytadi.
+    [RelayCommand]
+    private async Task DeleteAsync()
+    {
+        if (!CanDelete || Customer is not { } customer || IsBusy) return;
+        if (!await Shell.Current.CurrentPage.DisplayAlertAsync(
+                Loc.Instance["delete"],
+                string.Format(Loc.Instance["customer_delete_confirm"], customer.FullName),
+                Loc.Instance["ok"], Loc.Instance["cancel"]))
+            return;
+        IsBusy = true;
+        try
+        {
+            await customersApi.DeleteAsync(customer.Id);
+            await Shell.Current.GoToAsync("..");
+        }
+        catch (Refit.ApiException exception) { Ui.Toast(ApiErrors.Describe(exception)); }
+        catch { Ui.Toast(Loc.Instance["err_no_connection"]); }
+        finally { IsBusy = false; }
+    }
+
+    [RelayCommand]
     private void SelectPaymentMethod(string method) => PaymentMethod = method;
 
     [RelayCommand]
@@ -327,6 +401,7 @@ public partial class CustomerDetailViewModel(
             await Task.WhenAll(customerTask, salesTask, currenciesTask);
 
             Customer = await customerTask;
+            IsUntouched = Customer.IsUntouched;
             Initials = string.Concat(Customer.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries)
                 .Take(2).Select(x => char.ToUpperInvariant(x[0])));
 

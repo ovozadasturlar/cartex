@@ -89,10 +89,13 @@ public partial class CheckoutViewModel : AccessAwareViewModel, IQueryAttributabl
     private bool _initializingPayments;
     private decimal _discount;
 
+    public MobileCustomerPicker CustomerPicker { get; }
+
     public CheckoutViewModel(
         IOrderingApi orderingApi,
         IBusinessApi businessApi,
         IRatesApi ratesApi,
+        ICustomersApi customersApi,
         CartStore localCart,
         WarehouseContext warehouse,
         AccessState access,
@@ -105,6 +108,9 @@ public partial class CheckoutViewModel : AccessAwareViewModel, IQueryAttributabl
         _localCart = localCart;
         _warehouse = warehouse;
         _offline = offline;
+        // To'lov bosqichida ham mijoz biriktirish ochiq: qarzga sotish yoki avansdan
+        // foydalanish qarori shu yerda tug'iladi, savatga qaytish shart emas.
+        CustomerPicker = new MobileCustomerPicker(customersApi, offline, access, SetCustomer);
         ObserveAccess(nameof(CanUseCart), nameof(CanSelfSell), nameof(CanDiscount), nameof(CanQueue));
     }
 
@@ -201,6 +207,33 @@ public partial class CheckoutViewModel : AccessAwareViewModel, IQueryAttributabl
 
     partial void OnCashTextChanged(string value) => Recalc();
     partial void OnDiscountTextChanged(string value) => Recalc();
+    partial void OnUseCustomerAdvanceChanged(bool value) => SaveDraft();
+    partial void OnSelectedDebtCurrencyChanged(CurrencyDto? value) => SaveDraft();
+
+    private List<CheckoutPaymentDraft>? _restoredPayments;
+    private string? _restoredDebtCurrency;
+
+    // Savat butun savdo holatini saqlaydi: sahifa almashsa ham hech narsa yo'qolmaydi.
+    private void SaveDraft()
+    {
+        if (!IsLoaded || _serverCart is not null) return;
+        _localCart.SetCheckout(new CheckoutDraft(
+            Parse(CashText),
+            Parse(CardText),
+            Parse(BonusText),
+            Parse(DiscountText),
+            KeepExcessAsCredit,
+            UseCustomerAdvance,
+            SelectedDebtCurrency?.Code,
+            null,
+            IsMulticurrency
+                ? Payments
+                    .Where(x => x.Amount > 0)
+                    .Select(x => new CheckoutPaymentDraft(
+                        x.SelectedMethod?.Code ?? "Cash", x.SelectedCurrency?.Code ?? BaseCurrency, x.Amount))
+                    .ToList()
+                : null));
+    }
 
     // Mijoz "shuncha beraman" deganda kassir o'sha summani to'lovga kiritadi va bu tugma
     // yetmagan qismni chegirma maydoniga yozadi (CHEG-10).
@@ -283,7 +316,7 @@ public partial class CheckoutViewModel : AccessAwareViewModel, IQueryAttributabl
         {
             var aggregates = PaymentAggregates();
             var creditAmount = CreditAmount();
-            var request = new SubmitCartRequest(_warehouse.WarehouseId!.Value, _customerId, _localCart.Lines.Select(l => new SubmitCartItemRequest(l.VariantId, l.Quantity, l.PriceOverride)).ToList())
+            var request = new SubmitCartRequest(_warehouse.WarehouseId!.Value, _customerId, _localCart.Lines.Select(l => new SubmitCartItemRequest(l.VariantId, l.Quantity, l.PriceOverride, l.PrepackId)).ToList())
             {
                 IdempotencyKey = _localCart.EnsureSubmissionIdempotencyKey(),
                 Note = string.IsNullOrWhiteSpace(NoteText) ? null : NoteText.Trim(),
@@ -314,10 +347,19 @@ public partial class CheckoutViewModel : AccessAwareViewModel, IQueryAttributabl
         finally { IsBusy = false; NotifyError(); }
     }
 
+    // Bepul mahsulot sotuvga qo'yilmaydi: narxsiz qator savdoni to'xtatadi.
+    private bool ValidatePrices()
+    {
+        var priceless = Items.FirstOrDefault(x => x.UnitPrice <= 0);
+        if (priceless is null) return true;
+        Ui.Toast(string.Format(Loc.Instance["cart_price_required"], priceless.Name));
+        return false;
+    }
+
     [RelayCommand]
     private async Task CompleteAsync()
     {
-        if (IsBusy || !ValidatePayments()) return;
+        if (IsBusy || !ValidatePayments() || !ValidatePrices()) return;
         var paid = Paid;
         if (Payable - paid > 0 && _customerId is null)
         {
@@ -389,7 +431,7 @@ public partial class CheckoutViewModel : AccessAwareViewModel, IQueryAttributabl
 
         var aggregates = PaymentAggregates();
         await _offline.EnqueueSaleAsync(new CreateSaleRequest(_warehouse.WarehouseId.Value, _customerId, aggregates.Cash, aggregates.Card, 0, _localCart.Lines.Select(x => new CreateSaleItemRequest(
-                x.VariantId, x.Quantity, x.UnitPrice)).ToList())
+                x.VariantId, x.Quantity, x.UnitPrice, x.PrepackId)).ToList())
         {
             Payments = null,
             DebtCurrency = BaseCurrency,
@@ -418,7 +460,7 @@ public partial class CheckoutViewModel : AccessAwareViewModel, IQueryAttributabl
 
         var aggregates = PaymentAggregates();
         var creditAmount = CreditAmount();
-        var code = await _orderingApi.SubmitAsync(new SubmitCartRequest(_warehouse.WarehouseId!.Value, _customerId, _localCart.Lines.Select(l => new SubmitCartItemRequest(l.VariantId, l.Quantity, l.PriceOverride)).ToList())
+        var code = await _orderingApi.SubmitAsync(new SubmitCartRequest(_warehouse.WarehouseId!.Value, _customerId, _localCart.Lines.Select(l => new SubmitCartItemRequest(l.VariantId, l.Quantity, l.PriceOverride, l.PrepackId)).ToList())
         {
             IdempotencyKey = _localCart.EnsureSubmissionIdempotencyKey(),
             Note = string.IsNullOrWhiteSpace(NoteText) ? null : NoteText.Trim(),
@@ -453,6 +495,7 @@ public partial class CheckoutViewModel : AccessAwareViewModel, IQueryAttributabl
             Items.Add(new CheckoutLine(item.ProductName, item.Quantity, item.UnitPrice, item.LineTotal));
         foreach (var participant in cart.Participants ?? [])
             Participants.Add(new CheckoutParticipantLine(participant.RoleLabel, participant.PartyName));
+        CustomerPicker.Sync(cart.CustomerId, cart.CustomerName);
         _customerId = cart.CustomerId;
         CustomerName = cart.CustomerName ?? "";
         NoteText = cart.Note ?? "";
@@ -476,11 +519,22 @@ public partial class CheckoutViewModel : AccessAwareViewModel, IQueryAttributabl
             Items.Add(new CheckoutLine(line.ProductName, line.Quantity, line.UnitPrice, line.LineTotal));
         foreach (var participant in _localCart.Participants)
             Participants.Add(new CheckoutParticipantLine(participant.RoleLabel, participant.PartyName));
+        CustomerPicker.Sync(_localCart.CustomerId, _localCart.CustomerName);
         _customerId = _localCart.CustomerId;
         CustomerName = _localCart.CustomerName ?? "";
         NoteText = _localCart.Note;
         _totalAmount = _localCart.Total;
         CanEditNote = true;
+        // Sahifadan chiqib qaytilganda kiritilgan to'lov, chegirma va tanlovlar joyida qoladi.
+        var draft = _localCart.Checkout;
+        CashText = draft.PaidCash > 0 ? QuantityInput.Format(draft.PaidCash) : "";
+        CardText = draft.PaidCard > 0 ? QuantityInput.Format(draft.PaidCard) : "";
+        BonusText = draft.PaidBonus > 0 ? QuantityInput.Format(draft.PaidBonus) : "";
+        DiscountText = draft.Discount > 0 ? QuantityInput.Format(draft.Discount) : "";
+        KeepExcessAsCredit = draft.KeepExcessAsCredit;
+        UseCustomerAdvance = draft.UseCustomerAdvance;
+        _restoredPayments = draft.Payments;
+        _restoredDebtCurrency = draft.DebtCurrency;
         OnPropertyChanged(nameof(CanQueue));
         OnPropertyChanged(nameof(CanSelfSell));
         OnPropertyChanged(nameof(HasParticipants));
@@ -500,6 +554,11 @@ public partial class CheckoutViewModel : AccessAwareViewModel, IQueryAttributabl
                 foreach (var row in existing)
                     AddPaymentRow(row.Method, row.Currency, row.Amount);
             }
+            else if (_restoredPayments is { Count: > 0 } restored)
+            {
+                foreach (var row in restored)
+                    AddPaymentRow(row.Method, row.Currency, row.Amount);
+            }
             else
             {
                 if (Parse(CashText) > 0) AddPaymentRow("Cash", BaseCurrency, Parse(CashText));
@@ -509,8 +568,9 @@ public partial class CheckoutViewModel : AccessAwareViewModel, IQueryAttributabl
             }
         }
 
-        SelectedDebtCurrency = !string.IsNullOrWhiteSpace(_serverCart?.DebtCurrency)
-            ? FindCurrency(_serverCart!.DebtCurrency!)
+        var debtCurrency = _serverCart?.DebtCurrency ?? _restoredDebtCurrency;
+        SelectedDebtCurrency = !string.IsNullOrWhiteSpace(debtCurrency)
+            ? FindCurrency(debtCurrency) ?? FindCurrency(BaseCurrency)
             : FindCurrency(BaseCurrency);
         _initializingPayments = false;
         NotifyPaymentState();
@@ -623,8 +683,20 @@ public partial class CheckoutViewModel : AccessAwareViewModel, IQueryAttributabl
         CultureInfo.InvariantCulture,
         out var value) && value > 0 ? value : 0;
 
+    // Mijoz to'lov bosqichida biriktirilsa ham savatga yoziladi: navbatga qo'yish yoki
+    // oflayn saqlash o'sha savatdan ketadi.
+    private void SetCustomer(long? customerId, string? customerName)
+    {
+        _customerId = customerId;
+        CustomerName = customerName ?? "";
+        if (CanEditNote) _localCart.SetCustomer(customerId, customerName);
+        CustomerPicker.Sync(customerId, customerName);
+        Recalc();
+    }
+
     private void Recalc()
     {
+        SaveDraft();
         HasCustomer = _customerId is not null;
         HasNote = !string.IsNullOrEmpty(NoteText);
         TotalText = $"{_totalAmount:N0} {BaseCurrency}";

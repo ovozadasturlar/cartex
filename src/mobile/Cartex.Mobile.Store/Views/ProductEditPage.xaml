@@ -81,6 +81,8 @@
                                         WidthRequest="44" HeightRequest="44" CornerRadius="22"
                                         Style="{StaticResource BtnOutline}" Command="{Binding AddCategoryCommand}" />
                             </Grid>
+                            <Label Text="{Binding CategoryHint}" Style="{StaticResource MutedLabel}" FontSize="12"
+                                   IsVisible="{Binding CategoryHint, Converter={StaticResource NotEmpty}}" />
                         </VerticalStackLayout>
 
                         <VerticalStackLayout Spacing="6">
@@ -89,6 +91,8 @@
                                 <Picker ItemsSource="{Binding Units}" SelectedItem="{Binding Unit}"
                                         ItemDisplayBinding="{Binding Name, x:DataType=units:UnitDto}" VerticalOptions="Center" />
                             </Border>
+                            <Label Text="{Binding UnitHint}" Style="{StaticResource MutedLabel}" FontSize="12"
+                                   IsVisible="{Binding UnitHint, Converter={StaticResource NotEmpty}}" />
                         </VerticalStackLayout>
 
                         <VerticalStackLayout Spacing="6">
@@ -106,6 +110,8 @@
                                         WidthRequest="44" HeightRequest="44" CornerRadius="22"
                                         Style="{StaticResource BtnOutline}" Command="{Binding AddManufacturerCommand}" />
                             </Grid>
+                            <Label Text="{Binding ManufacturerHint}" Style="{StaticResource MutedLabel}" FontSize="12"
+                                   IsVisible="{Binding ManufacturerHint, Converter={StaticResource NotEmpty}}" />
                         </VerticalStackLayout>
                     </VerticalStackLayout>
                 </Border>

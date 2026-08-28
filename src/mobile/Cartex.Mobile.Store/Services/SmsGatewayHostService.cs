@@ -17,6 +17,7 @@ public sealed class SmsGatewayHostService(
     private Task? _loop;
     private int _polling;
     private int _pollAgain;
+    private readonly HubSubscription _subscription = new();
 
     public bool IsRunning => _lifetime is not null;
 
@@ -135,25 +136,13 @@ public sealed class SmsGatewayHostService(
 
     private async Task RunAsync(CancellationToken cancellationToken)
     {
-        _hub = new HubConnectionBuilder()
-            .WithUrl($"{session.ServerUrl}/hubs/sms-gateway", options => options.AccessTokenProvider = () => Task.FromResult(session.AccessToken))
-            .WithAutomaticReconnect()
-            .Build();
+        _hub = MobileHubConnections.Create("/hubs/sms-gateway", session, auth);
         _hub.On<long>("SmsJobAvailable", _ => RequestPoll());
         _hub.Reconnected += async _ =>
         {
             await SubscribeAllAsync(cancellationToken);
             RequestPoll();
         };
-        try
-        {
-            await _hub.StartAsync(cancellationToken);
-            await SubscribeAllAsync(cancellationToken);
-        }
-        catch (Exception exception)
-        {
-            System.Diagnostics.Debug.WriteLine(exception);
-        }
 
         while (!cancellationToken.IsCancellationRequested)
         {
@@ -163,6 +152,7 @@ public sealed class SmsGatewayHostService(
             try
             {
                 var registrations = await RegistrationsAsync();
+                await SubscribeAllAsync(cancellationToken);
                 idle = await PollAsync(registrations, cancellationToken) == 0;
                 foreach (var registration in registrations)
                     await api.HeartbeatAsync(new SmsGatewayHeartbeatRequest(auth.DeviceId,
@@ -187,12 +177,33 @@ public sealed class SmsGatewayHostService(
         }
     }
 
+    // Ulanish ham, obuna ham shu yerda tiklanadi: hub bir marta ko'tarilib qolsa, tushib
+    // qolganida SMS jimgina to'xtardi. Obuna ulanish identifikatoriga bog'lanadi, chunki
+    // guruh a'zoligi har qayta ulanishda server tomonda yo'qoladi.
     private async Task SubscribeAllAsync(CancellationToken cancellationToken)
     {
         if (_hub is null)
             return;
-        foreach (var registration in await RegistrationsAsync())
-            await _hub.InvokeAsync("Subscribe", auth.DeviceId, registration.SimSlot, registration.Token, cancellationToken);
+        var hub = _hub;
+        var complete = true;
+        await _subscription.EnsureAsync(hub, async () =>
+        {
+            foreach (var registration in await RegistrationsAsync())
+            {
+                // Bitta SIM rad etilsa (ishonch yoki rozilik yo'q) qolganlari obunasiz qolmaydi.
+                try
+                {
+                    await hub.InvokeAsync("Subscribe", auth.DeviceId, registration.SimSlot, registration.Token, cancellationToken);
+                }
+                catch (Exception exception)
+                {
+                    complete = false;
+                    System.Diagnostics.Debug.WriteLine(exception);
+                }
+            }
+        });
+        // Biror SIM obunasiz qolgan bo'lsa keyingi aylanishda qayta uriniladi.
+        if (!complete) _subscription.Invalidate();
     }
 
     private void RequestPoll()

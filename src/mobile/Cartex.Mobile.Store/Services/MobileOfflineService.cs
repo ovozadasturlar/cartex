@@ -54,7 +54,7 @@ public sealed class MobileOfflineService(
     private readonly SemaphoreSlim _syncLock = new(1, 1);
     private readonly CancellationTokenSource _lifetime = new();
     private CancellationTokenSource? _loopCts;
-    private bool _started;
+    private Task? _startTask;
     private MobileOfflineCredential? _credential;
     private MobileOfflineCredential? _satellite;
     private readonly SemaphoreSlim _hubProbeLock = new(1, 1);
@@ -136,10 +136,19 @@ public sealed class MobileOfflineService(
         return parts.Count == 0 ? "none" : string.Join(',', parts);
     }
 
-    public async Task StartAsync()
+    // Muvaffaqiyatli boshlangan Task keshlanadi (bir martalik ishga tushirish, ko'p chaqiruvchi
+    // uni parallel kutadi). Yiqilgan Task esa keshlanmaydi — aks holda bitta keystore/SQLite
+    // xatosi butun jarayon davomida oflayn rejimni o'lik holatda qoldirardi; keyingi chaqiruv
+    // qayta urinishi kerak.
+    public Task StartAsync()
     {
-        if (_started) return;
-        _started = true;
+        var task = _startTask;
+        if (task is { IsFaulted: false, IsCanceled: false }) return task;
+        return _startTask = StartCoreAsync();
+    }
+
+    private async Task StartCoreAsync()
+    {
         await store.InitializeAsync();
         _credential = await ReadCredentialAsync();
         if (_credential is not null)
@@ -373,28 +382,37 @@ public sealed class MobileOfflineService(
         {
             while (await timer.WaitForNextTickAsync(cancellationToken))
             {
-                if (auth.UserId is null) continue;
-                var online = Connectivity.Current.NetworkAccess == NetworkAccess.Internet;
-                // HUB-05: guvohnoma bilan birga joriy `epoch` keladi. Uzoq onlayn turgan telefon
-                // uni yangilamasa, vakolat boshqa qurilmaga o'tganidan keyin ham eski HUB'ni
-                // haqiqiy deb qabul qilardi.
-                if (online && DateTime.UtcNow - _lastAttestation >= AttestationInterval)
-                    await RefreshAttestationAsync();
-                if (IsSatellite)
+                try
                 {
-                    // HUB-11: bulut qaytsa yo'ldosh rejimi o'zi tugaydi — foydalanuvchi aralashmaydi.
-                    if (online)
-                        await LeaveSatelliteAsync();
+                    if (auth.UserId is null) continue;
+                    var online = Connectivity.Current.NetworkAccess == NetworkAccess.Internet;
+                    // HUB-05: guvohnoma bilan birga joriy `epoch` keladi. Uzoq onlayn turgan telefon
+                    // uni yangilamasa, vakolat boshqa qurilmaga o'tganidan keyin ham eski HUB'ni
+                    // haqiqiy deb qabul qilardi.
+                    if (online && DateTime.UtcNow - _lastAttestation >= AttestationInterval)
+                        await RefreshAttestationAsync();
+                    if (IsSatellite)
+                    {
+                        // HUB-11: bulut qaytsa yo'ldosh rejimi o'zi tugaydi — foydalanuvchi aralashmaydi.
+                        if (online)
+                            await LeaveSatelliteAsync();
+                        else
+                            await SatelliteSyncAsync();
+                        continue;
+                    }
+                    if (!IsEnabled || !online) continue;
+                    var pending = await PendingCountAsync();
+                    if (pending > 0 || DateTime.UtcNow - _lastSnapshotAttempt > TimeSpan.FromMinutes(5))
+                        await SyncAsync();
                     else
-                        await SatelliteSyncAsync();
-                    continue;
+                        await HeartbeatAsync();
                 }
-                if (!IsEnabled || !online) continue;
-                var pending = await PendingCountAsync();
-                if (pending > 0 || DateTime.UtcNow - _lastSnapshotAttempt > TimeSpan.FromMinutes(5))
-                    await SyncAsync();
-                else
-                    await HeartbeatAsync();
+                catch (Exception exception)
+                {
+                    // Bitta aylanish yiqilsa ham 20 soniyalik sikl to'xtamasin (masalan keystore
+                    // yoki SQLite bir martalik xato bersa) — keyingi tikda qayta uriniladi.
+                    System.Diagnostics.Debug.WriteLine(exception);
+                }
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

@@ -100,6 +100,16 @@ public sealed class MobileAuthService(IAuthApi authApi, SessionStore session)
         {
             throw;
         }
+        // Majburiy yangilash faqat 401 dan keyin, xuddi shu token bilan chaqiriladi. Shu yerda
+        // tarmoq nosozligida eski tokenni qaytarsak, AuthTokenHandler "refreshed == token" deb
+        // o'qib, vaqtinchalik uzilishni ham rad etilgan deb hisoblab operatorni smena o'rtasida
+        // chiqarib yuborardi. Shuning uchun xato yuqoriga uzatiladi: so'rov oddiy tarmoq
+        // xatosidek muvaffaqiyatsiz bo'ladi, sessiya esa saqlanib qoladi va keyingi so'rov
+        // qayta urinadi. Haqiqiy rad javobi faqat yuqoridagi 401 filtridan o'tadi.
+        catch when (force)
+        {
+            throw;
+        }
         catch
         {
             return session.AccessToken;

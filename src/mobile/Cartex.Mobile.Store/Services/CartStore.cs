@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Cartex.Mobile.Core;
+using Cartex.Shared.Models.Prepacks;
 using Cartex.Shared.Models.Products;
 using CommunityToolkit.Mvvm.ComponentModel;
 
@@ -8,6 +9,8 @@ namespace Cartex.Mobile.Store.Services;
 public sealed partial class CartLine : ObservableObject
 {
     public long VariantId { get; set; }
+    public long? PrepackId { get; set; }
+    public bool IsPrepack => PrepackId is not null;
     public string ProductName { get; set; } = "";
     public string UnitName { get; set; } = "";
     public decimal OriginalPrice { get; set; }
@@ -16,6 +19,7 @@ public sealed partial class CartLine : ObservableObject
     [ObservableProperty] private bool _isSwiped;
     [ObservableProperty] private bool _isExpanded;
     public bool AllowsFractional { get; set; }
+    public bool AllowsAmountEntry { get; set; }
     public decimal LineTotal => UnitPrice * Quantity;
     public decimal? PriceOverride => UnitPrice != OriginalPrice ? UnitPrice : null;
     public string? ImageKey { get; set; }
@@ -40,6 +44,10 @@ public sealed class CartStore
     public string? SubmissionIdempotencyKey { get; private set; }
     public string? CheckoutIdempotencyKey { get; private set; }
     public List<CartParticipantDraft> Participants { get; } = [];
+
+    // To'lov sahifasidan chiqib qaytilganda kiritilgan hamma narsa joyida turadi:
+    // desktopdagi kabi savat butun savdo holatini saqlaydi, faqat qatorlarni emas.
+    public CheckoutDraft Checkout { get; private set; } = new();
     private CancellationTokenSource? _persistCts;
 
     public event Action? Changed;
@@ -64,7 +72,9 @@ public sealed class CartStore
                 UnitPrice = l.UnitPrice,
                 Quantity = l.Quantity,
                 AllowsFractional = l.AllowsFractional,
-                ImageKey = l.ImageKey
+                AllowsAmountEntry = l.AllowsAmountEntry,
+                ImageKey = l.ImageKey,
+                PrepackId = l.PrepackId
             }));
             CustomerId = draft.CustomerId;
             CustomerName = draft.CustomerName;
@@ -73,6 +83,7 @@ public sealed class CartStore
             SubmissionIdempotencyKey = draft.SubmissionIdempotencyKey;
             CheckoutIdempotencyKey = draft.CheckoutIdempotencyKey;
             Participants.AddRange(draft.Participants ?? []);
+            Checkout = draft.Checkout ?? new CheckoutDraft();
         }
         catch
         {
@@ -84,7 +95,7 @@ public sealed class CartStore
 
     public void Add(ProductLookupDto product, decimal quantity)
     {
-        var line = Lines.FirstOrDefault(l => l.VariantId == product.VariantId);
+        var line = Lines.FirstOrDefault(l => l.VariantId == product.VariantId && !l.IsPrepack);
         if (line is null)
             Lines.Add(new CartLine
             {
@@ -95,6 +106,7 @@ public sealed class CartStore
                 UnitPrice = product.SellingPrice,
                 Quantity = quantity,
                 AllowsFractional = product.AllowsFractional,
+                AllowsAmountEntry = product.AllowsAmountEntry,
                 ImageKey = product.ImageKey
             });
         else
@@ -102,29 +114,77 @@ public sealed class CartStore
         Save();
     }
 
-    public bool SetQuantity(long variantId, decimal quantity)
+    public bool AddPrepack(PrepackLookupDto prepack)
     {
-        var line = Lines.FirstOrDefault(l => l.VariantId == variantId);
-        if (line is null || !QuantityInput.IsValid(quantity, line.AllowsFractional))
+        if (Lines.Any(l => l.PrepackId == prepack.PrepackId))
+            return false;
+        Lines.Add(new CartLine
+        {
+            VariantId = prepack.VariantId,
+            PrepackId = prepack.PrepackId,
+            ProductName = $"{prepack.ProductName} ({prepack.Quantity:0.###} {prepack.UnitName})",
+            UnitName = prepack.UnitName,
+            OriginalPrice = prepack.UnitPrice,
+            UnitPrice = prepack.UnitPrice,
+            Quantity = prepack.Quantity
+        });
+        Save();
+        return true;
+    }
+
+    public bool SetQuantity(CartLine line, decimal quantity)
+    {
+        if (line.IsPrepack || !QuantityInput.IsValid(quantity, line.AllowsFractional))
             return false;
         line.Quantity = quantity;
         Save(debouncePersistence: true);
         return true;
     }
 
-    public bool SetPrice(long variantId, decimal price)
+    // Mijoz "20 ming so'mlik" desa, miqdor summadan hisoblanadi. Pastga yaxlitlanadi:
+    // ortiqcha berish do'kon zarari, kam berish esa mijoz o'zi ko'radigan farq.
+    public decimal? SetAmount(CartLine line, decimal amount)
     {
-        var line = Lines.FirstOrDefault(l => l.VariantId == variantId);
-        if (line is null || price < 0)
+        if (line.IsPrepack || !line.AllowsAmountEntry || line.UnitPrice <= 0 || amount <= 0)
+            return null;
+        var step = line.AllowsFractional ? 0.001m : 1m;
+        var quantity = Math.Floor(amount / line.UnitPrice / step) * step;
+        if (quantity <= 0) return null;
+        line.Quantity = quantity;
+        Save(debouncePersistence: true);
+        return quantity;
+    }
+
+    public bool SetPrice(CartLine line, decimal price)
+    {
+        if (line.IsPrepack || price < 0)
             return false;
         line.UnitPrice = price;
         Save(debouncePersistence: true);
         return true;
     }
 
-    public void Remove(long variantId)
+    // Savdoni tuzatish: bekor qilingan savdoning qatorlari savatga qaytariladi va kassir
+    // xatoni tuzatib qayta yakunlaydi. Narx savdodagi holida qoladi.
+    public void Restore(
+        IEnumerable<CartLine> lines,
+        long? customerId,
+        string? customerName,
+        string? note,
+        CheckoutDraft? checkout = null)
     {
-        Lines.RemoveAll(l => l.VariantId == variantId);
+        Clear();
+        Lines.AddRange(lines);
+        CustomerId = customerId;
+        CustomerName = customerName;
+        Note = note ?? "";
+        Checkout = checkout ?? new CheckoutDraft();
+        Save();
+    }
+
+    public void Remove(CartLine line)
+    {
+        Lines.Remove(line);
         Save();
     }
 
@@ -133,6 +193,15 @@ public sealed class CartStore
         CustomerId = id;
         CustomerName = name;
         Save();
+    }
+
+    // To'lov holatini yozish savatning o'zini o'zgartirmaydi: yuborilgan savat kodi va
+    // idempotentlik kaliti saqlanadi, aks holda har bosilgan raqam qayta yuborish
+    // himoyasini nolga tushirardi.
+    public void SetCheckout(CheckoutDraft checkout)
+    {
+        Checkout = checkout;
+        Save(invalidateSubmission: false, debouncePersistence: true);
     }
 
     public void SetNote(string note)
@@ -188,6 +257,7 @@ public sealed class CartStore
         CustomerId = null;
         CustomerName = null;
         Note = "";
+        Checkout = new CheckoutDraft();
         Participants.Clear();
         Preferences.Remove(Key);
         Changed?.Invoke();
@@ -243,7 +313,8 @@ public sealed class CartStore
         Debounce.Cancel(ref _persistCts);
         var draft = new Draft(
             Lines.Select(l => new DraftLine(l.VariantId, l.ProductName, l.UnitName, l.UnitPrice, l.Quantity, l.ImageKey,
-                l.AllowsFractional, l.OriginalPrice)).ToList(),
+                l.AllowsFractional, l.OriginalPrice, l.AllowsAmountEntry, l.PrepackId)).ToList(),
+            Checkout,
             CustomerId, CustomerName, Note, SubmittedCartCode, SubmissionIdempotencyKey, CheckoutIdempotencyKey,
             Participants.ToList());
         Preferences.Set(Key, JsonSerializer.Serialize(draft));
@@ -276,9 +347,12 @@ public sealed class CartStore
         decimal Quantity,
         string? ImageKey,
         bool AllowsFractional = false,
-        decimal OriginalPrice = 0);
+        decimal OriginalPrice = 0,
+        bool AllowsAmountEntry = false,
+        long? PrepackId = null);
     private sealed record Draft(
         List<DraftLine> Lines,
+        CheckoutDraft? Checkout,
         long? CustomerId,
         string? CustomerName,
         string? Note,
@@ -289,3 +363,18 @@ public sealed class CartStore
 }
 
 public sealed record CartParticipantDraft(long RoleDefinitionId, long PartyId, string PartyName, string RoleLabel);
+
+// To'lov sahifasida kiritilgan hamma narsa: sahifadan chiqib qaytilganda ham, savdoni
+// tuzatishda ham shu holat qaytariladi. Matn emas, son saqlanadi - format tilga bog'liq.
+public sealed record CheckoutDraft(
+    decimal PaidCash = 0,
+    decimal PaidCard = 0,
+    decimal PaidBonus = 0,
+    decimal Discount = 0,
+    bool KeepExcessAsCredit = false,
+    bool UseCustomerAdvance = true,
+    string? DebtCurrency = null,
+    DateTime? DebtDueDate = null,
+    List<CheckoutPaymentDraft>? Payments = null);
+
+public sealed record CheckoutPaymentDraft(string Method, string Currency, decimal Amount);

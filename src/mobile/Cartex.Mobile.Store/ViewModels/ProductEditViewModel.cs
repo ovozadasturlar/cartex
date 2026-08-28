@@ -3,6 +3,7 @@ using Cartex.ApiClient.Api;
 using Cartex.Mobile.Core;
 using Cartex.Mobile.Store.Services;
 using Cartex.Shared.Models.Barcodes;
+using Cartex.Shared.Models.Catalog;
 using Cartex.Shared.Models.Categories;
 using Cartex.Shared.Models.Loyalty;
 using Cartex.Shared.Models.Products;
@@ -28,6 +29,8 @@ public partial class ProductEditViewModel : AccessAwareViewModel, IQueryAttribut
 
     private long _variantId;
     private string? _initialBarcode;
+    private CatalogProductDto? _reference;
+    private decimal _initialPackQty = 1;
     private bool _isCreate;
     private ProductDto? _product;
     private string? _imageKey;
@@ -54,6 +57,9 @@ public partial class ProductEditViewModel : AccessAwareViewModel, IQueryAttribut
     [ObservableProperty] private string _newBarcodePackQtyText = "1";
     [ObservableProperty] private string? _error;
     [ObservableProperty] private string? _notice;
+    [ObservableProperty] private string? _unitHint;
+    [ObservableProperty] private string? _categoryHint;
+    [ObservableProperty] private string? _manufacturerHint;
 
     public bool CanEdit => _isCreate ? Access.CanCreateProduct : Access.CanEditProduct;
     public bool CanCreateBarcode => Access.CanCreateBarcode && !_isCreate;
@@ -88,6 +94,11 @@ public partial class ProductEditViewModel : AccessAwareViewModel, IQueryAttribut
             _variantId = long.TryParse(Convert.ToString(id), out var parsed) ? parsed : 0;
         if (query.TryGetValue("barcode", out var b))
             _initialBarcode = Convert.ToString(b);
+        if (query.TryGetValue("reference", out var r) && r is CatalogProductDto reference)
+        {
+            _reference = reference;
+            _initialPackQty = reference.PackQty is > 0 and { } packQty ? packQty : 1;
+        }
         _isCreate = _variantId == 0;
         OnPropertyChanged(nameof(CanEdit));
         OnPropertyChanged(nameof(CanCreateBarcode));
@@ -114,6 +125,7 @@ public partial class ProductEditViewModel : AccessAwareViewModel, IQueryAttribut
             if (_isCreate)
             {
                 Code = _initialBarcode ?? "";
+                ApplyReference();
                 _isLoaded = true;
                 return;
             }
@@ -128,6 +140,37 @@ public partial class ProductEditViewModel : AccessAwareViewModel, IQueryAttribut
             _isLoaded = true;
         });
     }
+
+    private void ApplyReference()
+    {
+        if (_reference is not { } reference) return;
+
+        Name = reference.Name;
+
+        if (!string.IsNullOrWhiteSpace(reference.Unit))
+        {
+            Unit = Units.FirstOrDefault(unit => Same(unit.Name, reference.Unit) || Same(unit.ShortName, reference.Unit));
+            UnitHint = Unit is null ? Suggestion(reference.Unit) : null;
+        }
+
+        var categoryName = reference.CategoryChild ?? reference.CategoryParent;
+        if (!string.IsNullOrWhiteSpace(categoryName))
+        {
+            Category = Categories.FirstOrDefault(category => Same(category.Name, categoryName));
+            CategoryHint = Category is null ? Suggestion(categoryName) : null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(reference.Manufacturer))
+        {
+            Manufacturer = Manufacturers.FirstOrDefault(item => Same(item.Name, reference.Manufacturer));
+            ManufacturerHint = Manufacturer is null ? Suggestion(reference.Manufacturer) : null;
+        }
+    }
+
+    private static bool Same(string? left, string? right) =>
+        string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
+
+    private static string Suggestion(string? value) => $"{Loc.Instance["product_reference_suggestion"]} {value}";
 
     private async Task LoadCategoriesAsync(long? selectedId = null)
     {
@@ -340,7 +383,7 @@ public partial class ProductEditViewModel : AccessAwareViewModel, IQueryAttribut
                 Category?.Id,
                 Unit.Id,
                 0,
-                _initialBarcode != null ? [new BarcodeInput(_initialBarcode)] : null,
+                _initialBarcode != null ? [new BarcodeInput(_initialBarcode, _initialPackQty)] : null,
                 ImageKey: _imageKey,
                 Code: codeVal,
                 SellingPrice: price,
@@ -387,7 +430,7 @@ public partial class ProductEditViewModel : AccessAwareViewModel, IQueryAttribut
         }
         catch (Exception ex)
         {
-            Error = ex.Message;
+            Error = ex is Refit.ApiException api ? ApiErrors.Describe(api) : ex.Message;
             Ui.Toast(Error);
         }
         finally

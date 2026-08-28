@@ -170,7 +170,7 @@ public partial class CartEditViewModel(
         {
             await orderingApi.UpdateAsync(_code, new UpdateCartRequest(
                 _customerId,
-                Lines.Select(x => new SubmitCartItemRequest(x.VariantId, x.Quantity, x.PriceOverride)).ToList())
+                Lines.Select(x => new SubmitCartItemRequest(x.VariantId, x.Quantity, x.PriceOverride, x.PrepackId)).ToList())
             {
                 Note = string.IsNullOrWhiteSpace(Note) ? null : Note.Trim(),
                 Participants = _cart.Participants?.Select(x => new ParticipantSelectionRequest(x.RoleDefinitionId, x.PartyId)).ToList(),
@@ -214,7 +214,7 @@ public partial class CartEditViewModel(
             {
                 Lines.Add(new CartEditLine(item.VariantId, item.ProductName, item.UnitName,
                     item.Quantity, item.UnitPrice, item.AllowsFractional, item.ImageKey,
-                    item.OriginalUnitPrice));
+                    item.OriginalUnitPrice, item.PrepackId));
             }
             Recalculate();
             IsLoaded = true;
@@ -337,6 +337,7 @@ public partial class CartEditViewModel(
 public sealed partial class CartEditLine : ObservableObject
 {
     public long VariantId { get; }
+    public long? PrepackId { get; }
     public string ProductName { get; }
     public string UnitName { get; }
     public decimal UnitPrice { get; }
@@ -350,9 +351,11 @@ public sealed partial class CartEditLine : ObservableObject
     [ObservableProperty] private string _quantityText;
 
     public CartEditLine(long variantId, string productName, string unitName, decimal quantity,
-        decimal unitPrice, bool allowsFractional, string? imageKey, decimal? originalUnitPrice = null)
+        decimal unitPrice, bool allowsFractional, string? imageKey, decimal? originalUnitPrice = null,
+        long? prepackId = null)
     {
         VariantId = variantId;
+        PrepackId = prepackId;
         ProductName = productName;
         UnitName = unitName;
         UnitPrice = unitPrice;

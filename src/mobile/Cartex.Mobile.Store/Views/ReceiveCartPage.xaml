@@ -168,7 +168,7 @@
             </VerticalStackLayout>
         </Border>
 
-        <Grid Grid.RowSpan="3" BackgroundColor="#CC000000" IsVisible="{Binding IsLineModalOpen}">
+        <Grid Grid.RowSpan="3" BackgroundColor="#CC000000" IsVisible="{Binding IsLineModalOpen}" svc:AutoFocus.OnVisible="True">
             <Grid.GestureRecognizers>
                 <TapGestureRecognizer Command="{Binding CloseLineModalCommand}" />
             </Grid.GestureRecognizers>
@@ -224,7 +224,7 @@
             </Border>
         </Grid>
 
-        <Grid Grid.RowSpan="3" BackgroundColor="#CC000000" IsVisible="{Binding IsSupplierModalOpen}">
+        <Grid Grid.RowSpan="3" BackgroundColor="#CC000000" IsVisible="{Binding IsSupplierModalOpen}" svc:AutoFocus.OnVisible="True">
             <Grid.GestureRecognizers>
                 <TapGestureRecognizer Command="{Binding CloseSupplierModalCommand}" />
             </Grid.GestureRecognizers>

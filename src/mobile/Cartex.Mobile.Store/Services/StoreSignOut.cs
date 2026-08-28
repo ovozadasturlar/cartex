@@ -18,6 +18,10 @@ public sealed class StoreSignOut(
     public async Task RunAsync()
     {
         AppLock.Disable();
+        // Ombor kaliti joriy foydalanuvchi ID'siga bog'langan (`store_wh_<id>`) — LogoutAsync
+        // token'ni tozalab ID'ni nolga tushiradi, shuning uchun Reset() undan OLDIN chaqirilishi
+        // kerak, aks holda haqiqiy yozuv o'chmay qolib, keyingi kirishda eskisi qaytib chiqadi.
+        warehouse.Reset();
         await auth.LogoutAsync();
         access.Clear();
         await orderingHub.StopAsync();
@@ -25,7 +29,6 @@ public sealed class StoreSignOut(
         await hubHost.ApplyAsync();
         cart.Clear();
         supplyCart.Clear();
-        warehouse.Reset();
         // HUB-04: guvohnoma do'konga bog'langan — boshqa do'konga o'tilganda u yashab qolmasin.
         hubLink.Forget();
     }
