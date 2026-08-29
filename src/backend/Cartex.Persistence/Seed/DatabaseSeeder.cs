@@ -373,16 +373,16 @@ public static class DatabaseSeeder
 
         var featureRows = await context.Features.ToListAsync();
         var existing = featureRows.Select(f => f.Code).ToHashSet();
-        var legacyMulticurrency = featureRows.FirstOrDefault(f => f.Code == FeatureCatalog.Multicurrency)?.IsEnabled == true;
+        var tariff = (await context.LicenseStates.FirstOrDefaultAsync())?.Tariff;
+        var licensed = TariffCatalog.FeaturesFor(tariff);
         var missing = FeatureCatalog.Names
             .Where(kv => !existing.Contains(kv.Key))
             .Select(kv => new Feature
             {
                 Code = kv.Key,
                 Name = kv.Value,
-                IsEnabled = kv.Key is FeatureCatalog.PricingMulticurrency or FeatureCatalog.SalesMulticurrency
-                    ? legacyMulticurrency
-                    : !FeatureCatalog.DefaultDisabled.Contains(kv.Key)
+                IsEnabled = licensed.Contains(kv.Key),
+                OwnerEnabled = !FeatureCatalog.DefaultDisabled.Contains(kv.Key)
             })
             .ToList();
 
@@ -447,9 +447,16 @@ public static class DatabaseSeeder
             .ToList();
 
         await context.Permissions.AddRangeAsync(permissions);
+        var licensed = TariffCatalog.FeaturesFor(TariffCatalog.Pro);
         await context.Features.AddRangeAsync(FeatureCatalog.Names
-            .Select(kv => new Feature { Code = kv.Key, Name = kv.Value, IsEnabled = !FeatureCatalog.DefaultDisabled.Contains(kv.Key) }));
-        await context.LicenseStates.AddAsync(new LicenseState { Id = LicenseState.SingletonId, Tariff = "pro", ExpiresAt = null });
+            .Select(kv => new Feature
+            {
+                Code = kv.Key,
+                Name = kv.Value,
+                IsEnabled = licensed.Contains(kv.Key),
+                OwnerEnabled = !FeatureCatalog.DefaultDisabled.Contains(kv.Key)
+            }));
+        await context.LicenseStates.AddAsync(new LicenseState { Id = LicenseState.SingletonId, Tariff = TariffCatalog.Pro, ExpiresAt = null });
         await context.SaveChangesAsync();
 
         var developerRole = new Role { Name = AppRoles.Developer, Description = "Vendor / tizim ishlab chiquvchi", StartPage = "dashboard", Priority = AppRoles.DeveloperLevel, Level = AppRoles.DeveloperLevel, IsSystem = true, AccessAll = true };

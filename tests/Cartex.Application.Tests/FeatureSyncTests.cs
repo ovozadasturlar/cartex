@@ -12,8 +12,11 @@ namespace Cartex.Application.Tests;
 [Collection("database")]
 public class FeatureSyncTests(DatabaseFixture fixture) : DatabaseTest(fixture)
 {
+    // SOZ-08b: qayta yaratilgan feature `IsEnabled` ni joriy tarifdan (bu yerda `pro` = hamma feature)
+    // oladi, `OwnerEnabled` ni esa `DefaultDisabled` dan — ixtiyoriy modul (ordering) egа kaliti o'chiq,
+    // yadro feature (reports) yoqiq.
     [Fact]
-    public async Task Missing_features_are_recreated_with_default_enabled_state()
+    public async Task Missing_features_are_recreated_with_tariff_licensed_and_owner_default_state()
     {
         using (var scope = Fixture.CreateScope())
         {
@@ -35,7 +38,9 @@ public class FeatureSyncTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         var ordering = await db2.Features.FirstAsync(f => f.Code == FeatureCatalog.Ordering);
 
         Assert.True(reports.IsEnabled);
-        Assert.False(ordering.IsEnabled);
+        Assert.True(reports.OwnerEnabled);
+        Assert.True(ordering.IsEnabled);
+        Assert.False(ordering.OwnerEnabled);
     }
 
     [Fact]

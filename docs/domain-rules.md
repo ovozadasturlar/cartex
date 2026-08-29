@@ -417,19 +417,25 @@ Do'kon -> mijoz (chiqim):    avval avans kamayadi, yetmagani qarzga aylanadi
 | `RUXSAT-02` | Rol/ruxsat tekshiruvi `Application`/`Auth` da bo'ladi, `Api` da emas. Klient tekshiruvi faqat qulaylik uchun; server baribir qayta tekshiradi. |
 | `RUXSAT-03` | E'lon qilingan, lekin hech qayerda tekshirilmaydigan ruxsat bo'lmasligi kerak — yo tekshiriladi, yo o'chiriladi. |
 | `RUXSAT-04` | Modul o'chirilgan bo'lsa (feature flag), u UI'da umuman ko'rinmaydi va serverda ham yopiq bo'ladi. |
-| `RUXSAT-04a` | **Imkoniyat bitta joyda aniqlanadi:** ruxsat **VA** modul **VA**, kerak bo'lsa, siyosat. Imkoniyat yopiq bo'lsa u butun ilova bo'yicha ko'rinmaydi; bir ekranda yashirib, boshqasida ko'rsatish taqiqlanadi. Savatning alohida ruxsati yo'q: u savdo yoki navbat imkoniyatiga bog'liq. |
+| `RUXSAT-04a` | **Imkoniyat bitta joyda aniqlanadi:** ruxsat **VA**, kerak bo'lsa, modul **VA**, kerak bo'lsa, siyosat. Imkoniyat yopiq bo'lsa u butun ilova bo'yicha ko'rinmaydi; bir ekranda yashirib, boshqasida ko'rsatish taqiqlanadi. **Asosiy kassa savdosi (savat → yakunlash) — yadro imkoniyat, modul emas:** u faqat `sales.create`/`sales.checkout` ruxsatiga bog'liq va hech qanday tarif feature'i bilan qulflanmaydi (`SOZ-08`: savdo sotiladigan modul emas, mahsulotning o'zagi; `NAVBAT-06` bilan bir xil mantiq). Savatning alohida ruxsati yo'q — u `sales.*` ruxsatiga bog'liq. `ordering` feature faqat **mijoz-tomon onlayn buyurtma**ni (`/api/store`, Telegram) yoqadi; `store` feature faqat **do'kon-xodim mobil ilovasi**ni; navbat esa `AllowSaleQueue` siyosati bilan (`NAVBAT-06`). Ya'ni onlayn/store modullari o'chiq do'kon ham kassada oddiy savdo qila oladi. |
 | `RUXSAT-05` | **So'rov tanasidagi hech bir maydon ruxsat tekshiruvini o'chira olmaydi.** Tekshiruvga ta'sir qiladigan belgilar (mas. savdo navbatdagi savatdan yakunlanayotgani, oflayn replay ekani, narx oldindan ruxsatlangani) faqat **server ichida** o'rnatiladi va JSON'dan o'qilmaydi. Aks holda ruxsati kam foydalanuvchi shu maydonni yuborib tekshiruvni chetlab o'tardi. |
 | `RUXSAT-06` | **Savdo yaratish va savatni yakunlash — ikki xil ruxsat.** `sales.create` to'g'ridan-to'g'ri savdo ochish huquqi; `sales.checkout` esa **boshqa xodim tayyorlagan navbatdagi savatni** yakunlash huquqi. Faqat `sales.checkout` bor kassir navbat oqimi orqali ishlay oladi, lekin bo'sh joydan savdo yarata olmaydi (`RUXSAT-05` bilan birga o'qiladi). |
 | `RUXSAT-07` | **Ko'rish qamrovi: o'ziniki yoki hammaniki.** `*.viewAll` ruxsati yo'q foydalanuvchi ro'yxatda, jamida va grafikda **faqat o'zi yaratgan** yozuvlarni ko'radi; bor bo'lsa — hammasini. Qamrov **serverda** qo'yiladi: klient yuborgan hech bir filtr uni kengaytira olmaydi. Klient esa bajarib bo'lmaydigan boshqaruvni ko'rsatmaydi — `viewAll` yo'q bo'lsa "barcha xodimlar" tanlovi umuman chiqmaydi. |
 
 **Qabul mezoni — `RUXSAT-04a`**
 
-> Savdo ruxsati bor, lekin `ordering` va `store` modullari ikkalasi ham o'chiq bo'lsa,
-> `CanSell` va `CanUseCart` yolg'on bo'ladi va savat hech bir ekranda, jumladan skanerda,
-> ko'rinmaydi. Modullardan biri yoqiq, lekin savdo va navbat ruxsatlari yo'q bo'lsa ham savat
-> ko'rinmaydi. `supplies.create` bor, lekin `supplies` moduli o'chiq bo'lsa kirim imkoniyati
-> ko'rinmaydi. Navbat siyosati o'chiq bo'lsa, navbat ruxsatlari va savdo moduli mavjud bo'lsa
-> ham navbat amali ko'rinmaydi.
+> **Birlamchi kassada (desktop/web):** `sales.create` (yoki `sales.checkout`) ruxsati bor
+> foydalanuvchi `ordering` va `store` modullari ikkalasi ham o'chiq bo'lganda ham **savata sota
+> oladi** — `CanSell` rost, kassa ekrani va savat ko'rinadi. Bu modullar birlamchi kassaning
+> bazaviy savdosini gate qilmaydi. Savdo ruxsati bo'lmasa savat ko'rinmaydi. `supplies.create`
+> bor, lekin `supplies` moduli o'chiq bo'lsa kirim imkoniyati ko'rinmaydi (u haqiqiy modul).
+> Navbat siyosati (`AllowSaleQueue`) o'chiq bo'lsa, savdo ruxsatlari bor bo'lsa ham navbat amali
+> ko'rinmaydi (`NAVBAT-06`).
+>
+> **Mobil modul-ilovalar (store/agent) — istisno:** do'kon-xodim ilovasi (`store`) va agent
+> ilovasi (`agents`) — alohida sotiladigan modul-klientlar; ilovaning o'zi moduldir. Ularда
+> savat o'z cart-moduliga (`ordering`/`store`) bog'liq: modul o'chiq bo'lsa `CanSell` yolg'on va
+> savat ilovada ko'rinmaydi. Ruxsat bor, lekin modul o'chiq bo'lsa ham savat ko'rinmaydi.
 
 ---
 
@@ -496,6 +502,7 @@ Sozlama noto'g'ri boshqarilsa, mantiq to'g'ri bo'lsa ham natija noto'g'ri chiqad
 | `SOZ-06` | Sozlama o'zgarishi auditga yoziladi (kim, qachon, qaysi bo'lim). |
 | `SOZ-08` | Har bir ixtiyoriy imkoniyat **do'kon egasi o'chira oladigan** bo'lishi shart. Ikki mexanizm bor va ular turli savolga javob beradi: `Feature` — "bu modul shu do'konga sotilganmi" (vendor qarori, tarifga bog'liq, menyuni butunlay yashiradi); savdo siyosati — "do'kon buni ishlatadimi" (egasining qarori). Ish jarayoni sozlamasi hech qachon tarif feature'i qilinmaydi. |
 | `SOZ-08a` | **Litsenziya qatlami egasining kalitidan ustun.** Egasi `IsEnabled = false` bo'lgan modulni yoqa olmaydi: server `module_not_licensed` bilan rad etadi. Vendor litsenziyani o'chirganda `OwnerEnabled` ham `false` bo'ladi; litsenziya qayta yoqilganda egasining kaliti avtomatik yoqilmaydi. Klient Modullar ekranida litsenziyasiz modulni o'chiq va bosilmaydigan holatda, "Tarifingizda yo'q" sababi bilan ko'rsatadi. |
+| `SOZ-08b` | **`IsEnabled` — litsenziya (tarif) qatlami, `OwnerEnabled` — egasi qatlami; ular ikki xil manbadan boshqariladi va aralashtirilmaydi.** `IsEnabled` aynan **joriy tarif feature to'plamini** aks ettiradi (`TariffCatalog.FeaturesFor(tariff)`): u seed paytida va litsenziya har o'zgarganda tarifdan **qayta hisoblanadi**, qo'lda "standart o'chiq" ro'yxatidan emas. `OwnerEnabled` esa egasining tanlovi — ixtiyoriy modullar (`FeatureCatalog.DefaultDisabled`) uchun seed'da **o'chiq** (egа o'zi yoqadi), yadro imkoniyatlar uchun yoqiq. Shu sabab `pro` tarifли do'konda ordering/store `IsEnabled = true` (tarifda bor) bo'ladi va egа ularni Modullar ekranidan yoqa oladi; `free` tarifли do'konda esa ular `IsEnabled = false` bo'lib "Tarifingizda yo'q" ko'rinadi. Modul faol = `IsEnabled AND OwnerEnabled` (`SOZ-15` bo'yicha wildcard ham bo'ysunadi). |
 | `SOZ-09` | Chegara maydoni (`Max...`) o'chirish vositasi **emas**: unda `0` — "chegara yo'q" degani (`SOZ-02`). Imkoniyatni yopish uchun alohida `Allow.../Print...` kaliti bo'lishi shart. |
 | `SOZ-10` | Kalit o'chirilganda: server operatsiyani **rad etadi** (`SOZ-03`) va klient tegishli tugma/maydonni **ko'rsatmaydi**. Faqat klientda yashirish yetarli emas. |
 | `SOZ-07` | Sozlama keshi chegaralangan muddatga ega; o'zgarish ilovani qayta ishga tushirmasdan kuchga kiradi. |

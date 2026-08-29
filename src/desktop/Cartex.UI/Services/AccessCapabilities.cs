@@ -7,10 +7,10 @@ public static class AccessCapabilities
             .Any(SettingsService.Instance.IsFeatureOn);
 
     public static bool CanSell(Func<string, bool> hasPermission) =>
-        hasPermission("sales.create|sales.checkout") && FeatureEnabled("ordering|store");
+        hasPermission("sales.create|sales.checkout");
 
     public static bool CanQueue(Func<string, bool> hasPermission, bool allowSaleQueue) =>
-        hasPermission("sales.pick|sales.view") && allowSaleQueue && FeatureEnabled("ordering|store");
+        hasPermission("sales.pick|sales.view") && allowSaleQueue;
 
     public static bool CanUseCart(Func<string, bool> hasPermission, bool allowSaleQueue) =>
         CanSell(hasPermission) || CanQueue(hasPermission, allowSaleQueue);

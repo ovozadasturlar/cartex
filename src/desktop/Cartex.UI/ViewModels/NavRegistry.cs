@@ -29,7 +29,7 @@ public static class NavRegistry
     public static readonly NavDef[] SidebarPages =
     [
         new("main", "dashboard", MaterialIconKind.ViewDashboard, typeof(DashboardViewModel), "reports.view", "reports"),
-        new("main", "pos", MaterialIconKind.CashRegister, typeof(SalesViewModel), "sales.create|sales.checkout|sales.pick|sales.view", "ordering|store"),
+        new("main", "pos", MaterialIconKind.CashRegister, typeof(SalesViewModel), "sales.create|sales.checkout|sales.pick|sales.view"),
         new("sales", "shift", MaterialIconKind.CashClock, typeof(ShiftViewModel), "shifts.view"),
         new("sales", "sale_history", MaterialIconKind.ChartLine, typeof(SalesHistoryViewModel), "sales.view"),
         new("sales", "orders", MaterialIconKind.ClipboardTextClockOutline, typeof(OrdersViewModel), "sales.view", "ordering"),

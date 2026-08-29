@@ -46,6 +46,28 @@ public class CatalogReferenceTests(CartexApiFactory factory)
     }
 
     [Fact]
+    public async Task MAKAT_01_Reference_scan_does_not_create_a_shop_product() =>
+        await WithReferenceAsync(async (client, stub, warehouseId) =>
+        {
+            const string barcode = "4790000000041";
+            const string name = "MAKAT-01 taklif mahsuloti";
+            stub.Product = new CatalogProductDto(
+                barcode, name, null, "Brend", "Katta", "Kichik", null, "dona", 1m, null);
+
+            var before = await client.GetFromJsonAsync<List<ProductRow>>($"/api/products?search={Uri.EscapeDataString(name)}");
+            Assert.Empty(before!);
+
+            var result = await ScanAsync(client, barcode, warehouseId);
+            Assert.Equal("reference", result.GetProperty("kind").GetString());
+
+            var after = await client.GetFromJsonAsync<List<ProductRow>>($"/api/products?search={Uri.EscapeDataString(name)}");
+            Assert.Empty(after!);
+
+            var byBarcode = await client.GetAsync($"/api/products/by-barcode?code={barcode}&warehouseId={warehouseId}");
+            Assert.Equal(HttpStatusCode.NotFound, byBarcode.StatusCode);
+        });
+
+    [Fact]
     public async Task MAKAT_03_Existing_barcode_blocks_a_new_product()
     {
         var client = await AuthHelper.LoginAsync(factory, "admin", "admin123");

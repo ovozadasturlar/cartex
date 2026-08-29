@@ -50,12 +50,14 @@ export class Modules implements OnInit {
   private async load(): Promise<void> {
     this.loading.set(true);
     try {
-      const [modules, enabled] = await Promise.all([
-        lastValueFrom(this.api.modules()),
-        lastValueFrom(this.api.enabled()),
-      ]);
+      const modules = await lastValueFrom(this.api.modules());
       this.modules.set(modules.filter((module) => !Modules.salesPolicyCodes.has(module.code)));
-      this.multicurrencyLicensed.set(enabled.includes('multicurrency'));
+      // multicurrency (asosiy) modul ro'yxatida yo'q; litsenziyasi bolasidan (pricing) olinadi —
+      // faol holatidan emas, aks holda ega kaliti o'chiq litsenziyalangan modul "Tarifingizda yo'q"
+      // ko'rinardi (SOZ-08b).
+      this.multicurrencyLicensed.set(
+        modules.some((m) => m.code === 'multicurrency_pricing' && m.available),
+      );
     } catch (e) {
       this.notify.error(e);
     } finally {

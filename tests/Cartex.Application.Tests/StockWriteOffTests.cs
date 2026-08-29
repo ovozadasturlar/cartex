@@ -391,4 +391,34 @@ public class StockWriteOffTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         Assert.Equal(2, (await MovementsAsync(setup.WarehouseId, variantId))
             .Count(x => x.Kind == InventoryMovementKind.WriteOff));
     }
+
+    [Fact]
+    public async Task RUXSAT_A_write_off_from_another_branch_cannot_be_reversed()
+    {
+        var setup = await SetupAsync();
+        var variantId = await CreateVariantAsync("Filiallararo teskari chiqim");
+        await ReceiveAsync(null, setup.WarehouseId, variantId, 10m, 5_000m);
+        var created = await WriteOffAsync(setup.WarehouseId, new StockWriteOffLineInput(variantId, 2m, StockWriteOffReason.Broken));
+
+        long branch2, cashierId;
+        using (var scope = Fixture.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            branch2 = await db.Branches.Where(b => b.Name == "Filial 2").Select(b => b.Id).FirstAsync();
+            cashierId = await db.Users.Where(u => u.Username == "seller").Select(u => u.Id).FirstAsync();
+        }
+
+        Fixture.CurrentUser.AsCashier(cashierId, setup.BusinessId, branch2);
+        Fixture.CurrentUser.Granted.Add(AppPermissions.Stocks.WriteOff);
+
+        using (var scope2 = Fixture.CreateScope())
+        {
+            var ex = await Assert.ThrowsAsync<NotFoundException>(() =>
+                scope2.ServiceProvider.GetRequiredService<ISender>().Send(new ReverseStockWriteOffCommand(created.Id)));
+            Assert.Equal("write_off_not_found", ex.Code);
+        }
+
+        Fixture.CurrentUser.AsAdmin(setup.AdminId, setup.BusinessId, setup.BranchId);
+        Assert.Equal(8m, await StockAsync(setup.WarehouseId, variantId));
+    }
 }

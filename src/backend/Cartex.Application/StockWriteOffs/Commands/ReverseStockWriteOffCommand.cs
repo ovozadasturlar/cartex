@@ -37,6 +37,9 @@ public sealed class ReverseStockWriteOffCommandHandler(
                 $"SELECT * FROM stock_write_off_documents WHERE id = {request.DocumentId} FOR UPDATE", cancellationToken))
             .FirstOrDefault() ?? throw new NotFoundException("Write-off not found.", "write_off_not_found");
 
+        if (!currentUser.CanAccessAllBranches && !currentUser.BranchIds.Contains(original.BranchId))
+            throw new NotFoundException("Write-off not found.", "write_off_not_found");
+
         if (original.ReversesDocumentId is not null)
             throw new BusinessRuleException("Teskari chiqimni qaytarib bo'lmaydi.", "write_off_is_reversal");
         if (await db.StockWriteOffDocuments.AnyAsync(x => x.ReversesDocumentId == original.Id, cancellationToken))

@@ -52,6 +52,7 @@ public sealed class DatabaseFixture : IAsyncLifetime
         services.AddSingleton<Cartex.Application.Common.Interfaces.IObjectStorage, MemoryObjectStorage>();
         services.AddMemoryCache();
         services.AddScoped<IProductPopularity, Cartex.Infrastructure.Catalog.ProductPopularityProvider>();
+        services.AddScoped<Cartex.Application.Common.Interfaces.ILicenseService, Cartex.Infrastructure.Licensing.LicenseService>();
         services.AddScoped<Cartex.Auth.Services.IPasswordHasher, Cartex.Auth.Services.PasswordHasher>();
         services.AddPersistence(_container.GetConnectionString());
         services.AddApplication();

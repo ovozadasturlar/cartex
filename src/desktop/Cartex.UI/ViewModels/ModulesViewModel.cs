@@ -27,16 +27,17 @@ public partial class ModulesViewModel(IFeaturesApi api, IToastService toast, IBu
         IsLoading = true;
         try
         {
-            var modulesTask = api.GetModulesAsync();
-            var enabledTask = api.GetEnabledAsync();
-            await Task.WhenAll(modulesTask, enabledTask);
+            var modules = await api.GetModulesAsync();
 
             Modules.Clear();
-            foreach (var module in await modulesTask)
+            foreach (var module in modules)
                 if (!SalesPolicyCodes.Contains(module.Code))
                     Modules.Add(module);
 
-            MulticurrencyLicensed = (await enabledTask).Contains("multicurrency", StringComparer.Ordinal);
+            // `multicurrency` (asosiy) `ConfigurableCodes` da yo'q; uning litsenziyasi bolalari
+            // (pricing/sales) tarifda bor-yo'qligidan (`Available`) olinadi — faol holatidan emas,
+            // aks holda ega kaliti o'chiq litsenziyalangan modul "Tarifingizda yo'q" ko'rinardi (SOZ-08b).
+            MulticurrencyLicensed = modules.Any(m => m.Code == "multicurrency_pricing" && m.Available);
         }
         catch (Exception ex) { toast.Error(ApiErrors.Describe(ex)); }
         finally { IsLoading = false; }

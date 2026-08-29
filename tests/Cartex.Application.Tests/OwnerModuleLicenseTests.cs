@@ -1,4 +1,5 @@
 using Cartex.Application.Features.Commands;
+using Cartex.Application.Licensing.Commands;
 using Cartex.Application.Common.Messaging;
 using Cartex.Application.Tests.Common;
 using Cartex.Domain.Authorization;
@@ -48,6 +49,26 @@ public sealed class OwnerModuleLicenseTests(DatabaseFixture fixture) : DatabaseT
         await scope.ServiceProvider.GetRequiredService<ISender>()
             .Send(new SetFeatureCommand(FeatureCatalog.Ordering, true));
 
+        Assert.Equal((true, false), await StateAsync());
+    }
+
+    [Fact]
+    public async Task SOZ_08b_License_change_recomputes_is_enabled_from_tariff()
+    {
+        await SetStateAsync(isEnabled: true, ownerEnabled: true);
+
+        using (var scope = Fixture.CreateScope())
+            await scope.ServiceProvider.GetRequiredService<ISender>()
+                .Send(new UpdateLicenseCommand(TariffCatalog.Standard, null, null));
+
+        // `standard` tarifda `ordering` yo'q → tarifdan chiqqani uchun is_enabled=false, owner_enabled=false.
+        Assert.Equal((false, false), await StateAsync());
+
+        using (var scope = Fixture.CreateScope())
+            await scope.ServiceProvider.GetRequiredService<ISender>()
+                .Send(new UpdateLicenseCommand(TariffCatalog.Pro, null, null));
+
+        // `pro` tarifda `ordering` yana licensed → is_enabled=true; owner_enabled avtomatik yoqilmaydi (SOZ-08a).
         Assert.Equal((true, false), await StateAsync());
     }
 

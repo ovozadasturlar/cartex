@@ -326,11 +326,12 @@ public partial class SalesPolicyViewModel : ViewModelBase, ILoadable
 
     private void ApplyCurrencyFeatures(IReadOnlyCollection<string> enabled, IEnumerable<OwnerModuleDto> modules)
     {
-        MulticurrencyLicensed = enabled.Contains("multicurrency", StringComparer.Ordinal);
-        PricingMulticurrencyEnabled = enabled.Contains("multicurrency_pricing", StringComparer.Ordinal);
-        SalesMulticurrencyEnabled = enabled.Contains("multicurrency_sales", StringComparer.Ordinal);
         PricingMulticurrencyModule = modules.FirstOrDefault(x => x.Code == "multicurrency_pricing");
         SalesMulticurrencyModule = modules.FirstOrDefault(x => x.Code == "multicurrency_sales");
+        // multicurrency (asosiy) litsenziyasi bolasining `Available` flagidan — faol holatidan emas (SOZ-08b).
+        MulticurrencyLicensed = PricingMulticurrencyModule?.Available == true;
+        PricingMulticurrencyEnabled = enabled.Contains("multicurrency_pricing", StringComparer.Ordinal);
+        SalesMulticurrencyEnabled = enabled.Contains("multicurrency_sales", StringComparer.Ordinal);
     }
 
     private static string CodeAt(string[] codes, int index, string fallback) =>

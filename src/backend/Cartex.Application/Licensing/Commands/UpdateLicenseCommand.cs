@@ -20,6 +20,18 @@ public sealed class UpdateLicenseCommandHandler(IApplicationDbContext db, ILicen
         state.EnabledFeatures = request.EnabledFeatures;
         await db.SaveChangesAsync(cancellationToken);
         license.Invalidate();
+
+        // SOZ-08b: features.is_enabled aynan joriy tarifni aks ettiradi, litsenziya har o'zgarganda
+        // qayta hisoblanadi. SOZ-08a: tarifdan chiqqan modulning egа kaliti ham o'chiriladi.
+        var licensed = await license.GetTariffFeaturesAsync(cancellationToken);
+        foreach (var feature in await db.Features.ToListAsync(cancellationToken))
+        {
+            var isLicensed = licensed.Contains(feature.Code);
+            if (!isLicensed && feature.IsEnabled)
+                feature.OwnerEnabled = false;
+            feature.IsEnabled = isLicensed;
+        }
+        await db.SaveChangesAsync(cancellationToken);
         return Unit.Value;
     }
 }

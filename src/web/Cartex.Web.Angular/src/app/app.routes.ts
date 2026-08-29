@@ -20,7 +20,7 @@ export const routes: Routes = [
       {
         path: 'pos',
         canActivate: [permissionGuard],
-        data: { permission: 'sales.create|sales.checkout|sales.pick|sales.view', feature: 'ordering|store' },
+        data: { permission: 'sales.create|sales.checkout|sales.pick|sales.view' },
         loadComponent: () => import('./pages/pos/pos').then((m) => m.Pos),
       },
       {

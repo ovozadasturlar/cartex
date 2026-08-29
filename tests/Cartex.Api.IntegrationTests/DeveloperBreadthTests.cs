@@ -43,6 +43,36 @@ public class DeveloperBreadthTests(CartexApiFactory factory)
         var developer = await AuthHelper.LoginAsync(factory, "developer", "developer123");
         var admin = await AuthHelper.LoginAsync(factory, "admin", "admin123");
 
+        // `reports` — haqiqiy modul feature'i (`RUXSAT-04a` bo'yicha asosiy kassa savdosi endi
+        // feature bilan qulflanmaydi, shuning uchun SOZ-15 namunasi feature-gated moduldan olinadi).
+        try
+        {
+            (await developer.PutAsJsonAsync("/api/features/reports", new { code = "reports", isEnabled = false }))
+                .EnsureSuccessStatusCode();
+
+            var adminResp = await admin.GetAsync("/api/reports/sales");
+            Assert.Equal(HttpStatusCode.Forbidden, adminResp.StatusCode);
+
+            var devResp = await developer.GetAsync("/api/reports/sales");
+            Assert.Equal(HttpStatusCode.Forbidden, devResp.StatusCode);
+
+            (await developer.GetAsync("/api/features")).EnsureSuccessStatusCode();
+        }
+        finally
+        {
+            (await developer.PutAsJsonAsync("/api/features/reports", new { code = "reports", isEnabled = true }))
+                .EnsureSuccessStatusCode();
+            (await developer.PutAsJsonAsync("/api/features/modules/reports", new { isEnabled = true }))
+                .EnsureSuccessStatusCode();
+        }
+    }
+
+    [Fact]
+    public async Task RUXSAT_04a_Base_pos_sells_without_ordering_or_store_modules()
+    {
+        // RUXSAT-04a: asosiy kassa savdosi (savat) yadro imkoniyat — ordering va store modullari
+        // ikkalasi ham o'chiq bo'lsa ham u faqat sales.* ruxsatiga bog'liq va 403 bermaydi.
+        var developer = await AuthHelper.LoginAsync(factory, "developer", "developer123");
         try
         {
             (await developer.PutAsJsonAsync("/api/features/ordering", new { code = "ordering", isEnabled = false }))
@@ -50,13 +80,8 @@ public class DeveloperBreadthTests(CartexApiFactory factory)
             (await developer.PutAsJsonAsync("/api/features/store", new { code = "store", isEnabled = false }))
                 .EnsureSuccessStatusCode();
 
-            var adminResp = await admin.GetAsync("/api/ordering/carts/none");
-            Assert.Equal(HttpStatusCode.Forbidden, adminResp.StatusCode);
-
-            var devResp = await developer.GetAsync("/api/ordering/carts/none");
-            Assert.Equal(HttpStatusCode.Forbidden, devResp.StatusCode);
-
-            (await developer.GetAsync("/api/features")).EnsureSuccessStatusCode();
+            var carts = await developer.GetAsync("/api/ordering/carts");
+            Assert.Equal(HttpStatusCode.OK, carts.StatusCode);
         }
         finally
         {

@@ -204,7 +204,8 @@ export class SalesPolicySettings implements OnInit {
   }
 
   private applyCurrencyFeatures(enabled: string[], modules: OwnerModule[]): void {
-    this.multicurrencyLicensed.set(enabled.includes('multicurrency'));
+    // multicurrency (asosiy) litsenziyasi bolasining `available` flagidan — faol holatidan emas (SOZ-08b).
+    this.multicurrencyLicensed.set(modules.some((m) => m.code === 'multicurrency_pricing' && m.available));
     this.pricingMulticurrencyEnabled.set(enabled.includes('multicurrency_pricing'));
     this.salesMulticurrencyEnabled.set(enabled.includes('multicurrency_sales'));
     this.pricingMulticurrencyModule = modules.find((module) => module.code === 'multicurrency_pricing') ?? null;

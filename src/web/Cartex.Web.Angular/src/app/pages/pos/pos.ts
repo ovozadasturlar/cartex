@@ -957,7 +957,7 @@ this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '3
           variantId: l.variantId,
           prepackId: l.prepackId ?? null,
           quantity: l.qty,
-          unitPrice: this.canOverridePrice && l.price !== l.originalPrice ? l.price : null,
+          unitPrice: l.prepackId ? null : this.canOverridePrice && l.price !== l.originalPrice ? l.price : null,
           // NARX-09: ekranda ko'rsatilgan katalog narxi — server o'zinikiga solishtiradi.
           expectedUnitPrice: l.originalPrice,
         })),

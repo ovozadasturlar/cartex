@@ -29,6 +29,36 @@
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
  },
+ "docs/catalog/admin-ui-plan.md": {
+  "date": "2026-08-29",
+  "hash": "cfdc9534d4ce27799ab888eb70089c4f5b7217cd",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "docs/catalog/catalog-standard.md": {
+  "date": "2026-08-29",
+  "hash": "fdaa2d7d9872349651d12859d8a9c71c68e8f34c",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "docs/catalog/client-integration.md": {
+  "date": "2026-08-29",
+  "hash": "8eaffe752e3fca6d75b0ae474a9414043ed03f47",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "docs/catalog/edge-function/index.ts": {
+  "date": "2026-08-29",
+  "hash": "6436df4771738c9f1dab5f601e668024c128c776",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "docs/catalog/schema.sql": {
+  "date": "2026-08-29",
+  "hash": "ec15751a403ed3eee230077445757d94f1f189b1",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
  "docs/code-quality.md": {
   "date": "2026-08-28",
   "hash": "0769b6a52984a26e582df7a764b4d2e2266a604e",
@@ -42,10 +72,10 @@
   "reviewer": "session-2026-08-28"
  },
  "docs/domain-rules.md": {
-  "date": "2026-08-28",
-  "hash": "ed0e490d79ed5db93ec654d3b7b285a3a3434831",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "cb81843659855c4208b7cc92d1109dc3f2b3bd99",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "docs/e2e-interfeys-tekshiruvi.md": {
   "date": "2026-08-28",
@@ -77,6 +107,24 @@
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
  },
+ "docs/realtime-channels.md": {
+  "date": "2026-08-29",
+  "hash": "130cc712e8b7802ea22520ef7fcbb2db645b57e2",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "docs/review-backlog.md": {
+  "date": "2026-08-29",
+  "hash": "e7338af7a7d95ce81e5b0e622ac961a62c4a8284",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "docs/review-process.md": {
+  "date": "2026-08-29",
+  "hash": "f5f94f992f032a8a19a1f7d63e639ce6558fa9a9",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
  "docs/roadmap.md": {
   "date": "2026-08-28",
   "hash": "04d6fb9e2ce5ed89b624702c379e39b2e2f77fe7",
@@ -88,6 +136,12 @@
   "hash": "2b23c83e9694f88e9d66f6d934be9ec6811c8c19",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "docs/web-parity.md": {
+  "date": "2026-08-29",
+  "hash": "613dba1e40abd9abded2ca12e81485f95400eed2",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "scripts/pul-invariantlari.sql": {
   "date": "2026-08-28",
@@ -148,6 +202,12 @@
   "hash": "3b208049a1994e0b85247bae5bd8650dd69aa9bf",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "src/backend/Cartex.Api/Controllers/CatalogController.cs": {
+  "date": "2026-08-29",
+  "hash": "ffcff36e5bc8e004d36bc6f73a66f54a0c5b78a6",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/backend/Cartex.Api/Controllers/CategoriesController.cs": {
   "date": "2026-08-28",
@@ -228,10 +288,10 @@
   "reviewer": "session-2026-08-28"
  },
  "src/backend/Cartex.Api/Controllers/OrderingController.cs": {
-  "date": "2026-08-28",
-  "hash": "f743f9b82cb4b550335ba260bbb0748efd2110ab",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "7ea0520fa4abf923a828c99e8d171c615d7328bb",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/backend/Cartex.Api/Controllers/PartnersController.cs": {
   "date": "2026-08-28",
@@ -299,6 +359,12 @@
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
  },
+ "src/backend/Cartex.Api/Controllers/ScanController.cs": {
+  "date": "2026-08-29",
+  "hash": "6e54ca2da8238578b6608c13f08cedf598b824e1",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
  "src/backend/Cartex.Api/Controllers/SettingsController.cs": {
   "date": "2026-08-28",
   "hash": "8eef945d44bb0c5c50c35f3ad361b3fadbf854be",
@@ -322,6 +388,12 @@
   "hash": "fc2bc3193cda130764780ed03b5d84a22c00af5f",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "src/backend/Cartex.Api/Controllers/StockWriteOffsController.cs": {
+  "date": "2026-08-29",
+  "hash": "03992f9aa07012b0b094af4138e992ab71a8f38d",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/backend/Cartex.Api/Controllers/StocksController.cs": {
   "date": "2026-08-28",
@@ -383,11 +455,23 @@
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
  },
+ "src/backend/Cartex.Api/Hubs/HubPresence.cs": {
+  "date": "2026-08-29",
+  "hash": "7653ac302b1797157775dbbb93df4b51c0cbec24",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
  "src/backend/Cartex.Api/Hubs/OrderingHub.cs": {
   "date": "2026-08-28",
   "hash": "40292053d20a0b4508e86103014c7107486fd267",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "src/backend/Cartex.Api/Hubs/PresenceHub.cs": {
+  "date": "2026-08-29",
+  "hash": "1eac4c1bbdaf28f34685a8b0c9b0a206d2eac0b1",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/backend/Cartex.Api/Hubs/PrintingHub.cs": {
   "date": "2026-08-28",
@@ -671,6 +755,42 @@
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
  },
+ "src/backend/Cartex.Application/Catalog/CatalogReference.cs": {
+  "date": "2026-08-29",
+  "hash": "6a0ea657193e10ad7ca4dd0eeaed9d24d2a5e734",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "src/backend/Cartex.Application/Catalog/Commands/CatalogSettingsCommands.cs": {
+  "date": "2026-08-29",
+  "hash": "ee8cac2fb247eeb2e4e4d30b9f334e1c59221d6c",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "src/backend/Cartex.Application/Catalog/ICatalogPackStore.cs": {
+  "date": "2026-08-29",
+  "hash": "e148b7895771f857214be1f346b441be19a1e4e7",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "src/backend/Cartex.Application/Catalog/ICatalogReference.cs": {
+  "date": "2026-08-29",
+  "hash": "91e05f2f7c7a743d080d330710335b898e4f40e9",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "src/backend/Cartex.Application/Catalog/Queries/CatalogReferenceQueries.cs": {
+  "date": "2026-08-29",
+  "hash": "eceb0f738a78899276349eec5c139801960b8bab",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "src/backend/Cartex.Application/Catalog/Queries/GetCatalogSettingsQuery.cs": {
+  "date": "2026-08-29",
+  "hash": "1085851524b1015ddefbb81ccf00ed80d38b943b",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
  "src/backend/Cartex.Application/Categories/CategoryTreeRules.cs": {
   "date": "2026-08-28",
   "hash": "6dbf96fb89fbfce40dec241adb6d9f48f37c5cff",
@@ -779,11 +899,23 @@
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
  },
+ "src/backend/Cartex.Application/Common/Finance/CashPayout.cs": {
+  "date": "2026-08-29",
+  "hash": "8b29d4cc62d818b28421ed8aacdc7e47086d5f9e",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
  "src/backend/Cartex.Application/Common/Finance/CurrencyService.cs": {
   "date": "2026-08-28",
   "hash": "afa5c3da876b6340349b1aa852c7ab97937588da",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "src/backend/Cartex.Application/Common/Finance/CustomerAccounts.cs": {
+  "date": "2026-08-29",
+  "hash": "55a1655afe2abf4c33e13f3f63e135904b82332a",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/backend/Cartex.Application/Common/Finance/CustomerBalance.cs": {
   "date": "2026-08-28",
@@ -827,6 +959,12 @@
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
  },
+ "src/backend/Cartex.Application/Common/Interfaces/IHubPresence.cs": {
+  "date": "2026-08-29",
+  "hash": "e76182abe27072ac928c243c829160b34ac149d6",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
  "src/backend/Cartex.Application/Common/Interfaces/IImageProcessor.cs": {
   "date": "2026-08-28",
   "hash": "de0099a8715faebc988106fca440fb61c46bc695",
@@ -868,6 +1006,12 @@
   "hash": "8adc60bc9b5d6daae5132c1dce8418c3de88d7af",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "src/backend/Cartex.Application/Common/Interfaces/IProductPopularity.cs": {
+  "date": "2026-08-29",
+  "hash": "f84ae75defa3b5e108c0effb9fb2e3bbfda0d04b",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/backend/Cartex.Application/Common/Interfaces/IPushGateway.cs": {
   "date": "2026-08-28",
@@ -1175,6 +1319,12 @@
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
  },
+ "src/backend/Cartex.Application/Common/Shifts/ShiftLock.cs": {
+  "date": "2026-08-29",
+  "hash": "2da25b7300df577539e05222eb3649e0db146e56",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
  "src/backend/Cartex.Application/CustomerPayments/Commands/CreateCustomerPaymentCommand.cs": {
   "date": "2026-08-28",
   "hash": "b516db261ac2f2503c425ed21e3ca6d3e8eedcb6",
@@ -1259,6 +1409,18 @@
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
  },
+ "src/backend/Cartex.Application/Customers/CustomerOpeningBalance.cs": {
+  "date": "2026-08-29",
+  "hash": "6bdf63999c7ba5f41b8da89a7e680011df4162ff",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "src/backend/Cartex.Application/Customers/Queries/CustomerRows.cs": {
+  "date": "2026-08-29",
+  "hash": "2fcdec3d01bf2599b38f30dbd6e255669aa56dcc",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
  "src/backend/Cartex.Application/Customers/Queries/GetConsolidatedActQuery.cs": {
   "date": "2026-08-28",
   "hash": "18ea6e5c33bd747f1c47b74169ec8b7bf5e22d34",
@@ -1282,6 +1444,12 @@
   "hash": "dab956bc4fb0a7b6a8ff227b03bbeeec4994a30b",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "src/backend/Cartex.Application/Customers/Queries/GetCustomerMessagesQuery.cs": {
+  "date": "2026-08-29",
+  "hash": "45db4b93292cbae0636d8dfed00d5bffd0d3968a",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/backend/Cartex.Application/Customers/Queries/GetCustomerStatementQuery.cs": {
   "date": "2026-08-28",
@@ -1350,10 +1518,10 @@
   "reviewer": "session-2026-08-28"
  },
  "src/backend/Cartex.Application/Licensing/Commands/UpdateLicenseCommand.cs": {
-  "date": "2026-08-28",
-  "hash": "fd07bb38c3320660db3d25340b2d4d7899c84b87",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "933a12e02953536067045a91cb64b6beaf7bbb5e",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/backend/Cartex.Application/Licensing/Queries/GetLicenseOptionsQuery.cs": {
   "date": "2026-08-28",
@@ -2003,6 +2171,12 @@
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
  },
+ "src/backend/Cartex.Application/Sales/Queries/GetPublicReceiptQuery.cs": {
+  "date": "2026-08-29",
+  "hash": "a3d58335511bc5ab157b501391ed537e33f9014b",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
  "src/backend/Cartex.Application/Sales/Queries/GetReceiptByTokenQuery.cs": {
   "date": "2026-08-28",
   "hash": "d7a1e68a977b698c585a9c917e6c964f198fee03",
@@ -2044,6 +2218,18 @@
   "hash": "3dde3ffda41ca86a1d19f5da2c374201955f5a22",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "src/backend/Cartex.Application/Sales/ReceiptTokens.cs": {
+  "date": "2026-08-29",
+  "hash": "8c7ead431fdd40d8fb8b64fa51f82c2ddfe75b65",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "src/backend/Cartex.Application/Scan/Queries/ScanQuery.cs": {
+  "date": "2026-08-29",
+  "hash": "99814b4f153dc04ad2e0641b99632f8d971d9e06",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/backend/Cartex.Application/Settings/Commands/MigrateStorageCommand.cs": {
   "date": "2026-08-28",
@@ -2285,17 +2471,71 @@
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
  },
+ "src/backend/Cartex.Application/StockWriteOffs/Commands/CreateStockWriteOffCommand.cs": {
+  "date": "2026-08-29",
+  "hash": "35d07e3dbab9461373d57f77530569d6ddef75f9",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "src/backend/Cartex.Application/StockWriteOffs/Commands/ReverseStockWriteOffCommand.cs": {
+  "date": "2026-08-29",
+  "hash": "781531c71d19882698fd775ebf5f9aecb7f881f7",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "src/backend/Cartex.Application/StockWriteOffs/Queries/GetStockWriteOffsQuery.cs": {
+  "date": "2026-08-29",
+  "hash": "58e85d22d9e40e0babb5e7732f5b7cfebfad9f49",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "src/backend/Cartex.Application/StockWriteOffs/Queries/GetWriteOffBalancesQuery.cs": {
+  "date": "2026-08-29",
+  "hash": "28172bcbef70d0f6647e782601599b4b3b2fedb7",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "src/backend/Cartex.Application/StockWriteOffs/Queries/GetWriteOffBatchesQuery.cs": {
+  "date": "2026-08-29",
+  "hash": "8a5ea4b78103c3fed5afecd4d1eea878e7069b2e",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "src/backend/Cartex.Application/StockWriteOffs/WriteOffAccess.cs": {
+  "date": "2026-08-29",
+  "hash": "48dc0ba6883cf6bf78949ed694279ee517f4440d",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "src/backend/Cartex.Application/StockWriteOffs/WriteOffDocuments.cs": {
+  "date": "2026-08-29",
+  "hash": "624d4de3dafb8d786f5efd9fbc6eb80b749d2d39",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
  "src/backend/Cartex.Application/Stocks/Commands/AdjustStockCommand.cs": {
   "date": "2026-08-28",
   "hash": "767243e4fb37f53191d24b5b6633e603c74e02d1",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
  },
+ "src/backend/Cartex.Application/Stocks/Commands/BackfillOpeningStockCommand.cs": {
+  "date": "2026-08-29",
+  "hash": "0773bf0fb7cd74f8170efdd4461652c130afd7f1",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
  "src/backend/Cartex.Application/Stocks/Queries/GetExpiringStocksQuery.cs": {
   "date": "2026-08-28",
   "hash": "854be5e98e6292adbb576993e5b8e465c4db9178",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "src/backend/Cartex.Application/Stocks/Queries/GetInventoryMovementsQuery.cs": {
+  "date": "2026-08-29",
+  "hash": "bfdca6d6735bca6a20aace033e7d5673580ae780",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/backend/Cartex.Application/Stocks/Queries/GetLowStockQuery.cs": {
   "date": "2026-08-28",
@@ -2464,6 +2704,12 @@
   "hash": "1082b50d8bc77ee0151881ce80bbd0c314694f96",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "src/backend/Cartex.Application/Supplies/Commands/SupplyLedger.cs": {
+  "date": "2026-08-29",
+  "hash": "d539bdfc66fa4f738ca76cb778ee15f9f10de1e4",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/backend/Cartex.Application/Supplies/Commands/SupplyLineResolver.cs": {
   "date": "2026-08-28",
@@ -3059,6 +3305,12 @@
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
  },
+ "src/backend/Cartex.Domain/Entities/StockWriteOff.cs": {
+  "date": "2026-08-29",
+  "hash": "9591c25ec442f80c3f74e16f6d8c7de7f7a54784",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
  "src/backend/Cartex.Domain/Entities/Supplier.cs": {
   "date": "2026-08-28",
   "hash": "8b544f0cd1d12de996ca1069587fae3c24818b3a",
@@ -3191,6 +3443,24 @@
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
  },
+ "src/backend/Cartex.Infrastructure/Catalog/CatalogPackStore.cs": {
+  "date": "2026-08-29",
+  "hash": "71f78271845318f6d86258b61da170a7c95255b0",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "src/backend/Cartex.Infrastructure/Catalog/FileCatalogSource.cs": {
+  "date": "2026-08-29",
+  "hash": "4dbc6cbfabe754e5e493a8763541f798a336c752",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "src/backend/Cartex.Infrastructure/Catalog/OnlineCatalogSource.cs": {
+  "date": "2026-08-29",
+  "hash": "c21faa72467a9341e1b52ff05558d6bcc4822d23",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
  "src/backend/Cartex.Infrastructure/Catalog/OpenFoodFactsProvider.cs": {
   "date": "2026-08-28",
   "hash": "e7231d634c0d75f5663dcaa3a0a7bd481819dfad",
@@ -3202,6 +3472,12 @@
   "hash": "d2d1ca2c20e04bc3cc2f97c028204f2b5bd42c39",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "src/backend/Cartex.Infrastructure/Catalog/ProductPopularityProvider.cs": {
+  "date": "2026-08-29",
+  "hash": "446d794319996ba5aa735d89026388b3404c96f7",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/backend/Cartex.Infrastructure/CloudBridge/CloudBridgeClient.cs": {
   "date": "2026-08-28",
@@ -3348,10 +3624,10 @@
   "reviewer": "session-2026-08-28"
  },
  "src/backend/Cartex.Infrastructure/Search/SearchFoldBackfillService.cs": {
-  "date": "2026-08-28",
-  "hash": "0ef913a3354ea8343d10d90eda711e077f3f6c63",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "905cb9d28e1db91e1863b2a7814c846a8eb48710",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/backend/Cartex.Infrastructure/Security/HardwareKeyService.cs": {
   "date": "2026-08-28",
@@ -3616,6 +3892,12 @@
   "hash": "35dc724bceac525d4679fc892261f0b350026abc",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "src/backend/Cartex.Persistence/Interceptors/InventoryJournalInterceptor.cs": {
+  "date": "2026-08-29",
+  "hash": "6af925c0eb381748ee8111238c920bf0a90d5a0e",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/backend/Cartex.Persistence/Interceptors/PriceHistoryInterceptor.cs": {
   "date": "2026-08-28",
@@ -3899,6 +4181,18 @@
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
  },
+ "src/backend/Cartex.Persistence/Migrations/20260828191238_InitialMigration.Designer.cs": {
+  "date": "2026-08-29",
+  "hash": "3d13c4876b0a373bc1357cea485fafc616e0261d",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "src/backend/Cartex.Persistence/Migrations/20260828191238_InitialMigration.cs": {
+  "date": "2026-08-29",
+  "hash": "39d644a5487e6cde08a06949c4d2cab0b08fef4e",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
  "src/backend/Cartex.Persistence/Migrations/ApplicationDbContextModelSnapshot.cs": {
   "date": "2026-08-28",
   "hash": "f2b8bd3fad76e96ee08d1480873436ca87cd2343",
@@ -3906,10 +4200,10 @@
   "reviewer": "session-2026-08-28"
  },
  "src/backend/Cartex.Persistence/Seed/DatabaseSeeder.cs": {
-  "date": "2026-08-28",
-  "hash": "4c710e8134e831331d24cfaab7b4ed7866acf1a6",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "17cc5b76cedb3f7461d6aa9e2b676693129ce47b",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/backend/Cartex.Persistence/Seed/DemoDataSeeder.cs": {
   "date": "2026-08-28",
@@ -3928,6 +4222,18 @@
   "hash": "3503f78c2bd7c175daf835acf452906d36fc876e",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "src/backend/Cartex.Persistence/Services/InventoryReasonState.cs": {
+  "date": "2026-08-29",
+  "hash": "42f62646d3f9b3c44c5032c17420619990c8f6da",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "src/backend/Cartex.Persistence/TransactionScoped.cs": {
+  "date": "2026-08-29",
+  "hash": "cb4ac89dd208d0995c87c432ecf8b43bbabea46b",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/desktop/Cartex.Desktop/App.axaml": {
   "date": "2026-08-28",
@@ -4296,10 +4602,10 @@
   "reviewer": "session-2026-08-28"
  },
  "src/desktop/Cartex.UI/Services/AccessCapabilities.cs": {
-  "date": "2026-08-28",
-  "hash": "1c9f77850b4fdf53e77ed8584a8bb897a614a750",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "7ac2ff41ae14925c70b5f9cb380e432ca40c7f38",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/desktop/Cartex.UI/Services/ApiErrors.cs": {
   "date": "2026-08-28",
@@ -4421,6 +4727,12 @@
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
  },
+ "src/desktop/Cartex.UI/Services/HubConnections.cs": {
+  "date": "2026-08-29",
+  "hash": "fe18e207833c5011bc093d2184742c982cc7d793",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
  "src/desktop/Cartex.UI/Services/HubCredentialStore.cs": {
   "date": "2026-08-28",
   "hash": "87af1eb65fe66fef76e22ebc5d5868c2c0abbecc",
@@ -4438,6 +4750,12 @@
   "hash": "069a4c81c36e89f465451a0772907ad96ae5f605",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "src/desktop/Cartex.UI/Services/HubSubscription.cs": {
+  "date": "2026-08-29",
+  "hash": "411561ba38bbeb2c7c2efa9e27e68ac11a220aec",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/desktop/Cartex.UI/Services/ImageUrl.cs": {
   "date": "2026-08-28",
@@ -4606,6 +4924,12 @@
   "hash": "f539444c756f427c4b8f3475595e410bee4ed67a",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "src/desktop/Cartex.UI/Services/ScanIndicator.cs": {
+  "date": "2026-08-29",
+  "hash": "a8f0104fcda77915346fa1efe720cf3833998ea3",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/desktop/Cartex.UI/Services/ServiceLocator.cs": {
   "date": "2026-08-28",
@@ -4848,16 +5172,16 @@
   "reviewer": "session-2026-08-28"
  },
  "src/desktop/Cartex.UI/ViewModels/ModulesViewModel.cs": {
-  "date": "2026-08-28",
-  "hash": "fde6536ff7e8dc7c01fed99918d6b47a7237a6ec",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "c8c57438b8568ce47a50a26c1bbe7707ecca0796",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/desktop/Cartex.UI/ViewModels/NavRegistry.cs": {
-  "date": "2026-08-28",
-  "hash": "98a16542acd98035caf34427089b9435f99ada3c",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "4a11d66cdcd88bb62fdea3c456c981571f69f302",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/desktop/Cartex.UI/ViewModels/NotificationDeliveryDetailViewModel.cs": {
   "date": "2026-08-28",
@@ -4998,10 +5322,10 @@
   "reviewer": "session-2026-08-28"
  },
  "src/desktop/Cartex.UI/ViewModels/SalesPolicyViewModel.cs": {
-  "date": "2026-08-28",
-  "hash": "6513b6f5d30757f87c1ac59a5f1df0ae56dedacc",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "a71916451d0fc794e4120406cb9ec2c5327dfd9e",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/desktop/Cartex.UI/ViewModels/SalesViewModel.cs": {
   "date": "2026-08-28",
@@ -5038,6 +5362,12 @@
   "hash": "e991b68fcc3ecbdd8cb40b00a51aeb9bc5bcd4db",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "src/desktop/Cartex.UI/ViewModels/StockWriteOffsViewModel.cs": {
+  "date": "2026-08-29",
+  "hash": "59522fdcbb3d8817316c33231ee74b686bdce50b",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/desktop/Cartex.UI/ViewModels/SuppliersViewModel.cs": {
   "date": "2026-08-28",
@@ -5190,10 +5520,10 @@
   "reviewer": "session-2026-08-28"
  },
  "src/desktop/Cartex.UI/Views/BranchesView.axaml": {
-  "date": "2026-08-28",
-  "hash": "451d8727268a8c33e825d4f6f0db1f7e7ca29c7c",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "2b6bca2fd52f0744dc652227fc58b548c421e115",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/desktop/Cartex.UI/Views/BranchesView.axaml.cs": {
   "date": "2026-08-28",
@@ -5262,10 +5592,10 @@
   "reviewer": "session-2026-08-28"
  },
  "src/desktop/Cartex.UI/Views/CustomerPickerDialog.axaml": {
-  "date": "2026-08-28",
-  "hash": "83529af10d9fe927d6109c55e32ad6db64308c78",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "2784af068263c0177bd842345c89d0b517d5f0eb",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/desktop/Cartex.UI/Views/CustomerPickerDialog.axaml.cs": {
   "date": "2026-08-28",
@@ -5358,10 +5688,10 @@
   "reviewer": "session-2026-08-28"
  },
  "src/desktop/Cartex.UI/Views/LoginView.axaml": {
-  "date": "2026-08-28",
-  "hash": "4806959efc7eba48a455ecb94f8898a79b873bb2",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "27aec3f5ae52765e0e14b8f355deb4087b7cac0b",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/desktop/Cartex.UI/Views/LoginView.axaml.cs": {
   "date": "2026-08-28",
@@ -5454,10 +5784,10 @@
   "reviewer": "session-2026-08-28"
  },
  "src/desktop/Cartex.UI/Views/OnboardingView.axaml": {
-  "date": "2026-08-28",
-  "hash": "9240f64b0a2f06b322ec49d036315f206e2c4983",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "6b2eac30b9c74edea18ac75f8746d00c851146e5",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/desktop/Cartex.UI/Views/OnboardingView.axaml.cs": {
   "date": "2026-08-28",
@@ -5526,10 +5856,10 @@
   "reviewer": "session-2026-08-28"
  },
  "src/desktop/Cartex.UI/Views/ProductEditorDialog.axaml": {
-  "date": "2026-08-28",
-  "hash": "5fe0ae9ef07b2c284f2865c099b5569054465f22",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "2a224c75f9bb1044c4c1610616592458c3a924a6",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/desktop/Cartex.UI/Views/ProductEditorDialog.axaml.cs": {
   "date": "2026-08-28",
@@ -5610,10 +5940,10 @@
   "reviewer": "session-2026-08-28"
  },
  "src/desktop/Cartex.UI/Views/ReceiptDetailDialog.axaml": {
-  "date": "2026-08-28",
-  "hash": "e5e2eb72d44435b85d0672bc3824149af2febbc1",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "734d19b608a0ff0ec51ac1514d74b51dd2d42582",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/desktop/Cartex.UI/Views/ReceiptDetailDialog.axaml.cs": {
   "date": "2026-08-28",
@@ -5706,16 +6036,28 @@
   "reviewer": "session-2026-08-28"
  },
  "src/desktop/Cartex.UI/Views/SalesView.axaml": {
-  "date": "2026-08-28",
-  "hash": "e5605aaeafc593409dc0a8948fbb176148057177",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "a67dc009d87017ebfb1cfc8a1d9b10fc3c42e598",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/desktop/Cartex.UI/Views/SalesView.axaml.cs": {
   "date": "2026-08-28",
   "hash": "ff84657898bbaa35ab2bbccd14da074399a16b2d",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "src/desktop/Cartex.UI/Views/ScanIndicatorView.axaml": {
+  "date": "2026-08-29",
+  "hash": "7a35f2aa692689ff0ff8a964a0983ebebf515ff4",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "src/desktop/Cartex.UI/Views/ScanIndicatorView.axaml.cs": {
+  "date": "2026-08-29",
+  "hash": "c61253e286b112d81315cf448b07060babb6bde6",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/desktop/Cartex.UI/Views/SettingsHubView.axaml": {
   "date": "2026-08-28",
@@ -5765,6 +6107,18 @@
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
  },
+ "src/desktop/Cartex.UI/Views/StockWriteOffsView.axaml": {
+  "date": "2026-08-29",
+  "hash": "40786ae1cf8f91c9f78de37c3c1a4157ab935597",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "src/desktop/Cartex.UI/Views/StockWriteOffsView.axaml.cs": {
+  "date": "2026-08-29",
+  "hash": "3f0ec3f5286daed7614cb24031df3c116d287fb6",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
  "src/desktop/Cartex.UI/Views/SuppliersView.axaml": {
   "date": "2026-08-28",
   "hash": "4d0fa8b46ab6a82d582afe265713a9084332eb34",
@@ -5778,10 +6132,10 @@
   "reviewer": "session-2026-08-28"
  },
  "src/desktop/Cartex.UI/Views/SuppliesView.axaml": {
-  "date": "2026-08-28",
-  "hash": "7ce690ea58a6e1d65328afd09725ff16b42ced34",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "abac60c341f2abe355e864990db4a50d022d92b8",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/desktop/Cartex.UI/Views/SuppliesView.axaml.cs": {
   "date": "2026-08-28",
@@ -5850,10 +6204,10 @@
   "reviewer": "session-2026-08-28"
  },
  "src/desktop/Cartex.UI/Views/UsersView.axaml": {
-  "date": "2026-08-28",
-  "hash": "fd7e8a0a86646431926dc5fb21c8722764f36375",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "83dba4e2a37986d485833b246a081413f2361ceb",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/desktop/Cartex.UI/Views/UsersView.axaml.cs": {
   "date": "2026-08-28",
@@ -6467,6 +6821,12 @@
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
  },
+ "src/mobile/Cartex.Mobile.Core/AutoFocus.cs": {
+  "date": "2026-08-29",
+  "hash": "74e07b448d582651803be483a326036bd7adfa2f",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
  "src/mobile/Cartex.Mobile.Core/Controls/HoldRepeatButton.cs": {
   "date": "2026-08-28",
   "hash": "40f0212cca8189bcf3c16a5550c4fba5019979ab",
@@ -6791,11 +7151,23 @@
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
  },
+ "src/mobile/Cartex.Mobile.Store/Services/HubSubscription.cs": {
+  "date": "2026-08-29",
+  "hash": "2d4ade3ab7934c88dea06d784dfa846391eebed6",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
  "src/mobile/Cartex.Mobile.Store/Services/KeyboardDismissal.cs": {
   "date": "2026-08-28",
   "hash": "59c76effec981e0663be884eb761cb147bc135ee",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "src/mobile/Cartex.Mobile.Store/Services/MobileHubConnections.cs": {
+  "date": "2026-08-29",
+  "hash": "5cb964504a5bc6e6bb458be5f8deef620727c05a",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/mobile/Cartex.Mobile.Store/Services/MobileHubHostService.cs": {
   "date": "2026-08-28",
@@ -6844,6 +7216,12 @@
   "hash": "64f2628eea59b80f402f3b5dce9ccdc4dae68680",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "src/mobile/Cartex.Mobile.Store/Services/ScanIndicator.cs": {
+  "date": "2026-08-29",
+  "hash": "50748f402e354bbf6e780511ba654d4ce4a351bb",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/mobile/Cartex.Mobile.Store/Services/SmsGatewayHostService.cs": {
   "date": "2026-08-28",
@@ -6964,6 +7342,12 @@
   "hash": "e3a21d2d2e97a8333e1e31eba73d671daa6565d6",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "src/mobile/Cartex.Mobile.Store/ViewModels/MobileCustomerPicker.cs": {
+  "date": "2026-08-29",
+  "hash": "e9d0d0547b0e06eefe63d38f42480b2c35c0ac00",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/mobile/Cartex.Mobile.Store/ViewModels/OfflineImportViewModel.cs": {
   "date": "2026-08-28",
@@ -7108,6 +7492,30 @@
   "hash": "0b4a0efa3c5ab01f18ae3685f940ef17970f5c65",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "src/mobile/Cartex.Mobile.Store/Views/CustomerFormView.xaml": {
+  "date": "2026-08-29",
+  "hash": "d4f202e77116fac16d3457a1610df2af75bcc266",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "src/mobile/Cartex.Mobile.Store/Views/CustomerFormView.xaml.cs": {
+  "date": "2026-08-29",
+  "hash": "c8cde214505fafa33a1d6c80c68b304c35b678bc",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "src/mobile/Cartex.Mobile.Store/Views/CustomerPickerView.xaml": {
+  "date": "2026-08-29",
+  "hash": "2dc37a38a876986694db400e58f74db5805d441c",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "src/mobile/Cartex.Mobile.Store/Views/CustomerPickerView.xaml.cs": {
+  "date": "2026-08-29",
+  "hash": "23ec3644d679f241f2a587b1ff93018142a22218",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/mobile/Cartex.Mobile.Store/Views/CustomerRefundPage.xaml": {
   "date": "2026-08-28",
@@ -7421,6 +7829,12 @@
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
  },
+ "src/shared/Cartex.ApiClient/Api/ICatalogApi.cs": {
+  "date": "2026-08-29",
+  "hash": "0eca86cebb763ef342a2311247b4339449778eab",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
  "src/shared/Cartex.ApiClient/Api/ICategoriesApi.cs": {
   "date": "2026-08-28",
   "hash": "f0de62f1431c5a55a4e435473097888522a91e3e",
@@ -7571,6 +7985,12 @@
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
  },
+ "src/shared/Cartex.ApiClient/Api/IScanApi.cs": {
+  "date": "2026-08-29",
+  "hash": "ed7e2c43c38301551878726ba20e2c284047289e",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
  "src/shared/Cartex.ApiClient/Api/ISessionsApi.cs": {
   "date": "2026-08-28",
   "hash": "a93b0b76c0248f7e783d7f668e07d54dcaa3ff09",
@@ -7600,6 +8020,12 @@
   "hash": "baaf2bf4ba0e53cc0b1f3efb91c124f68b647d7d",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "src/shared/Cartex.ApiClient/Api/IStockWriteOffsApi.cs": {
+  "date": "2026-08-29",
+  "hash": "bede4f5f679dcc87ba919258da4a82b1247cf744",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/shared/Cartex.ApiClient/Api/IStocksApi.cs": {
   "date": "2026-08-28",
@@ -7757,6 +8183,12 @@
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
  },
+ "src/shared/Cartex.Shared/Barcodes/WeightedBarcode.cs": {
+  "date": "2026-08-29",
+  "hash": "a976470026ff7278f3742b0ac5350449f75eb211",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
  "src/shared/Cartex.Shared/Localization/ReceiptTexts.cs": {
   "date": "2026-08-28",
   "hash": "8a2afa891ccf96bc7861a7e17f13315ed290c1eb",
@@ -7882,6 +8314,12 @@
   "hash": "989f312aee7b15dfd53f792e66c42785b521f520",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "src/shared/Cartex.Shared/Models/Catalog/CatalogModels.cs": {
+  "date": "2026-08-29",
+  "hash": "94e4854c7c2b57af604431f12f4d7f92edbf3e0d",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/shared/Cartex.Shared/Models/Categories/CategoryDto.cs": {
   "date": "2026-08-28",
@@ -8387,6 +8825,12 @@
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
  },
+ "src/shared/Cartex.Shared/Models/Scan/ScanModels.cs": {
+  "date": "2026-08-29",
+  "hash": "55d4c3465cb79b9ec51312a5523271455b2b002a",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
  "src/shared/Cartex.Shared/Models/Settings/DocumentPrintLayout.cs": {
   "date": "2026-08-28",
   "hash": "f668bfcea3f8016c4904608c670a70d505e06cf9",
@@ -8447,11 +8891,23 @@
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
  },
+ "src/shared/Cartex.Shared/Models/Stocks/InventoryMovementDto.cs": {
+  "date": "2026-08-29",
+  "hash": "eab16495db38bb137a782c5fdba3e75868a1b255",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
  "src/shared/Cartex.Shared/Models/Stocks/LowStockDto.cs": {
   "date": "2026-08-28",
   "hash": "e2e8046774217ec96819afb2e0fd12ed1f27990f",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "src/shared/Cartex.Shared/Models/Stocks/OpeningStockBackfillDto.cs": {
+  "date": "2026-08-29",
+  "hash": "285505899ab786ae44a33833a8cdaa8c25952687",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/shared/Cartex.Shared/Models/Stocks/StockDto.cs": {
   "date": "2026-08-28",
@@ -8470,6 +8926,12 @@
   "hash": "2c509e69a71cf0ce15f9ab81cff74329aa2aef40",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "src/shared/Cartex.Shared/Models/Stocks/StockWriteOffModels.cs": {
+  "date": "2026-08-29",
+  "hash": "2254631004397420448b8a16c997a2877c62a33a",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/shared/Cartex.Shared/Models/Storage/StorageModels.cs": {
   "date": "2026-08-28",
@@ -8622,10 +9084,10 @@
   "reviewer": "session-2026-08-28"
  },
  "src/web/Cartex.Web.Angular/src/app/app.routes.ts": {
-  "date": "2026-08-28",
-  "hash": "774bc80f5608f26f39f73b25d1ef8ad865577eeb",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "1056a04790845b2204eb2fa1b182fbacc9e877ea",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/web/Cartex.Web.Angular/src/app/app.ts": {
   "date": "2026-08-28",
@@ -8634,10 +9096,10 @@
   "reviewer": "session-2026-08-28"
  },
  "src/web/Cartex.Web.Angular/src/app/core/access-capabilities.service.ts": {
-  "date": "2026-08-28",
-  "hash": "fc10e31c403bfdaf24d3727650e1379343b0bcb0",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "c514b96cd2357d94b0b926a4314c9d27c64a3695",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/web/Cartex.Web.Angular/src/app/core/api.service.ts": {
   "date": "2026-08-28",
@@ -8711,11 +9173,23 @@
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
  },
+ "src/web/Cartex.Web.Angular/src/app/core/api/scan.api.ts": {
+  "date": "2026-08-29",
+  "hash": "a1369745d476624b601dac422589ffed5c850657",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
  "src/web/Cartex.Web.Angular/src/app/core/api/settings.api.ts": {
   "date": "2026-08-28",
   "hash": "2e1019fcb3e364a841e43e3c450d70ab9dbb05cd",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "src/web/Cartex.Web.Angular/src/app/core/api/write-offs.api.ts": {
+  "date": "2026-08-29",
+  "hash": "62098e6bef42bd3e80a61ebbeba483b833c12de7",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/web/Cartex.Web.Angular/src/app/core/auth.guard.ts": {
   "date": "2026-08-28",
@@ -8740,6 +9214,12 @@
   "hash": "a38f1395dfe54c3702e9e77b9d88a762000221ee",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "src/web/Cartex.Web.Angular/src/app/core/csv-export.ts": {
+  "date": "2026-08-29",
+  "hash": "efa42c4444ebe1e0d20dc718dbccb7689b86b1d7",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/web/Cartex.Web.Angular/src/app/core/device-identity.ts": {
   "date": "2026-08-28",
@@ -8790,10 +9270,10 @@
   "reviewer": "session-2026-08-28"
  },
  "src/web/Cartex.Web.Angular/src/app/core/nav.ts": {
-  "date": "2026-08-28",
-  "hash": "27a09ceb28ce84de782f55329c743af9a06d2d5f",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "ceb0b1495f4539812bf3058634f1fc438d818844",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/web/Cartex.Web.Angular/src/app/core/notify.service.ts": {
   "date": "2026-08-28",
@@ -8813,6 +9293,12 @@
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
  },
+ "src/web/Cartex.Web.Angular/src/app/core/print-status-hub.service.ts": {
+  "date": "2026-08-29",
+  "hash": "71d2d14db59ab6a36a301e3a11c11b416e7a2750",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
  "src/web/Cartex.Web.Angular/src/app/core/queue-hub.service.ts": {
   "date": "2026-08-28",
   "hash": "24a8f002ee00c09a011518292cb4986d3c14dda2",
@@ -8830,6 +9316,18 @@
   "hash": "fa8659498c229bb2de9774b26dd374786ea22105",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "src/web/Cartex.Web.Angular/src/app/core/sales-policy.service.ts": {
+  "date": "2026-08-29",
+  "hash": "eddf193068fcbec57eb9d026a18decd7c21ecdd5",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "src/web/Cartex.Web.Angular/src/app/core/scan-indicator.ts": {
+  "date": "2026-08-29",
+  "hash": "0e297f936a6ca9837d2a00b03f7b8430995fa5d1",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/web/Cartex.Web.Angular/src/app/core/transloco.loader.ts": {
   "date": "2026-08-28",
@@ -8903,6 +9401,18 @@
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
  },
+ "src/web/Cartex.Web.Angular/src/app/pages/catalog-settings/catalog-settings.html": {
+  "date": "2026-08-29",
+  "hash": "ce09ac9d929c6af09b8ffbfe5ea9809f8c73eb15",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "src/web/Cartex.Web.Angular/src/app/pages/catalog-settings/catalog-settings.ts": {
+  "date": "2026-08-29",
+  "hash": "54f090db8f9f7e435fd39c3013f755a8603d9fe7",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
  "src/web/Cartex.Web.Angular/src/app/pages/categories/categories.html": {
   "date": "2026-08-28",
   "hash": "d2560489b9b96ab1722867ca3d3a8b15213d14d7",
@@ -8952,10 +9462,10 @@
   "reviewer": "session-2026-08-28"
  },
  "src/web/Cartex.Web.Angular/src/app/pages/customers/send-message.dialog.ts": {
-  "date": "2026-08-28",
-  "hash": "584d4118e8dbee3e1eac839f1dd204a82284a3cc",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "b53b3d84d0ba22496a4d36e2303c37d8d34a18e3",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/web/Cartex.Web.Angular/src/app/pages/dashboard/dashboard.html": {
   "date": "2026-08-28",
@@ -9036,10 +9546,10 @@
   "reviewer": "session-2026-08-28"
  },
  "src/web/Cartex.Web.Angular/src/app/pages/loyalty/cashback-rule-dialog.ts": {
-  "date": "2026-08-28",
-  "hash": "b501bb9b02b4b7981f40dbd89e771f430e75610e",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "144b50c7fe3ca11ea02c8c93866b6c721da562be",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/web/Cartex.Web.Angular/src/app/pages/loyalty/confirm-dialog.ts": {
   "date": "2026-08-28",
@@ -9048,10 +9558,10 @@
   "reviewer": "session-2026-08-28"
  },
  "src/web/Cartex.Web.Angular/src/app/pages/loyalty/discount-dialog.ts": {
-  "date": "2026-08-28",
-  "hash": "e9c16fdb25b2bad2ef3fed9c0dfe038d618d3fc9",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "9105f8249f009ef673c085b6a0f23d690da3c272",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/web/Cartex.Web.Angular/src/app/pages/loyalty/loyalty.html": {
   "date": "2026-08-28",
@@ -9060,10 +9570,10 @@
   "reviewer": "session-2026-08-28"
  },
  "src/web/Cartex.Web.Angular/src/app/pages/loyalty/loyalty.ts": {
-  "date": "2026-08-28",
-  "hash": "a3c9cc1c8fecb051702e526c940e867f50651db9",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "8b8ca06e2ae1b0aabeea8296bf7ae84cfae6d99b",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/web/Cartex.Web.Angular/src/app/pages/manufacturers/manufacturers.html": {
   "date": "2026-08-28",
@@ -9084,10 +9594,10 @@
   "reviewer": "session-2026-08-28"
  },
  "src/web/Cartex.Web.Angular/src/app/pages/modules/modules.ts": {
-  "date": "2026-08-28",
-  "hash": "3a0a20c305a250547d1f494ab7f82691ff33524e",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "7aab11f0f49d7a2ba6b4962c37eee9d940ff99e4",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/web/Cartex.Web.Angular/src/app/pages/notification-journal/notification-journal.ts": {
   "date": "2026-08-28",
@@ -9132,10 +9642,10 @@
   "reviewer": "session-2026-08-28"
  },
  "src/web/Cartex.Web.Angular/src/app/pages/pos/pos-tools.ts": {
-  "date": "2026-08-28",
-  "hash": "c48d1c7f880934a375852f017c283c947b832f5e",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "0ac956af83106eccb556cc7d6fafe341cef67f35",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/web/Cartex.Web.Angular/src/app/pages/pos/pos.html": {
   "date": "2026-08-28",
@@ -9144,16 +9654,16 @@
   "reviewer": "session-2026-08-28"
  },
  "src/web/Cartex.Web.Angular/src/app/pages/pos/pos.ts": {
-  "date": "2026-08-28",
-  "hash": "c5e466e740a919bda1b9c5b7286a785516886e98",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "c8bfc7910d87dbeb700fd535528d36be300475de",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/web/Cartex.Web.Angular/src/app/pages/pos/prepack-dialog.html": {
-  "date": "2026-08-28",
-  "hash": "0935e659c11fbe97c59b72890486827d2cbbcce3",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "01d897743678c3709d9941ab70af1d5c15358b15",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/web/Cartex.Web.Angular/src/app/pages/pos/receipt-dialog.html": {
   "date": "2026-08-28",
@@ -9166,6 +9676,12 @@
   "hash": "57da0d74089b5f3c8f50e04d1dbe2867af60f86b",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "src/web/Cartex.Web.Angular/src/app/pages/pos/reference-dialog.ts": {
+  "date": "2026-08-29",
+  "hash": "4fc901af87505b60ac848ef9094cc4e468677a41",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/web/Cartex.Web.Angular/src/app/pages/printing/printing.ts": {
   "date": "2026-08-28",
@@ -9210,10 +9726,16 @@
   "reviewer": "session-2026-08-28"
  },
  "src/web/Cartex.Web.Angular/src/app/pages/products/products.ts": {
-  "date": "2026-08-28",
-  "hash": "8f40d37c02eb063b2a065af69190abd4d0372515",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "a6e221b3c047d3ab89413a6b18d2cc5ce68e7e12",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "src/web/Cartex.Web.Angular/src/app/pages/products/variants.dialog.ts": {
+  "date": "2026-08-29",
+  "hash": "889f2d2c055ff23225491ca20c0bb84de64c81a4",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/web/Cartex.Web.Angular/src/app/pages/rates/rates.html": {
   "date": "2026-08-28",
@@ -9318,10 +9840,10 @@
   "reviewer": "session-2026-08-28"
  },
  "src/web/Cartex.Web.Angular/src/app/pages/sales-policy/sales-policy.ts": {
-  "date": "2026-08-28",
-  "hash": "ee72e29ad1260d5431e8707234cb6ba1c0a47c83",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "4fbdc31654937c57263092fff58cb4d392591051",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/web/Cartex.Web.Angular/src/app/pages/sales/sales.html": {
   "date": "2026-08-28",
@@ -9330,10 +9852,10 @@
   "reviewer": "session-2026-08-28"
  },
  "src/web/Cartex.Web.Angular/src/app/pages/sales/sales.ts": {
-  "date": "2026-08-28",
-  "hash": "dae16c5402244c53c04d03c77b10b1d968d9efd0",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "4e3b7403d30c64d0f8256240e60a3ee8a45abf16",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/web/Cartex.Web.Angular/src/app/pages/security/security.ts": {
   "date": "2026-08-28",
@@ -9444,10 +9966,10 @@
   "reviewer": "session-2026-08-28"
  },
  "src/web/Cartex.Web.Angular/src/app/pages/transfers/transfers.ts": {
-  "date": "2026-08-28",
-  "hash": "4f541034dab9d4a1699d61889b0bdda14cf36eca",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "864c4f5569e0cab7ea52c35deac24c9596d4db7a",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/web/Cartex.Web.Angular/src/app/pages/units/units.html": {
   "date": "2026-08-28",
@@ -9468,10 +9990,10 @@
   "reviewer": "session-2026-08-28"
  },
  "src/web/Cartex.Web.Angular/src/app/pages/users/users.ts": {
-  "date": "2026-08-28",
-  "hash": "3a93edf9367ac273e5a7a941b11208ab4db78b1b",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "82460be04915a140cb520edfc7f4cadd4a47b3b9",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/web/Cartex.Web.Angular/src/app/pages/warehouse/warehouse.html": {
   "date": "2026-08-28",
@@ -9480,10 +10002,10 @@
   "reviewer": "session-2026-08-28"
  },
  "src/web/Cartex.Web.Angular/src/app/pages/warehouse/warehouse.ts": {
-  "date": "2026-08-28",
-  "hash": "a4c5e66be2628506dba23098abb3e187e4733f51",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "f0131c422b78f0564cb37fac461bf7ce88a0f850",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/web/Cartex.Web.Angular/src/app/pages/warehouses/warehouses.html": {
   "date": "2026-08-28",
@@ -9496,6 +10018,18 @@
   "hash": "790a412f269db0cc383485928aa6f17f3314e2bc",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "src/web/Cartex.Web.Angular/src/app/pages/write-offs/write-offs.html": {
+  "date": "2026-08-29",
+  "hash": "0cdbd898d7f31496dd95dddd46b3ff525a9d0c09",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "src/web/Cartex.Web.Angular/src/app/pages/write-offs/write-offs.ts": {
+  "date": "2026-08-29",
+  "hash": "e4b37c44ab714b7f8121345af3fb5bc4a23272a8",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/web/Cartex.Web.Angular/src/app/shared/bar-list.ts": {
   "date": "2026-08-28",
@@ -9532,6 +10066,12 @@
   "hash": "c6046a0e653a1b183de6c8ca26d96ade7ee49767",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "src/web/Cartex.Web.Angular/src/app/shared/scan-indicator.ts": {
+  "date": "2026-08-29",
+  "hash": "f07ec57d62ed70d78036dea431df1e24ae39fa17",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "src/web/Cartex.Web.Angular/src/app/shared/scanner.dialog.ts": {
   "date": "2026-08-28",
@@ -9611,6 +10151,18 @@
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
  },
+ "tests/Cartex.Api.IntegrationTests/CatalogReferenceTests.cs": {
+  "date": "2026-08-29",
+  "hash": "488516722f45e021f4c43fd1bfe4a5436af1fddf",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "tests/Cartex.Api.IntegrationTests/CatalogStub.cs": {
+  "date": "2026-08-29",
+  "hash": "12a23a04382b538fa56545e6bdd3f4875aa37033",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
  "tests/Cartex.Api.IntegrationTests/CatalogTests.cs": {
   "date": "2026-08-28",
   "hash": "62c9d30ddc07f9d38ab29d53d59fa88f8e67ebef",
@@ -9630,10 +10182,10 @@
   "reviewer": "session-2026-08-28"
  },
  "tests/Cartex.Api.IntegrationTests/DeveloperBreadthTests.cs": {
-  "date": "2026-08-28",
-  "hash": "df9b8d2e5c74e0bb300e27223d7620b1cdf1f117",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "1cb7d228170699298976497583275f4e390d8697",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "tests/Cartex.Api.IntegrationTests/DeveloperVisibilityTests.cs": {
   "date": "2026-08-28",
@@ -9749,6 +10301,12 @@
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
  },
+ "tests/Cartex.Api.IntegrationTests/ScanResolutionTests.cs": {
+  "date": "2026-08-29",
+  "hash": "34e388744bfd0a0d7674821f80a44121219eb17d",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
  "tests/Cartex.Api.IntegrationTests/ShiftApiTests.cs": {
   "date": "2026-08-28",
   "hash": "c8f035fe5a827a5ac94dc2255238206c30fb08d0",
@@ -9858,16 +10416,22 @@
   "reviewer": "session-2026-08-28"
  },
  "tests/Cartex.Application.Tests/Common/DatabaseFixture.cs": {
-  "date": "2026-08-28",
-  "hash": "6157056abe07f5c4037ed01e9c046d81354c7767",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "8b3d4996b5e23e440899cb1b64ce304e4813b62c",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "tests/Cartex.Application.Tests/Common/DatabaseTest.cs": {
   "date": "2026-08-28",
   "hash": "197d8d10acb8869d24e5ac567beae802da2412be",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "tests/Cartex.Application.Tests/Common/RecordingMessageChannels.cs": {
+  "date": "2026-08-29",
+  "hash": "26ba9361bd178055e2a245400fde8b35a2d89756",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "tests/Cartex.Application.Tests/Common/TestCurrentUser.cs": {
   "date": "2026-08-28",
@@ -9880,6 +10444,12 @@
   "hash": "bac8cf96de972a519624f489f4053bb88a4f4efb",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "tests/Cartex.Application.Tests/Common/TestHubPresence.cs": {
+  "date": "2026-08-29",
+  "hash": "26de69c75074d1c08211f5f5a46b3fef8bae7016",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "tests/Cartex.Application.Tests/Common/TestOffline.cs": {
   "date": "2026-08-28",
@@ -9941,6 +10511,12 @@
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
  },
+ "tests/Cartex.Application.Tests/CustomerMessageChannelTests.cs": {
+  "date": "2026-08-29",
+  "hash": "bd9f73e61dc701eaae43bc4981d39018f5181209",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
  "tests/Cartex.Application.Tests/CustomerOpeningBalanceTests.cs": {
   "date": "2026-08-28",
   "hash": "101f371155907bc90ff8775b8b32464f5166abec",
@@ -9996,16 +10572,28 @@
   "reviewer": "session-2026-08-28"
  },
  "tests/Cartex.Application.Tests/FeatureSyncTests.cs": {
-  "date": "2026-08-28",
-  "hash": "fecffd64689f8af3d01617472df0f7769a28fef1",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "fe0398db4bc8160bdae04bb7aff2b7ea86a75899",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "tests/Cartex.Application.Tests/HourlySalesReportTests.cs": {
   "date": "2026-08-28",
   "hash": "c0991927164b526017a0cf80cfedbdddd0d8865d",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "tests/Cartex.Application.Tests/InventoryJournalTests.cs": {
+  "date": "2026-08-29",
+  "hash": "455699c099c25cf0cfc5db30ac4c61c6bae1d82e",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "tests/Cartex.Application.Tests/LicenseSingletonTests.cs": {
+  "date": "2026-08-29",
+  "hash": "3eda235b2e5ac683487b77370871485cc9a435ea",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "tests/Cartex.Application.Tests/LocalPrintCompletionTests.cs": {
   "date": "2026-08-28",
@@ -10122,10 +10710,10 @@
   "reviewer": "session-2026-08-28"
  },
  "tests/Cartex.Application.Tests/OwnerModuleLicenseTests.cs": {
-  "date": "2026-08-28",
-  "hash": "ea13b1b0e83a4136935056a2aa8b9d0aefeab34f",
-  "note": "full review (7 reviewers) + fixes, all green",
-  "reviewer": "session-2026-08-28"
+  "date": "2026-08-29",
+  "hash": "a2f8c2dc3b5e6d1b0ff91f68cfa39499df3a5e84",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "tests/Cartex.Application.Tests/PartnerRewardTests.cs": {
   "date": "2026-08-28",
@@ -10402,6 +10990,12 @@
   "hash": "f0047d9c9ae0f2d6d0b50079cd1efc7c5b0ffe7a",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "tests/Cartex.Application.Tests/StockWriteOffTests.cs": {
+  "date": "2026-08-29",
+  "hash": "2e0c0e2adb0f67a513837f35d995c82c12987d4c",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  },
  "tests/Cartex.Application.Tests/SupplierDebtTests.cs": {
   "date": "2026-08-28",
@@ -10828,5 +11422,155 @@
   "hash": "8722c952d5b3f769ef52f562f65e6579de0cf671",
   "note": "full review (7 reviewers) + fixes, all green",
   "reviewer": "session-2026-08-28"
+ },
+ "tools/Cartex.Catalog.Tool/CommandLine.cs": {
+  "date": "2026-08-29",
+  "hash": "b50b5f3daf9f0367ca5ec2ad2a2ca10f697f9927",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "tools/Cartex.Catalog.Tool/Io/CsvFile.cs": {
+  "date": "2026-08-29",
+  "hash": "32f95b9df6c400a33efd90649803122db48408fa",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "tools/Cartex.Catalog.Tool/Io/JsonFile.cs": {
+  "date": "2026-08-29",
+  "hash": "d463eb4a7ebbe3913f20131bc475b6d2935d2807",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "tools/Cartex.Catalog.Tool/Io/ServerCatalogReader.cs": {
+  "date": "2026-08-29",
+  "hash": "a6b97962aabc7722696368d0d8f6875f90d13f32",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "tools/Cartex.Catalog.Tool/Io/WorkbookReader.cs": {
+  "date": "2026-08-29",
+  "hash": "50375d3e3ed8e4ac3ec67da09b035601d3122a88",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "tools/Cartex.Catalog.Tool/Normalization/BarcodeNormalizer.cs": {
+  "date": "2026-08-29",
+  "hash": "1d8d2e8e9530c330e41dd0fdc7fc14d87752e1e5",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "tools/Cartex.Catalog.Tool/Normalization/CatalogNormalizer.cs": {
+  "date": "2026-08-29",
+  "hash": "191661e3cbe5c34cd7833658950e501eec764792",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "tools/Cartex.Catalog.Tool/Normalization/CategoryPath.cs": {
+  "date": "2026-08-29",
+  "hash": "ec6b890861b04b22e016d4d5eae397fb93959c1c",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "tools/Cartex.Catalog.Tool/Normalization/Homoglyphs.cs": {
+  "date": "2026-08-29",
+  "hash": "241137304145a80b8fa86c1e6279fd1701313e16",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "tools/Cartex.Catalog.Tool/Normalization/ImageReference.cs": {
+  "date": "2026-08-29",
+  "hash": "ec0b07a69430ff52c6e8515d06fd719bd271fdbf",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "tools/Cartex.Catalog.Tool/Normalization/ManufacturerIndex.cs": {
+  "date": "2026-08-29",
+  "hash": "ce940c30a9501fd33fc32ae9d8aef35e645a8e9f",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "tools/Cartex.Catalog.Tool/Normalization/NameNormalizer.cs": {
+  "date": "2026-08-29",
+  "hash": "109cb356abac554392c00fd97d8fff7d3bb32953",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "tools/Cartex.Catalog.Tool/Normalization/SearchFold.cs": {
+  "date": "2026-08-29",
+  "hash": "3f5d5e087e02edd9acf229bc66a849df1b1d0de8",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "tools/Cartex.Catalog.Tool/Normalization/SegmentMap.cs": {
+  "date": "2026-08-29",
+  "hash": "ab7c9f6b436f43eaf2940807f286dceffb9ab5a4",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "tools/Cartex.Catalog.Tool/Normalization/SourceRow.cs": {
+  "date": "2026-08-29",
+  "hash": "de5773a127f64972e8b833a432873a15fe3045e4",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "tools/Cartex.Catalog.Tool/Normalization/Transliterator.cs": {
+  "date": "2026-08-29",
+  "hash": "b52781b635e5d86499912eb06546bc05591466ac",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "tools/Cartex.Catalog.Tool/Normalization/TypeVocabulary.cs": {
+  "date": "2026-08-29",
+  "hash": "d18318130458db609866e9d1e5e0268860427875",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "tools/Cartex.Catalog.Tool/Packaging/CatalogPack.cs": {
+  "date": "2026-08-29",
+  "hash": "1a0c49c503ae61240df60d1a8c8af8c8b3ace497",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "tools/Cartex.Catalog.Tool/Packaging/PackBuilder.cs": {
+  "date": "2026-08-29",
+  "hash": "551341c532f31d76fad19b5a4576d7a9e724ab46",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "tools/Cartex.Catalog.Tool/Packaging/PackManifest.cs": {
+  "date": "2026-08-29",
+  "hash": "3606701e81e39492a82aa1450054705d5f1ca1bb",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "tools/Cartex.Catalog.Tool/Packaging/PackSigner.cs": {
+  "date": "2026-08-29",
+  "hash": "785e0931b87e4e97bf3779524dabdd22c28d0db7",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "tools/Cartex.Catalog.Tool/Packaging/ShopTypes.cs": {
+  "date": "2026-08-29",
+  "hash": "4ada5312ab86b5bce98a2377a4ff95cffd95785e",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "tools/Cartex.Catalog.Tool/Program.cs": {
+  "date": "2026-08-29",
+  "hash": "50730f687e43b80c59f603d8c85cd0337fb60b60",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "tools/Cartex.Catalog.Tool/Supabase/CatalogPush.cs": {
+  "date": "2026-08-29",
+  "hash": "19aa72244a061fc8881dc421abf91e21047379ee",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
+ },
+ "tools/Cartex.Catalog.Tool/Supabase/MasterCatalog.cs": {
+  "date": "2026-08-29",
+  "hash": "4f53180da8bb76de826a3d1225ec2e290eb9b631",
+  "note": "pre-ship: backend+client parity review, 694 backend tests green, catalog/autofocus/write-off",
+  "reviewer": "review"
  }
 }

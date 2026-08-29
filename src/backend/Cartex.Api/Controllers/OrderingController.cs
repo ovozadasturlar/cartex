@@ -17,7 +17,6 @@ namespace Cartex.Api.Controllers;
 [ApiController]
 [Route("api/ordering")]
 [Authorize]
-[RequiresFeature(FeatureCatalog.Ordering, FeatureCatalog.Store)]
 public class OrderingController(ISender sender) : ControllerBase
 {
     [HttpGet("carts")]

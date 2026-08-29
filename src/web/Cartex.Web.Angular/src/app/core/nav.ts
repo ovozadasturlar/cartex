@@ -71,7 +71,6 @@ export const NAV_SECTIONS: NavSection[] = [
         icon: 'point_of_sale',
         route: '/pos',
         permission: 'sales.create|sales.checkout|sales.pick|sales.view',
-        feature: 'ordering|store',
       },
     ],
   },

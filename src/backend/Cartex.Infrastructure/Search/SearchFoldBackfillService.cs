@@ -1,3 +1,4 @@
+using Cartex.Domain.Common;
 using Cartex.Persistence;
 using Cartex.Shared.Search;
 using Microsoft.EntityFrameworkCore;
@@ -41,11 +42,11 @@ public sealed class SearchFoldBackfillService(
         Func<TEntity, string?> getName,
         Action<TEntity, string> setFold,
         ApplicationDbContext db,
-        CancellationToken cancellationToken) where TEntity : class
+        CancellationToken cancellationToken) where TEntity : BaseEntity
     {
         while (true)
         {
-            var rows = await query.Take(BatchSize).ToListAsync(cancellationToken);
+            var rows = await query.OrderBy(x => x.Id).Take(BatchSize).ToListAsync(cancellationToken);
             if (rows.Count == 0)
                 return;
 
