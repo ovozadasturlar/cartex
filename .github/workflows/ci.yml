@@ -27,6 +27,14 @@ jobs:
       - name: Build backend
         run: dotnet build src/backend/Cartex.Api/Cartex.Api.csproj -c Release
 
+      # MobileStoreCapabilityContractTests reflects on the compiled Store assembly to prove the
+      # scan screen's cart gate delegates to AccessState (RUXSAT-04a), so the app must be built
+      # first — the MAUI Android workload is not preinstalled on the runner.
+      - name: Build mobile store for the contract test
+        run: |
+          dotnet workload install maui-android
+          dotnet build src/mobile/Cartex.Mobile.Store/Cartex.Mobile.Store.csproj -c Release -f net10.0-android -p:AndroidLinkMode=None
+
       - name: Architecture tests
         run: dotnet test tests/Cartex.ArchitectureTests/Cartex.ArchitectureTests.csproj -c Release
 
