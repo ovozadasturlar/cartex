@@ -1,4 +1,4 @@
-using System.IO;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Cartex.UI.Models;
 
@@ -52,8 +52,14 @@ public sealed class SettingsService
 
     public string ApiBaseUrl
     {
-        get => _data.ApiBaseUrl;
-        set { _data.ApiBaseUrl = value; Save(); }
+        get => NormalizeLoopback(_data.ApiBaseUrl);
+        set { _data.ApiBaseUrl = NormalizeLoopback(value); Save(); }
+    }
+
+    private static string NormalizeLoopback(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return "http://127.0.0.1:5015";
+        return url.Replace("://localhost", "://127.0.0.1", StringComparison.OrdinalIgnoreCase);
     }
 
     public bool RememberMe
@@ -68,10 +74,30 @@ public sealed class SettingsService
         set { _data.PosCartWidth = value; Save(); }
     }
 
+    private string? _machineDeviceId;
+
+    /// The identity must survive reinstalls and profile changes, so it is derived from the
+    /// machine instead of being stored in a file. MachineGuid alone is not enough because
+    /// cloned Windows images share it - the machine name is mixed in.
     public string DeviceId
     {
         get
         {
+            if (_machineDeviceId is not null) return _machineDeviceId;
+            if (OperatingSystem.IsWindows())
+            {
+                try
+                {
+                    using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Cryptography");
+                    if (key?.GetValue("MachineGuid") is string machineGuid && machineGuid.Length > 0)
+                    {
+                        var bytes = System.Security.Cryptography.SHA256.HashData(
+                            System.Text.Encoding.UTF8.GetBytes($"{machineGuid}|{Environment.MachineName}"));
+                        return _machineDeviceId = Convert.ToHexString(bytes)[..32].ToLowerInvariant();
+                    }
+                }
+                catch { }
+            }
             if (string.IsNullOrEmpty(_data.DeviceId))
             {
                 _data.DeviceId = Guid.NewGuid().ToString("N");
@@ -93,6 +119,30 @@ public sealed class SettingsService
         set { _data.OfflineWarehouseId = value; Save(); }
     }
 
+    public bool HubEnabled
+    {
+        get => _data.HubEnabled;
+        set { _data.HubEnabled = value; Save(); }
+    }
+
+    public bool OfflineAllowSales
+    {
+        get => _data.OfflineAllowSales;
+        set { _data.OfflineAllowSales = value; Save(); }
+    }
+
+    public bool OfflineAllowPayments
+    {
+        get => _data.OfflineAllowPayments;
+        set { _data.OfflineAllowPayments = value; Save(); }
+    }
+
+    public bool OfflineAllowSupplies
+    {
+        get => _data.OfflineAllowSupplies;
+        set { _data.OfflineAllowSupplies = value; Save(); }
+    }
+
     public bool SettingsSidebarCollapsed
     {
         get => _data.SettingsSidebarCollapsed;
@@ -105,6 +155,37 @@ public sealed class SettingsService
         set { _data.PosListMode = value; Save(); }
     }
 
+    public IReadOnlyCollection<long> GetExpandedCategoryIds(long userId) =>
+        _data.ExpandedCategoryIds.GetValueOrDefault(userId.ToString()) ?? [];
+
+    public void SetExpandedCategoryIds(long userId, IEnumerable<long> ids)
+    {
+        _data.ExpandedCategoryIds[userId.ToString()] = ids.Distinct().Order().ToList();
+        Save();
+    }
+
+    public List<string> EnabledFeatures
+    {
+        get => _data.EnabledFeatures ??= ["loyalty", "reports", "stock_transfers", "supplies", "suppliers", "accounts", "partners"];
+        set { _data.EnabledFeatures = value; Save(); }
+    }
+
+    /// BRAK-06: chiqim bo'limi do'kon siyosatiga bog'liq. Siyosat serverdan kelguncha menyu
+    /// oxirgi ma'lum holatdan quriladi — standart yopiq, ya'ni noma'lum holatda bo'lim ochilmaydi.
+    public bool TrackWriteOff
+    {
+        get => _data.TrackWriteOff;
+        set { _data.TrackWriteOff = value; Save(); }
+    }
+
+    /// Ro'yxat hali ma'lum bo'lmasa modul yopiq deb qaralmaydi — aks holda aloqasiz
+    /// ochilgan dastur yarmini yashirib qo'yardi. Ro'yxat kelgach holat aniqlashadi.
+    public bool IsFeatureOn(string feature) =>
+        EnabledFeatures is not { Count: > 0 } enabled
+        || enabled.Contains(feature, StringComparer.OrdinalIgnoreCase);
+
+    [SuppressMessage("Meziantou.Analyzer", "MA0045",
+        Justification = "Konstruktordan chaqiriladi; kichik lokal sozlama fayli.")]
     private SettingsData Load()
     {
         try
@@ -120,6 +201,8 @@ public sealed class SettingsService
         return new SettingsData();
     }
 
+    [SuppressMessage("Meziantou.Analyzer", "MA0045",
+        Justification = "Chaqiruvchilar property setter'lar; kichik lokal sozlama fayli.")]
     private void Save()
     {
         if (_settingsPath is null) return;
@@ -136,13 +219,20 @@ public sealed class SettingsService
         public AppTheme Theme { get; set; } = AppTheme.Light;
         public AppLanguage Language { get; set; } = AppLanguage.En;
         public AppMode Mode { get; set; }
-        public string ApiBaseUrl { get; set; } = "http://localhost:5015";
+        public string ApiBaseUrl { get; set; } = "http://127.0.0.1:5015";
         public bool RememberMe { get; set; }
         public double PosCartWidth { get; set; } = 430;
         public string? DeviceId { get; set; }
         public bool OfflineCacheEnabled { get; set; }
         public long OfflineWarehouseId { get; set; }
+        public bool OfflineAllowSales { get; set; } = true;
+        public bool OfflineAllowPayments { get; set; } = true;
+        public bool OfflineAllowSupplies { get; set; } = true;
+        public bool HubEnabled { get; set; }
         public bool SettingsSidebarCollapsed { get; set; }
         public bool PosListMode { get; set; }
+        public bool TrackWriteOff { get; set; }
+        public Dictionary<string, List<long>> ExpandedCategoryIds { get; set; } = [];
+        public List<string> EnabledFeatures { get; set; } = ["loyalty", "reports", "stock_transfers", "supplies", "suppliers", "accounts", "partners"];
     }
 }

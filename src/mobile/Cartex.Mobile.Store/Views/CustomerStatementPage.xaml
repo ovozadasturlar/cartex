@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Cartex.Mobile.Store.Views.CustomerStatementPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Cartex.Mobile.Store.ViewModels"
+    xmlns:models="clr-namespace:Cartex.Shared.Models.Customers;assembly=Cartex.Shared"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
+    x:DataType="vm:CustomerStatementViewModel"
+    Title="{svc:T statement}">
+    <Grid RowDefinitions="*,Auto">
+        <CollectionView ItemsSource="{Binding Rows}" SelectionMode="None">
+            <CollectionView.Header>
+                <VerticalStackLayout Padding="16,12" Spacing="12">
+                    <Border Style="{StaticResource Card}" Padding="14">
+                        <VerticalStackLayout Spacing="3">
+                            <Label Text="{Binding CustomerName}" FontSize="20" FontAttributes="Bold" />
+                            <HorizontalStackLayout Spacing="4"><Label Text="{svc:T base_currency}" Style="{StaticResource MutedLabel}" FontSize="12" /><Label Text="{Binding BaseCurrency}" Style="{StaticResource MutedLabel}" FontSize="12" FontAttributes="Bold" /></HorizontalStackLayout>
+                        </VerticalStackLayout>
+                    </Border>
+                    <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+                        <HorizontalStackLayout BindableLayout.ItemsSource="{Binding Balances}" Spacing="8">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="models:CustomerStatementBalanceDto">
+                                    <Border Style="{StaticResource Card}" Padding="12" MinimumWidthRequest="150">
+                                        <VerticalStackLayout Spacing="3">
+                                            <Label Text="{Binding Currency}" Style="{StaticResource MutedLabel}" FontSize="11" />
+                                            <Label Text="{Binding ClosingBalance, StringFormat='{0:N2}'}" FontSize="18" FontAttributes="Bold" />
+                                            <HorizontalStackLayout Spacing="3"><Label Text="{svc:T opening_balance}" Style="{StaticResource MutedLabel}" FontSize="10" /><Label Text="{Binding OpeningBalance, StringFormat='{0:N2}'}" Style="{StaticResource MutedLabel}" FontSize="10" /></HorizontalStackLayout>
+                                        </VerticalStackLayout>
+                                    </Border>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </HorizontalStackLayout>
+                    </ScrollView>
+                    <Picker ItemsSource="{Binding Scopes}" SelectedItem="{Binding SelectedScope}" ItemDisplayBinding="{Binding Label, x:DataType=vm:CustomerStatementScopeChoice}" />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <VerticalStackLayout><Label Text="{svc:T date_filter}" FontAttributes="Bold" /><Label Text="{svc:T all_period}" Style="{StaticResource MutedLabel}" FontSize="11" /></VerticalStackLayout>
+                        <Switch Grid.Column="1" IsToggled="{Binding UseDateFilter}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8" IsVisible="{Binding UseDateFilter}"><DatePicker Date="{Binding FromDate}" /><DatePicker Grid.Column="1" Date="{Binding ToDate}" /></Grid>
+                    <Button Text="{svc:T apply}" Style="{StaticResource BtnOutline}" Command="{Binding ApplyFilterCommand}" />
+                    <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never"><HorizontalStackLayout Spacing="8"><Button Text="{svc:T statement_both}" Style="{StaticResource BtnOutline}" Command="{Binding SelectModeCommand}" CommandParameter="both" /><Button Text="{svc:T statement_timeline}" Style="{StaticResource BtnOutline}" Command="{Binding SelectModeCommand}" CommandParameter="timeline" /><Button Text="{svc:T statement_consolidated}" Style="{StaticResource BtnOutline}" Command="{Binding SelectModeCommand}" CommandParameter="consolidated" /></HorizontalStackLayout></ScrollView>
+                </VerticalStackLayout>
+            </CollectionView.Header>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="vm:CustomerStatementDisplayRow">
+                    <VerticalStackLayout Padding="16,0" Spacing="0">
+                        <Label Text="{Binding Title}" FontSize="16" FontAttributes="Bold" Margin="0,12,0,8" IsVisible="{Binding IsHeader}" />
+                        <Border Style="{StaticResource Card}" Padding="12" Margin="0,0,0,8" IsVisible="{Binding IsTimeline}">
+                            <Border.GestureRecognizers><TapGestureRecognizer Command="{Binding OpenRowCommand, Source={RelativeSource AncestorType={x:Type vm:CustomerStatementViewModel}}}" CommandParameter="{Binding .}" /></Border.GestureRecognizers>
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                <VerticalStackLayout Spacing="2"><Label Text="{Binding Entry.Summary}" FontSize="14" FontAttributes="Bold" /><Label Text="{Binding Entry.DocumentNumber}" Style="{StaticResource MutedLabel}" FontSize="11" /><Label Text="{Binding Entry.OccurredAt, StringFormat='{0:dd.MM.yyyy HH:mm}'}" Style="{StaticResource MutedLabel}" FontSize="11" /></VerticalStackLayout>
+                                <VerticalStackLayout Grid.Column="1" Spacing="1"><Label Text="{Binding DebitText}" FontAttributes="Bold" HorizontalTextAlignment="End" /><Label Text="{Binding CreditText}" FontAttributes="Bold" HorizontalTextAlignment="End" /><Label Text="{Binding BalanceText}" Style="{StaticResource MutedLabel}" FontSize="11" HorizontalTextAlignment="End" /></VerticalStackLayout>
+                            </Grid>
+                        </Border>
+                        <Border Style="{StaticResource Card}" Padding="12" Margin="0,0,0,8" IsVisible="{Binding IsProduct}">
+                            <VerticalStackLayout Spacing="6">
+                                <Grid ColumnDefinitions="*,Auto"><Label Text="{Binding Product.ProductName}" FontSize="14" FontAttributes="Bold" /><Label Grid.Column="1" Text="{Binding ProductAmount}" FontAttributes="Bold" /></Grid>
+                                <Grid ColumnDefinitions="*,*,*" ColumnSpacing="6"><VerticalStackLayout><Label Text="{svc:T sold}" Style="{StaticResource MutedLabel}" FontSize="10" /><Label Text="{Binding Product.NetSold, StringFormat='{0:0.###}'}" /></VerticalStackLayout><VerticalStackLayout Grid.Column="1"><Label Text="{svc:T issued}" Style="{StaticResource MutedLabel}" FontSize="10" /><Label Text="{Binding Product.CustodyIssued, StringFormat='{0:0.###}'}" /></VerticalStackLayout><VerticalStackLayout Grid.Column="2"><Label Text="{svc:T with_customer}" Style="{StaticResource MutedLabel}" FontSize="10" /><Label Text="{Binding Product.CustodyOutstanding, StringFormat='{0:0.###}'}" /></VerticalStackLayout></Grid>
+                            </VerticalStackLayout>
+                        </Border>
+                    </VerticalStackLayout>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+            <CollectionView.Footer><Border Margin="16,12" Padding="12" StrokeThickness="0" StrokeShape="RoundRectangle 12" BackgroundColor="{AppThemeBinding Light={StaticResource DangerBg}, Dark={StaticResource DangerBgDark}}" IsVisible="{Binding HasError}"><Label Text="{Binding Error}" Style="{StaticResource TxDanger}" /></Border></CollectionView.Footer>
+        </CollectionView>
+        <Border Grid.Row="1" StrokeThickness="1" Padding="16,12" BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" Stroke="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}" IsVisible="{Binding CanExport}"><Grid ColumnDefinitions="*,*" ColumnSpacing="8"><Button Text="PDF" Style="{StaticResource BtnPrimary}" Command="{Binding ExportCommand}" CommandParameter="pdf" /><Button Grid.Column="1" Text="XLSX" Style="{StaticResource BtnOutline}" Command="{Binding ExportCommand}" CommandParameter="xlsx" /></Grid></Border>
+        <ActivityIndicator Grid.RowSpan="2" IsRunning="{Binding IsLoading}" IsVisible="{Binding IsLoading}" VerticalOptions="Center" HorizontalOptions="Center" />
+    </Grid>
+</ContentPage>

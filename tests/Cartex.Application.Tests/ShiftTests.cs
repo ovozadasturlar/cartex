@@ -1,4 +1,4 @@
-using Cartex.Application.Sales.Commands;
+﻿using Cartex.Application.Sales.Commands;
 using Cartex.Application.Shifts;
 using Cartex.Application.Shifts.Commands;
 using Cartex.Application.Shifts.Queries;
@@ -9,6 +9,7 @@ using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Cartex.Shared.Models.Shifts;
 
 namespace Cartex.Application.Tests;
 
@@ -19,8 +20,8 @@ public class ShiftTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     {
         using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var branch1 = (await db.Branches.FirstAsync(b => b.Name == "Filial 1")).Id;
-        var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Filial 1 ombori")).Id;
+        var branch1 = (await db.Branches.FirstAsync(b => b.Name == "Asosiy filial")).Id;
+        var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Asosiy ombor")).Id;
         var businessId = (await db.Businesses.FirstAsync()).Id;
         var adminId = (await db.Users.FirstAsync(u => u.Username == "admin")).Id;
         var productId = (await db.Products.FirstAsync(p => p.Name == "Smesitel oshxona Zegor")).Id;
@@ -45,7 +46,7 @@ public class ShiftTests(DatabaseFixture fixture) : DatabaseTest(fixture)
 
             var current = await sender.Send(new GetCurrentShiftQuery());
             Assert.NotNull(current);
-            report = await sender.Send(new CloseShiftCommand(current!.Id, current.ExpectedCash));
+            report = await sender.Send(new CloseShiftCommand(current.Id, current.ExpectedCash));
         }
 
         Assert.Equal(100000, report.OpeningFloat);
@@ -59,7 +60,7 @@ public class ShiftTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     [Fact]
     public async Task Close_with_counted_below_expected_reports_negative_difference()
     {
-        var (branch1, warehouse1, businessId, adminId, _) = await SetupAsync();
+        var (branch1, _, businessId, adminId, _) = await SetupAsync();
         Fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
 
         ZReportDto report;

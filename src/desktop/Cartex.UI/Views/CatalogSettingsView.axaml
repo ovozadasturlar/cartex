@@ -1,0 +1,76 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mi="using:Material.Icons.Avalonia"
+             xmlns:c="using:Cartex.UI.Controls"
+             xmlns:vm="using:Cartex.UI.ViewModels"
+             x:Class="Cartex.UI.Views.CatalogSettingsView"
+             x:DataType="vm:CatalogSettingsViewModel">
+    <DockPanel Margin="24">
+        <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[product_reference]}" Margin="0,0,0,16">
+            <Button Classes="brand" Command="{Binding SaveCommand}" Content="{Binding L[save]}" />
+        </c:PageHeader>
+
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="14" MaxWidth="860" HorizontalAlignment="Left">
+                <Border Classes="card" Padding="18">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="{Binding L[product_reference_description]}" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextMuted}" />
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="{Binding L[catalog_mode]}" Classes="caption" />
+                            <ComboBox ItemsSource="{Binding ModeNames}" SelectedIndex="{Binding ModeIndex}" MinWidth="240" />
+                            <TextBlock Text="{Binding ModeHint}" TextWrapping="Wrap" Classes="caption"
+                                       Foreground="{DynamicResource TextMuted}" />
+                        </StackPanel>
+                        <StackPanel Spacing="5" IsVisible="{Binding IsOnlineMode}">
+                            <TextBlock Text="{Binding L[catalog_endpoint_url]}" Classes="caption" />
+                            <TextBox Text="{Binding EndpointBaseUrl}" />
+                        </StackPanel>
+                        <StackPanel Spacing="5" IsVisible="{Binding !IsOffMode}">
+                            <TextBlock Text="{Binding L[catalog_image_base_url]}" Classes="caption" />
+                            <TextBox Text="{Binding ImageBaseUrl}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="card" Padding="18" IsVisible="{Binding IsFileMode}">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="{Binding L[catalog_pack]}" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding L[catalog_pack_hint]}" TextWrapping="Wrap" Classes="caption"
+                                   Foreground="{DynamicResource TextMuted}" />
+                        <TextBlock Text="{Binding L[catalog_pack_none]}" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextMuted}" IsVisible="{Binding !HasPack}" />
+                        <Grid ColumnDefinitions="Auto,12,*" RowDefinitions="Auto,6,Auto,6,Auto" IsVisible="{Binding HasPack}">
+                            <TextBlock Text="{Binding L[catalog_pack_version]}" Foreground="{DynamicResource TextMuted}" />
+                            <TextBlock Grid.Column="2" Text="{Binding Pack.Version}" />
+                            <TextBlock Grid.Row="2" Text="{Binding L[total_rows]}" Foreground="{DynamicResource TextMuted}" />
+                            <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding Pack.RowCount}" />
+                            <TextBlock Grid.Row="4" Text="{Binding L[catalog_pack_uploaded_at]}" Foreground="{DynamicResource TextMuted}" />
+                            <TextBlock Grid.Row="4" Grid.Column="2" Text="{Binding PackUploadedText}" />
+                        </Grid>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Classes="brand" Command="{Binding UploadPackCommand}" Content="{Binding UploadButtonText}" />
+                            <Button Classes="outline" Command="{Binding DeletePackCommand}" Content="{Binding L[delete]}"
+                                    IsVisible="{Binding HasPack}" />
+                        </StackPanel>
+                        <Border IsVisible="{Binding LastError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                Background="{DynamicResource DangerBg}" CornerRadius="8" Padding="12">
+                            <StackPanel Spacing="4">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <mi:MaterialIcon Kind="AlertCircleOutline" Width="16" Height="16"
+                                                     Foreground="{DynamicResource DangerBrush}" />
+                                    <TextBlock Text="{Binding L[catalog_pack_rejected]}" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource DangerBrush}" />
+                                </StackPanel>
+                                <TextBlock Text="{Binding LastError}" TextWrapping="Wrap"
+                                           Foreground="{DynamicResource TextPrimary}" />
+                                <TextBlock Text="{Binding L[catalog_pack_kept]}" TextWrapping="Wrap" Classes="caption"
+                                           Foreground="{DynamicResource TextMuted}" IsVisible="{Binding HasPack}" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

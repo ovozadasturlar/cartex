@@ -4,7 +4,7 @@ using Cartex.Shared.Models.Warehouses;
 
 namespace Cartex.Mobile.Store.Services;
 
-public sealed class WarehouseContext(IWarehousesApi warehousesApi, MobileAuthService auth)
+public sealed class WarehouseContext(IWarehousesApi warehousesApi, MobileAuthService auth, AccessState access)
 {
     private string Key => $"store_wh_{auth.UserId}";
 
@@ -31,7 +31,13 @@ public sealed class WarehouseContext(IWarehousesApi warehousesApi, MobileAuthSer
         return await PickAsync(candidates);
     }
 
-    public async Task ChangeAsync() => await PickAsync(await CandidatesAsync());
+    public async Task ChangeAsync()
+    {
+        var before = WarehouseId;
+        await PickAsync(await CandidatesAsync());
+        if (WarehouseId != before)
+            await access.RefreshAsync();
+    }
 
     public void Reset()
     {
@@ -54,16 +60,20 @@ public sealed class WarehouseContext(IWarehousesApi warehousesApi, MobileAuthSer
         var names = candidates.Select(w => w.Name).ToArray();
         var page = Shell.Current?.CurrentPage;
         if (page is null) return false;
-        var choice = await page.DisplayActionSheet(Loc.Instance["warehouse_pick"], Loc.Instance["cancel"], null, names);
+        var choice = await page.DisplayActionSheetAsync(Loc.Instance["warehouse_pick"], Loc.Instance["cancel"], null, names);
         var picked = candidates.FirstOrDefault(w => w.Name == choice);
         if (picked is null) return WarehouseId is not null;
         Set(picked);
         return true;
     }
 
-    private void Set(WarehouseDto warehouse)
+    // HUB-10: yo'ldosh rejimida ombor tanlanmaydi — u HUB'niki bo'ladi, chunki ekrandagi
+    // qoldiq ham, narx ham o'sha ombordan kelgan.
+    public void Force(long id, string name)
     {
-        Preferences.Set(Key, warehouse.Id);
-        Preferences.Set(Key + "_name", warehouse.Name);
+        Preferences.Set(Key, id);
+        Preferences.Set(Key + "_name", name);
     }
+
+    private void Set(WarehouseDto warehouse) => Force(warehouse.Id, warehouse.Name);
 }

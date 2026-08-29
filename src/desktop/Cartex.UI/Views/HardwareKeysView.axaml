@@ -11,7 +11,8 @@
             <c:PageHeader Title="{Binding L[hardware_keys]}" />
 
             <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    IsVisible="{Binding CanCreate}">
                 <StackPanel Spacing="14">
 
                     <StackPanel Spacing="6">
@@ -110,19 +111,21 @@
                                                             </Panel>
                                                             <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right"
                                                                         IsVisible="{Binding RevokedAt, Converter={x:Static ObjectConverters.IsNull}}">
-                                                                <Button Classes="icon" IsVisible="{Binding IsEnabled}"
-                                                                        Command="{Binding $parent[UserControl].DataContext.ToggleKeyCommand}"
-                                                                        CommandParameter="{Binding}"
-                                                                        ToolTip.Tip="{Binding $parent[UserControl].DataContext.L[key_disable]}">
-                                                                    <mi:MaterialIcon Kind="PauseCircleOutline" Width="16" Height="16" Foreground="#B45309" />
-                                                                </Button>
-                                                                <Button Classes="icon" IsVisible="{Binding !IsEnabled}"
-                                                                        Command="{Binding $parent[UserControl].DataContext.ToggleKeyCommand}"
-                                                                        CommandParameter="{Binding}"
-                                                                        ToolTip.Tip="{Binding $parent[UserControl].DataContext.L[key_enable]}">
-                                                                    <mi:MaterialIcon Kind="PlayCircleOutline" Width="16" Height="16" Foreground="{DynamicResource BrandPrimaryBrush}" />
-                                                                </Button>
-                                                                <Button Classes="icon"
+                                                                <Panel IsVisible="{Binding $parent[UserControl].DataContext.CanEdit}">
+                                                                    <Button Classes="icon" IsVisible="{Binding IsEnabled}"
+                                                                            Command="{Binding $parent[UserControl].DataContext.ToggleKeyCommand}"
+                                                                            CommandParameter="{Binding}"
+                                                                            ToolTip.Tip="{Binding $parent[UserControl].DataContext.L[key_disable]}">
+                                                                        <mi:MaterialIcon Kind="PauseCircleOutline" Width="16" Height="16" Foreground="#B45309" />
+                                                                    </Button>
+                                                                    <Button Classes="icon" IsVisible="{Binding !IsEnabled}"
+                                                                            Command="{Binding $parent[UserControl].DataContext.ToggleKeyCommand}"
+                                                                            CommandParameter="{Binding}"
+                                                                            ToolTip.Tip="{Binding $parent[UserControl].DataContext.L[key_enable]}">
+                                                                        <mi:MaterialIcon Kind="PlayCircleOutline" Width="16" Height="16" Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                                                    </Button>
+                                                                </Panel>
+                                                                <Button Classes="icon" IsVisible="{Binding $parent[UserControl].DataContext.CanRevoke}"
                                                                         Command="{Binding $parent[UserControl].DataContext.RevokeKeyCommand}"
                                                                         CommandParameter="{Binding}"
                                                                         ToolTip.Tip="{Binding $parent[UserControl].DataContext.L[revoke]}">

@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Cartex.Mobile.Store.Views.ProductEditPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Cartex.Mobile.Store.ViewModels"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
+    xmlns:ctl="clr-namespace:Cartex.Mobile.Core.Controls;assembly=Cartex.Mobile.Core"
+    xmlns:cat="clr-namespace:Cartex.Shared.Models.Categories;assembly=Cartex.Shared"
+    xmlns:loyalty="clr-namespace:Cartex.Shared.Models.Loyalty;assembly=Cartex.Shared"
+    xmlns:rates="clr-namespace:Cartex.Shared.Models.Rates;assembly=Cartex.Shared"
+    xmlns:units="clr-namespace:Cartex.Shared.Models.Units;assembly=Cartex.Shared"
+    x:DataType="vm:ProductEditViewModel"
+    Title="{svc:T edit_product}">
+
+    <Grid RowDefinitions="*,Auto">
+        <ScrollView>
+            <VerticalStackLayout Padding="16" Spacing="14">
+
+                <Border Style="{StaticResource Card}">
+                    <VerticalStackLayout Spacing="12">
+                        <ctl:Thumb Source="{Binding PreviewUrl}" Size="180" Radius="14" Stretch="True" />
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                            <Button Text="{svc:T take_photo}" Style="{StaticResource BtnSecondary}" Command="{Binding TakePhotoCommand}" />
+                            <Button Grid.Column="1" Text="{svc:T pick_photo}" Style="{StaticResource BtnSecondary}" Command="{Binding PickPhotoCommand}" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                            <Border Style="{StaticResource InputWrap}">
+                                <Entry x:Name="ImageLinkEntry" Text="{Binding ImageLinkText}" Placeholder="{svc:T image_link}" Keyboard="Url"
+                                       ReturnType="Done" Completed="OnEntryCompleted" VerticalOptions="Center" />
+                            </Border>
+                            <Button Grid.Column="1" Text="{svc:T apply}" Style="{StaticResource BtnOutline}" Command="{Binding ApplyLinkCommand}" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border Style="{StaticResource Card}">
+                    <VerticalStackLayout Spacing="12">
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{svc:T name}" Style="{StaticResource TxCaption}" />
+                            <Border Style="{StaticResource InputWrap}">
+                                <Entry x:Name="ProductNameEntry" Text="{Binding Name}" ReturnType="Next"
+                                       Completed="OnEntryCompleted" VerticalOptions="Center" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{svc:T price}" Style="{StaticResource TxCaption}" />
+                            <Grid ColumnDefinitions="*,112" ColumnSpacing="8" IsVisible="{Binding CanChoosePriceCurrency}">
+                                <Border Style="{StaticResource InputWrap}">
+                                    <Entry x:Name="PriceWithCurrencyEntry" Text="{Binding PriceText}" Keyboard="Numeric" ReturnType="Next"
+                                           Completed="OnEntryCompleted" VerticalOptions="Center" />
+                                </Border>
+                                <Border Grid.Column="1" Style="{StaticResource InputWrap}">
+                                    <Picker ItemsSource="{Binding PriceCurrencies}" SelectedItem="{Binding PriceCurrency}"
+                                            ItemDisplayBinding="{Binding Code, x:DataType=rates:CurrencyDto}" VerticalOptions="Center" />
+                                </Border>
+                            </Grid>
+                            <Border Style="{StaticResource InputWrap}" IsVisible="{Binding CanChoosePriceCurrency, Converter={StaticResource Invert}}">
+                                <Entry x:Name="PriceEntry" Text="{Binding PriceText}" Keyboard="Numeric" ReturnType="Next"
+                                       Completed="OnEntryCompleted" VerticalOptions="Center" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{svc:T code}" Style="{StaticResource TxCaption}" />
+                            <Border Style="{StaticResource InputWrap}">
+                                <Entry x:Name="CodeEntry" Text="{Binding Code}" ReturnType="Done"
+                                       Completed="OnEntryCompleted" VerticalOptions="Center" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{svc:T category}" Style="{StaticResource TxCaption}" />
+                            <Grid ColumnDefinitions="*,44" ColumnSpacing="8">
+                                <Border Style="{StaticResource InputWrap}">
+                                    <Picker ItemsSource="{Binding Categories}" SelectedItem="{Binding Category}"
+                                            ItemDisplayBinding="{Binding TreeDisplayName, x:DataType=cat:CategoryDto}" VerticalOptions="Center" />
+                                </Border>
+                                <Button Grid.Column="1" FontFamily="MDI" Text="{StaticResource IcPlus}" FontSize="20" Padding="0"
+                                        WidthRequest="44" HeightRequest="44" CornerRadius="22"
+                                        Style="{StaticResource BtnOutline}" Command="{Binding AddCategoryCommand}" />
+                            </Grid>
+                            <Label Text="{Binding CategoryHint}" Style="{StaticResource MutedLabel}" FontSize="12"
+                                   IsVisible="{Binding CategoryHint, Converter={StaticResource NotEmpty}}" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{svc:T unit}" Style="{StaticResource TxCaption}" />
+                            <Border Style="{StaticResource InputWrap}">
+                                <Picker ItemsSource="{Binding Units}" SelectedItem="{Binding Unit}"
+                                        ItemDisplayBinding="{Binding Name, x:DataType=units:UnitDto}" VerticalOptions="Center" />
+                            </Border>
+                            <Label Text="{Binding UnitHint}" Style="{StaticResource MutedLabel}" FontSize="12"
+                                   IsVisible="{Binding UnitHint, Converter={StaticResource NotEmpty}}" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{svc:T manufacturer}" Style="{StaticResource TxCaption}" />
+                            <Grid ColumnDefinitions="*,Auto,44" ColumnSpacing="8">
+                                <Border Style="{StaticResource InputWrap}">
+                                    <Picker ItemsSource="{Binding Manufacturers}" SelectedItem="{Binding Manufacturer}"
+                                            ItemDisplayBinding="{Binding Name, x:DataType=loyalty:ManufacturerDto}" VerticalOptions="Center" />
+                                </Border>
+                                <Button Grid.Column="1" FontFamily="MDI" Text="{StaticResource IcClose}" FontSize="18" Padding="0"
+                                        WidthRequest="44" HeightRequest="44" CornerRadius="22"
+                                        Style="{StaticResource BtnOutline}" Command="{Binding ClearManufacturerCommand}"
+                                        IsVisible="{Binding Manufacturer, Converter={StaticResource NotEmpty}}" />
+                                <Button Grid.Column="2" FontFamily="MDI" Text="{StaticResource IcPlus}" FontSize="20" Padding="0"
+                                        WidthRequest="44" HeightRequest="44" CornerRadius="22"
+                                        Style="{StaticResource BtnOutline}" Command="{Binding AddManufacturerCommand}" />
+                            </Grid>
+                            <Label Text="{Binding ManufacturerHint}" Style="{StaticResource MutedLabel}" FontSize="12"
+                                   IsVisible="{Binding ManufacturerHint, Converter={StaticResource NotEmpty}}" />
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border Style="{StaticResource Card}" IsVisible="{Binding CanManageBarcodes}">
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="{svc:T barcodes}" Style="{StaticResource TxCaption}" />
+
+                        <VerticalStackLayout BindableLayout.ItemsSource="{Binding Barcodes}" Spacing="6">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ProductBarcodeRow">
+                                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10" Padding="4,2">
+                                        <Label Text="{Binding Code}" LineBreakMode="TailTruncation"
+                                               VerticalOptions="Center"
+                                               TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                        <Label Grid.Column="1" Text="{Binding PackQtyText}" Style="{StaticResource MutedLabel}"
+                                               VerticalOptions="Center" />
+                                        <Button Grid.Column="2" FontFamily="MDI" Text="{StaticResource IcClose}" FontSize="16" Padding="0"
+                                                WidthRequest="36" HeightRequest="36" CornerRadius="18"
+                                                Style="{StaticResource BtnOutline}"
+                                                IsVisible="{Binding CanDeleteBarcode, Source={RelativeSource AncestorType={x:Type vm:ProductEditViewModel}}}"
+                                                TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
+                                                Command="{Binding DeleteBarcodeCommand, Source={RelativeSource AncestorType={x:Type vm:ProductEditViewModel}}}"
+                                                CommandParameter="{Binding .}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+
+                        <Grid ColumnDefinitions="*,88,44" ColumnSpacing="8" IsVisible="{Binding CanCreateBarcode}">
+                            <Border Style="{StaticResource InputWrap}">
+                                <Entry x:Name="NewBarcodeEntry" Text="{Binding NewBarcode}" Placeholder="{svc:T barcode_new}" Keyboard="Numeric"
+                                       ReturnType="Next" Completed="OnEntryCompleted" VerticalOptions="Center" />
+                            </Border>
+                            <Border Grid.Column="1" Style="{StaticResource InputWrap}">
+                                <Entry x:Name="NewBarcodePackQtyEntry" Text="{Binding NewBarcodePackQtyText}" Placeholder="{svc:T pack_qty}" Keyboard="Numeric"
+                                       ReturnType="Done" Completed="OnEntryCompleted" HorizontalTextAlignment="Center" VerticalOptions="Center" />
+                            </Border>
+                            <Button Grid.Column="2" FontFamily="MDI" Text="{StaticResource IcPlus}" FontSize="20" Padding="0"
+                                    WidthRequest="44" HeightRequest="44" CornerRadius="22"
+                                    Style="{StaticResource BtnPrimary}"
+                                    Command="{Binding AddBarcodeCommand}" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+
+                <Label Text="{Binding Notice}" Style="{StaticResource TxOk}" IsVisible="{Binding Notice, Converter={StaticResource NotEmpty}}" />
+                <Label Text="{Binding Error}" Style="{StaticResource TxDanger}" IsVisible="{Binding Error, Converter={StaticResource NotEmpty}}" />
+
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <Border Grid.Row="1" Style="{StaticResource Sheet}" Padding="16,12">
+            <Button Text="{svc:T save}" Style="{StaticResource BtnPrimary}" Command="{Binding SaveCommand}"
+                    IsEnabled="{Binding IsBusy, Converter={StaticResource Invert}}" />
+        </Border>
+
+        <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
+                           VerticalOptions="Center" HorizontalOptions="Center" />
+    </Grid>
+</ContentPage>

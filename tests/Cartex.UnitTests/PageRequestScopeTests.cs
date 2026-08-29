@@ -32,7 +32,7 @@ public class PageRequestScopeTests
 
         Task<HttpResponseMessage> request;
         using (scope.BeginPageRequest())
-            request = client.GetAsync("/products");
+            request = client.GetAsync("/products", TestContext.Current.CancellationToken);
 
         await inner.Started.Task;
         scope.CancelPending();
@@ -46,7 +46,7 @@ public class PageRequestScopeTests
         var scope = new PageRequestScope();
         var (client, inner) = Build(scope);
 
-        var request = client.GetAsync("/offline/snapshot");
+        var request = client.GetAsync("/offline/snapshot", TestContext.Current.CancellationToken);
         await inner.Started.Task;
         scope.CancelPending();
 
@@ -61,7 +61,7 @@ public class PageRequestScopeTests
 
         Task<HttpResponseMessage> request;
         using (scope.BeginPageRequest())
-            request = client.PostAsync("/sales", new StringContent("{}"));
+            request = client.PostAsync("/sales", new StringContent("{}"), TestContext.Current.CancellationToken);
 
         await inner.Started.Task;
         scope.CancelPending();
@@ -78,7 +78,7 @@ public class PageRequestScopeTests
         Task<HttpResponseMessage> request;
         using (scope.BeginPageRequest())
         using (PageRequestScope.Detach())
-            request = client.GetAsync("/units");
+            request = client.GetAsync("/units", TestContext.Current.CancellationToken);
 
         await inner.Started.Task;
         scope.CancelPending();
@@ -96,7 +96,7 @@ public class PageRequestScopeTests
 
         Task<HttpResponseMessage> request;
         using (scope.BeginPageRequest())
-            request = client.GetAsync("/supplies");
+            request = client.GetAsync("/supplies", TestContext.Current.CancellationToken);
 
         await inner.Started.Task;
         Assert.False(request.IsCompleted);

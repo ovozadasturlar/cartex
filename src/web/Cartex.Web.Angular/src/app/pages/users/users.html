@@ -1,6 +1,11 @@
 <ng-container *transloco="let t">
   <cx-page-header [title]="t('users')" [subtitle]="t('users_subtitle')">
-    @if (canManage) {
+    @if (canExport) {
+      <button matButton="outlined" (click)="exportCsv()">
+        <mat-icon>download</mat-icon>{{ t('export') }}
+      </button>
+    }
+    @if (canCreate) {
       <button mat-flat-button (click)="open(null)">
         <mat-icon>add</mat-icon>{{ t('add') }}
       </button>
@@ -58,8 +63,17 @@
                 </td>
               </ng-container>
 
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef></th>
+                <td mat-cell *matCellDef="let u" (click)="$event.stopPropagation()">
+                  <button matIconButton class="danger" [title]="t('delete')" (click)="remove(u)">
+                    <mat-icon>delete_outline</mat-icon>
+                  </button>
+                </td>
+              </ng-container>
+
               <tr mat-header-row *matHeaderRowDef="cols"></tr>
-              <tr mat-row *matRowDef="let u; columns: cols" [class.clickable]="canManage" (click)="open(u)"></tr>
+              <tr mat-row *matRowDef="let u; columns: cols" [class.clickable]="canEdit" (click)="open(u)"></tr>
             </table>
           </div>
           <cx-paging-bar [meta]="pg.meta" (changed)="onPage($event)" />

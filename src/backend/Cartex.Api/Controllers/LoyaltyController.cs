@@ -1,13 +1,10 @@
-using Cartex.Application.Loyalty.Commands;
+﻿using Cartex.Application.Loyalty.Commands;
 using Cartex.Application.Loyalty.Queries;
 using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Enums;
 using Cartex.Shared.Models.Loyalty;
 using Cartex.Application.Common.Messaging;
-using LoyaltyProgramDto = Cartex.Application.Loyalty.Queries.LoyaltyProgramDto;
-using DiscountRuleDto = Cartex.Application.Loyalty.Queries.DiscountRuleDto;
-using LoyaltyStatsDto = Cartex.Application.Loyalty.Queries.LoyaltyStatsDto;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -28,7 +25,7 @@ public class LoyaltyController(ISender sender) : ControllerBase
     }
 
     [HttpPut]
-    [HasPermission(AppPermissions.Loyalty.Manage)]
+    [HasPermission(AppPermissions.Loyalty.Edit)]
     public async Task<IActionResult> UpdateProgram(UpdateLoyaltyProgramCommand command)
     {
         await sender.Send(command);
@@ -36,7 +33,7 @@ public class LoyaltyController(ISender sender) : ControllerBase
     }
 
     [HttpPost("rules")]
-    [HasPermission(AppPermissions.Loyalty.Manage)]
+    [HasPermission(AppPermissions.Loyalty.Edit)]
     public async Task<ActionResult<long>> CreateRule(CreateCashbackRuleRequest request)
     {
         var id = await sender.Send(new CreateCashbackRuleCommand(
@@ -46,7 +43,7 @@ public class LoyaltyController(ISender sender) : ControllerBase
     }
 
     [HttpPut("rules/{id:long}")]
-    [HasPermission(AppPermissions.Loyalty.Manage)]
+    [HasPermission(AppPermissions.Loyalty.Edit)]
     public async Task<IActionResult> UpdateRule(long id, UpdateCashbackRuleRequest request)
     {
         await sender.Send(new UpdateCashbackRuleCommand(
@@ -56,7 +53,7 @@ public class LoyaltyController(ISender sender) : ControllerBase
     }
 
     [HttpDelete("rules/{id:long}")]
-    [HasPermission(AppPermissions.Loyalty.Manage)]
+    [HasPermission(AppPermissions.Loyalty.Edit)]
     public async Task<IActionResult> DeleteRule(long id)
     {
         await sender.Send(new DeleteCashbackRuleCommand(id));
@@ -71,7 +68,7 @@ public class LoyaltyController(ISender sender) : ControllerBase
     }
 
     [HttpPost("discounts")]
-    [HasPermission(AppPermissions.Loyalty.Manage)]
+    [HasPermission(AppPermissions.Loyalty.Edit)]
     public async Task<ActionResult<long>> SaveDiscountRule(SaveDiscountRuleCommand command)
     {
         var id = await sender.Send(command);
@@ -79,7 +76,7 @@ public class LoyaltyController(ISender sender) : ControllerBase
     }
 
     [HttpDelete("discounts/{id:long}")]
-    [HasPermission(AppPermissions.Loyalty.Manage)]
+    [HasPermission(AppPermissions.Loyalty.Edit)]
     public async Task<IActionResult> DeleteDiscountRule(long id)
     {
         await sender.Send(new DeleteDiscountRuleCommand(id));

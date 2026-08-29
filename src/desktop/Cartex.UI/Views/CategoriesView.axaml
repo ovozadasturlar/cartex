@@ -2,19 +2,28 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mi="using:Material.Icons.Avalonia"
              xmlns:c="using:Cartex.UI.Controls"
-             xmlns:svc="using:Cartex.UI.Services"
+             xmlns:vm="using:Cartex.UI.ViewModels"
+             xmlns:model="using:Cartex.UI.Models"
              x:Class="Cartex.UI.Views.CategoriesView"
+             x:Name="Root"
+             x:DataType="vm:CategoriesViewModel"
              c:Shortcuts.Source="{Binding Shortcuts}"
-             x:CompileBindings="False">
+             x:CompileBindings="True">
 
     <Panel>
-        <DockPanel Margin="24" Classes.blurred="{Binding IsEditOpen}">
+        <DockPanel Margin="24" Classes.blurred="{Binding IsOverlayOpen}">
             <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[categories]}" Margin="0,0,0,16">
                 <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Classes="outline" Command="{Binding ExpandCollapseAllCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="7">
+                            <mi:MaterialIcon Kind="FileTree" Width="17" Height="17" />
+                            <TextBlock Text="{Binding ExpandCollapseText}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
                     <TextBox Classes="search" Width="240" VerticalAlignment="Center"
                              PlaceholderText="{Binding L[search]}" Text="{Binding SearchText}" />
                     <c:ExportButton Command="{Binding ExportCommand}" Text="{Binding L[export]}" IsVisible="{Binding CanExport}" />
-                    <Button Classes="brand" Command="{Binding OpenCreateCommand}">
+                    <Button Classes="brand" Command="{Binding OpenCreateCommand}" IsVisible="{Binding CanCreate}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <mi:MaterialIcon Kind="Plus" Width="18" Height="18" />
                             <TextBlock Text="{Binding L[add]}" VerticalAlignment="Center" />
@@ -26,30 +35,87 @@
             <Panel>
                 <Border Background="{DynamicResource CardBg}" CornerRadius="12"
                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
-                    <DataGrid ItemsSource="{Binding Categories}" AutoGenerateColumns="False" IsReadOnly="True"
-                              GridLinesVisibility="Horizontal" HeadersVisibility="Column"
-                              c:GridDoubleClick.Command="{Binding OpenEditCommand}">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Width="*" Binding="{Binding Name}"
-                                                Header="{Binding [name], Source={x:Static svc:LocalizationManager.Instance}}" />
-                            <DataGridTextColumn Width="*" Binding="{Binding ParentName}"
-                                                Header="{Binding [parent], Source={x:Static svc:LocalizationManager.Instance}}" />
-                            <DataGridTextColumn Width="2*" Binding="{Binding Description}"
-                                                Header="{Binding [description], Source={x:Static svc:LocalizationManager.Instance}}" />
-                            <DataGridTemplateColumn Width="Auto">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <Button Classes="icon" Margin="6,0"
-                                                Command="{Binding $parent[DataGrid].DataContext.OpenEditCommand}"
-                                                CommandParameter="{Binding}" ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[edit]}">
-                                            <mi:MaterialIcon Kind="Pencil" Width="16" Height="16"
-                                                             Foreground="{DynamicResource TextSecondary}" />
-                                        </Button>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
-                        </DataGrid.Columns>
-                    </DataGrid>
+                    <ScrollViewer x:Name="TreeScroll" HorizontalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding Categories}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:CategoryTreeItem">
+                                    <Border Margin="{Binding Indent}" MinHeight="48" Focusable="True"
+                                            Background="Transparent" BorderBrush="{DynamicResource BorderBrush}"
+                                            BorderThickness="0,0,0,1" Padding="8,4"
+                                            DragDrop.AllowDrop="True"
+                                            DragDrop.DragOver="OnRowDragOver"
+                                            DragDrop.DragLeave="OnRowDragLeave"
+                                            DragDrop.Drop="OnRowDrop"
+                                            KeyDown="OnRowKeyDown">
+                                        <Grid ColumnDefinitions="28,Auto,2*,*,Auto,Auto,Auto" ColumnSpacing="6">
+                                            <Button Grid.Column="0" Classes="icon" Width="26" Height="26" Padding="3"
+                                                    IsVisible="{Binding HasChildren}"
+                                                    Command="{Binding $parent[UserControl].((vm:CategoriesViewModel)DataContext).ToggleExpandCommand}"
+                                                    CommandParameter="{Binding}">
+                                                <mi:MaterialIcon Kind="ChevronRight" Width="17" Height="17"
+                                                                 RenderTransformOrigin="50%,50%">
+                                                    <mi:MaterialIcon.RenderTransform>
+                                                        <RotateTransform Angle="{Binding ChevronAngle}">
+                                                            <RotateTransform.Transitions>
+                                                                <Transitions>
+                                                                    <DoubleTransition Property="Angle" Duration="0:0:0.16" />
+                                                                </Transitions>
+                                                            </RotateTransform.Transitions>
+                                                        </RotateTransform>
+                                                    </mi:MaterialIcon.RenderTransform>
+                                                </mi:MaterialIcon>
+                                            </Button>
+                                            <TextBlock Grid.Column="1" Text="⠿" Tag="{Binding}" PointerPressed="OnDragHandlePressed"
+                                                       IsVisible="{Binding $parent[UserControl].((vm:CategoriesViewModel)DataContext).CanEdit}"
+                                                       Padding="5" Cursor="SizeAll" VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource TextMuted}"
+                                                       ToolTip.Tip="{Binding $parent[UserControl].((vm:CategoriesViewModel)DataContext).L[category_move_hint]}" />
+                                            <StackPanel Grid.Column="2" MinWidth="120" VerticalAlignment="Center" Spacing="2">
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextPrimary}" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding FullPath}" FontSize="11.5"
+                                                           Foreground="{DynamicResource TextMuted}" TextTrimming="PrefixCharacterEllipsis" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="3" MinWidth="90" Text="{Binding Category.Description}" VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource TextSecondary}" TextTrimming="CharacterEllipsis" />
+                                            <Border Grid.Column="4" Background="{DynamicResource SidebarItemHover}" CornerRadius="12" Padding="9,4"
+                                                    VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                    <TextBlock Text="{Binding DescendantProductCount}" FontWeight="SemiBold" />
+                                                    <TextBlock Text="{Binding $parent[UserControl].((vm:CategoriesViewModel)DataContext).L[products_count]}"
+                                                               Foreground="{DynamicResource TextSecondary}" />
+                                                </StackPanel>
+                                            </Border>
+                                            <Button Grid.Column="5" Classes="icon" Margin="2,0"
+                                                    IsVisible="{Binding $parent[UserControl].((vm:CategoriesViewModel)DataContext).CanEdit}"
+                                                    Command="{Binding $parent[UserControl].((vm:CategoriesViewModel)DataContext).OpenMergeCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    ToolTip.Tip="{Binding $parent[UserControl].((vm:CategoriesViewModel)DataContext).L[merge]}">
+                                                <mi:MaterialIcon Kind="Merge" Width="16" Height="16" Foreground="{DynamicResource TextSecondary}" />
+                                            </Button>
+                                            <Button Grid.Column="6" Classes="icon" Margin="2,0"
+                                                    IsVisible="{Binding $parent[UserControl].((vm:CategoriesViewModel)DataContext).CanEdit}"
+                                                    Command="{Binding $parent[UserControl].((vm:CategoriesViewModel)DataContext).OpenEditCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    ToolTip.Tip="{Binding $parent[UserControl].((vm:CategoriesViewModel)DataContext).L[edit]}">
+                                                <mi:MaterialIcon Kind="Pencil" Width="16" Height="16" Foreground="{DynamicResource TextSecondary}" />
+                                            </Button>
+                                            <Border Grid.ColumnSpan="7" IsHitTestVisible="False" IsVisible="{Binding IsMatch}"
+                                                    BorderBrush="{DynamicResource BrandBrush}" BorderThickness="2" CornerRadius="7" />
+                                            <Border Grid.ColumnSpan="7" IsHitTestVisible="False" IsVisible="{Binding IsDropChild}"
+                                                    Background="#182196F3" BorderBrush="#2196F3" BorderThickness="2" CornerRadius="7" />
+                                            <Border Grid.ColumnSpan="7" IsHitTestVisible="False" IsVisible="{Binding IsDropInvalid}"
+                                                    Background="#18EF5350" BorderBrush="#EF5350" BorderThickness="2" CornerRadius="7" />
+                                            <Border Grid.ColumnSpan="7" Height="3" VerticalAlignment="Top" IsHitTestVisible="False"
+                                                    IsVisible="{Binding IsDropBefore}" Background="#2196F3" CornerRadius="2" />
+                                            <Border Grid.ColumnSpan="7" Height="3" VerticalAlignment="Bottom" IsHitTestVisible="False"
+                                                    IsVisible="{Binding IsDropAfter}" Background="#2196F3" CornerRadius="2" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
                 </Border>
                 <c:EmptyState Icon="ShapeOutline" Title="{Binding L[no_data]}" IsVisible="{Binding IsEmpty}" />
             </Panel>
@@ -57,10 +123,9 @@
 
         <Border IsVisible="{Binding IsEditOpen}" Background="#30000000"
                 c:OverlayBehaviors.DismissCommand="{Binding CancelEditCommand}">
-            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="440"
+            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="480"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Classes="form"
+                    HorizontalAlignment="Center" VerticalAlignment="Center" Classes="form"
                     c:FormBehaviors.AutoFocus="True"
                     c:FormBehaviors.EnterSubmits="{Binding SaveCommand}"
                     c:FormBehaviors.EscCancels="{Binding CancelEditCommand}">
@@ -79,13 +144,47 @@
                         <TextBlock Text="{Binding L[parent]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
                         <ComboBox ItemsSource="{Binding Parents}" SelectedItem="{Binding SelectedParent}" HorizontalAlignment="Stretch">
                             <ComboBox.ItemTemplate>
-                                <DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate>
+                                <DataTemplate x:DataType="model:IdOption">
+                                    <TextBlock Text="{Binding Name}" TextTrimming="PrefixCharacterEllipsis" />
+                                </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,6,0,0">
                         <Button Classes="outline" Command="{Binding CancelEditCommand}" Content="{Binding L[cancel]}" />
                         <Button Classes="brand" Command="{Binding SaveCommand}" Content="{Binding L[save]}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Border>
+
+        <Border IsVisible="{Binding IsMergeOpen}" Background="#30000000"
+                c:OverlayBehaviors.DismissCommand="{Binding CancelEditCommand}">
+            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="500"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    HorizontalAlignment="Center" VerticalAlignment="Center" Classes="form"
+                    c:FormBehaviors.AutoFocus="True"
+                    c:FormBehaviors.EnterSubmits="{Binding MergeCommand}"
+                    c:FormBehaviors.EscCancels="{Binding CancelEditCommand}">
+                <StackPanel Margin="24" Spacing="16">
+                    <TextBlock Text="{Binding L[category_merge]}" FontSize="18" FontWeight="Bold"
+                               Foreground="{DynamicResource TextPrimary}" />
+                    <TextBlock Text="{Binding MergeConfirmation}" TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextSecondary}" />
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[category_merge_target]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <ComboBox ItemsSource="{Binding MergeTargets}" SelectedItem="{Binding SelectedMergeTarget}"
+                                  HorizontalAlignment="Stretch">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="model:IdOption">
+                                    <TextBlock Text="{Binding Name}" TextTrimming="PrefixCharacterEllipsis" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+                        <Button Classes="outline" Command="{Binding CancelEditCommand}" Content="{Binding L[cancel]}" />
+                        <Button Classes="brand" Command="{Binding MergeCommand}" Content="{Binding L[merge]}" />
                     </StackPanel>
                 </StackPanel>
             </Border>

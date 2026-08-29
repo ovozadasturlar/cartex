@@ -1,12 +1,12 @@
-using Cartex.Application.Common.Interfaces;
-using Cartex.Application.Common.Messaging;
+﻿using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Settings;
 using Cartex.Persistence;
+using Cartex.Shared.Models.Settings;
 using FluentValidation;
 
 namespace Cartex.Application.Settings.Commands;
 
-public record UpdateSalesPolicyCommand(string ShiftPolicy, decimal MaxDiscountPercent, decimal DefaultMinStock, int StaleRateDays, bool AllowDebtSales = true, bool AllowCustomerCredit = false, bool RequireDebtDueDate = true, bool RequireSupplier = false) : ICommand<Unit>;
+public sealed record UpdateSalesPolicyCommand(SalesPolicyDto Policy) : ICommand<Unit>;
 
 public sealed class UpdateSalesPolicyCommandHandler(ISettingsService settings, IAuditService audit)
     : IRequestHandler<UpdateSalesPolicyCommand, Unit>
@@ -14,16 +14,9 @@ public sealed class UpdateSalesPolicyCommandHandler(ISettingsService settings, I
     public async Task<Unit> Handle(UpdateSalesPolicyCommand request, CancellationToken cancellationToken)
     {
         var cfg = await settings.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken) ?? new SalesPolicySettings();
-        cfg.ShiftPolicy = request.ShiftPolicy;
-        cfg.MaxDiscountPercent = request.MaxDiscountPercent;
-        cfg.DefaultMinStock = request.DefaultMinStock;
-        cfg.StaleRateDays = request.StaleRateDays;
-        cfg.AllowDebtSales = request.AllowDebtSales;
-        cfg.AllowCustomerCredit = request.AllowCustomerCredit;
-        cfg.RequireDebtDueDate = request.RequireDebtDueDate;
-        cfg.RequireSupplier = request.RequireSupplier;
-        audit.Add("settings", "settings", null, new { section = "salesPolicy" });
+        SalesPolicyMapping.Apply(cfg, request.Policy);
         await settings.SetAsync(SettingKeys.SalesPolicy, cfg, cancellationToken);
+        audit.Add("settings", "settings", null, new { section = "salesPolicy" });
         return Unit.Value;
     }
 }
@@ -32,9 +25,15 @@ public sealed class UpdateSalesPolicyCommandValidator : AbstractValidator<Update
 {
     public UpdateSalesPolicyCommandValidator()
     {
-        RuleFor(x => x.ShiftPolicy).Must(p => p is "Off" or "CashOnly" or "AllSales");
-        RuleFor(x => x.MaxDiscountPercent).InclusiveBetween(0, 100);
-        RuleFor(x => x.DefaultMinStock).GreaterThanOrEqualTo(0);
-        RuleFor(x => x.StaleRateDays).InclusiveBetween(1, 30);
+        RuleFor(x => x.Policy.ShiftPolicy).Must(p => p is "Off" or "CashOnly" or "AllSales");
+        RuleFor(x => x.Policy.CreditLimitEnforcement).Must(p => p is "Block" or "Warn");
+        RuleFor(x => x.Policy.DefaultCreditLimit).GreaterThanOrEqualTo(0).When(x => x.Policy.DefaultCreditLimit is not null);
+        RuleFor(x => x.Policy.MaxDiscountPercent).InclusiveBetween(0, 100).When(x => x.Policy.MaxDiscountPercent is not null);
+        RuleFor(x => x.Policy.MaxDebtWriteOffAmount).GreaterThanOrEqualTo(0).When(x => x.Policy.MaxDebtWriteOffAmount is not null);
+        RuleFor(x => x.Policy.MaxDebtWriteOffPercent).InclusiveBetween(0, 100).When(x => x.Policy.MaxDebtWriteOffPercent is not null);
+        RuleFor(x => x.Policy.MaxPriceIncreasePercent).GreaterThanOrEqualTo(0).When(x => x.Policy.MaxPriceIncreasePercent is not null);
+        RuleFor(x => x.Policy.MaxCustomerLoan).GreaterThanOrEqualTo(0).When(x => x.Policy.MaxCustomerLoan is not null);
+        RuleFor(x => x.Policy.DefaultMinStock).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.Policy.StaleRateDays).InclusiveBetween(1, 30);
     }
 }

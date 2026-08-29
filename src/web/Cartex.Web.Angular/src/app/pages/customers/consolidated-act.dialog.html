@@ -1,0 +1,113 @@
+<ng-container *transloco="let t">
+  <h2 mat-dialog-title>
+    {{ t('consolidated_act') }}
+    <span class="who">{{ customerName }}</span>
+  </h2>
+
+  @if (busy()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+
+  <mat-dialog-content>
+    <div class="panes">
+      <section class="pane">
+        <header>
+          <div class="lead">
+            <span class="step">{{ t('act_step_pick') }}</span>
+            <strong>
+              {{ t('documents') }}
+              <span class="count">{{ selected().length }}</span>
+              <span class="muted">{{ t('act_selected_suffix') }}</span>
+            </strong>
+          </div>
+          @if (rows().length) {
+            <button matButton (click)="toggleAll()">{{ t('select_all') }}</button>
+          }
+        </header>
+
+        <div class="rows">
+          @for (r of rows(); track r.kind + r.id) {
+            <label class="doc" [class.on]="r.picked">
+              <mat-checkbox [checked]="r.picked" (change)="toggle(r)" />
+              <span class="body">
+                <span class="line1">
+                  <span class="muted">{{ t('act_kind_' + r.kind) }}</span>
+                  <strong>{{ r.number }}</strong>
+                </span>
+                <span class="line2">{{ r.summary }}</span>
+                <span class="line3">{{ r.occurredAt | cxDate }}</span>
+              </span>
+              <span class="amount cx-money" [class.back]="r.amount < 0">
+                {{ r.amount ? (r.amount > 0 ? '+' : '') + (r.amount | cxMoney) : '—' }}
+              </span>
+            </label>
+          } @empty {
+            <p class="muted">{{ t('no_items') }}</p>
+          }
+        </div>
+
+        @if (selected().length) {
+          <footer class="picked">
+            <span class="muted">{{ t('act_selected_effect') }}</span>
+            <strong class="cx-money">{{ selectedAmount() | cxMoney }}</strong>
+          </footer>
+        }
+      </section>
+
+      <section class="pane">
+        <header>
+          <div class="lead">
+            <span class="step">{{ t('act_step_result') }}</span>
+            <strong>{{ t('consumed_goods') }}</strong>
+          </div>
+        </header>
+
+        @if (act(); as a) {
+          <div class="rows">
+            @for (l of a.lines; track l.variantId) {
+              <div class="good">
+                <span class="body">
+                  <span class="line1">{{ l.productName }}</span>
+                  <span class="line3">
+                    {{ l.netQuantity }} {{ l.unitName }}
+                    @if (l.returnedQuantity > 0) {
+                      <span class="back">(−{{ l.returnedQuantity }})</span>
+                    }
+                  </span>
+                </span>
+                <span class="amount cx-money">{{ l.netAmount | cxMoney }}</span>
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="placeholder">
+            <mat-icon>description</mat-icon>
+            <p>{{ t('act_result_hint') }}</p>
+          </div>
+        }
+      </section>
+    </div>
+
+    <div class="totals">
+      <div class="total">
+        <span class="muted">{{ t('consumed_goods') }}</span>
+        <strong class="cx-money">{{ (act()?.consumedAmount ?? 0) | cxMoney }}</strong>
+      </div>
+      <div class="total">
+        <span class="muted">{{ t('settled') }}</span>
+        <strong class="cx-money">{{ (act()?.paidAmount ?? 0) | cxMoney }}</strong>
+      </div>
+      <div class="total accent">
+        <span class="muted">{{ t('remaining_debt') }}</span>
+        <strong class="cx-money">{{ (act()?.remainingDebt ?? 0) | cxMoney }}</strong>
+      </div>
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button matButton mat-dialog-close>{{ t('close') }}</button>
+    <button matButton="filled" [disabled]="!selected().length || busy()" (click)="generate()">
+      {{ t('generate') }}
+    </button>
+  </mat-dialog-actions>
+</ng-container>

@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Cartex.Mobile.Agent.Views.ProductEditPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Cartex.Mobile.Agent.ViewModels"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
+    xmlns:ctl="clr-namespace:Cartex.Mobile.Core.Controls;assembly=Cartex.Mobile.Core"
+    xmlns:cat="clr-namespace:Cartex.Shared.Models.Categories;assembly=Cartex.Shared"
+    x:DataType="vm:ProductEditViewModel"
+    Title="{svc:T edit_product}">
+
+    <Grid RowDefinitions="*,Auto">
+        <ScrollView>
+            <VerticalStackLayout Padding="16" Spacing="14">
+
+                <Border Style="{StaticResource Card}">
+                    <VerticalStackLayout Spacing="12">
+                        <ctl:Thumb Source="{Binding PreviewUrl}" Size="180" Radius="14" Stretch="True" />
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                            <Button Text="{svc:T take_photo}" Style="{StaticResource BtnSecondary}" Command="{Binding TakePhotoCommand}" />
+                            <Button Grid.Column="1" Text="{svc:T pick_photo}" Style="{StaticResource BtnSecondary}" Command="{Binding PickPhotoCommand}" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                            <Border Style="{StaticResource InputWrap}">
+                                <Entry Text="{Binding ImageLinkText}" Placeholder="{svc:T image_link}" Keyboard="Url" VerticalOptions="Center" />
+                            </Border>
+                            <Button Grid.Column="1" Text="{svc:T apply}" Style="{StaticResource BtnOutline}" Command="{Binding ApplyLinkCommand}" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border Style="{StaticResource Card}">
+                    <VerticalStackLayout Spacing="12">
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{svc:T name}" Style="{StaticResource TxCaption}" />
+                            <Border Style="{StaticResource InputWrap}">
+                                <Entry Text="{Binding Name}" VerticalOptions="Center" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{svc:T price}" Style="{StaticResource TxCaption}" />
+                            <Border Style="{StaticResource InputWrap}">
+                                <Entry Text="{Binding PriceText}" Keyboard="Numeric" VerticalOptions="Center" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{svc:T code}" Style="{StaticResource TxCaption}" />
+                            <Border Style="{StaticResource InputWrap}">
+                                <Entry Text="{Binding Code}" VerticalOptions="Center" />
+                            </Border>
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="{svc:T category}" Style="{StaticResource TxCaption}" />
+                            <Border Style="{StaticResource InputWrap}">
+                                <Picker ItemsSource="{Binding Categories}" SelectedItem="{Binding Category}"
+                                        ItemDisplayBinding="{Binding TreeDisplayName, x:DataType=cat:CategoryDto}" VerticalOptions="Center" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+
+                <Label Text="{Binding Notice}" Style="{StaticResource TxOk}" IsVisible="{Binding Notice, Converter={StaticResource NotEmpty}}" />
+                <Label Text="{Binding Error}" Style="{StaticResource TxDanger}" IsVisible="{Binding Error, Converter={StaticResource NotEmpty}}" />
+
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <Border Grid.Row="1" Style="{StaticResource Sheet}" Padding="16,12">
+            <Button Text="{svc:T save}" Style="{StaticResource BtnPrimary}" Command="{Binding SaveCommand}"
+                    IsEnabled="{Binding IsBusy, Converter={StaticResource Invert}}" />
+        </Border>
+
+        <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
+                           VerticalOptions="Center" HorizontalOptions="Center" />
+    </Grid>
+</ContentPage>

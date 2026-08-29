@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
+             xmlns:vm="clr-namespace:Cartex.Mobile.Store.ViewModels"
+             xmlns:models="clr-namespace:Cartex.Shared.Models.Customers;assembly=Cartex.Shared"
+             x:Class="Cartex.Mobile.Store.Views.CustomerPickerView"
+             x:DataType="vm:MobileCustomerPicker">
+    <VerticalStackLayout Spacing="8">
+
+        <Border Style="{StaticResource Card}" Padding="14,6" IsVisible="{Binding HasCustomer}">
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                <Label Text="{StaticResource IcAccount}" Style="{StaticResource Icon}" />
+                <Label Grid.Column="1" Text="{Binding CustomerName}" FontAttributes="Bold" FontSize="14" VerticalOptions="Center"
+                       TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                <Button Grid.Column="2" FontFamily="MDI" Text="{StaticResource IcClose}" FontSize="16"
+                        WidthRequest="36" HeightRequest="40" CornerRadius="10" Padding="0"
+                        BackgroundColor="Transparent"
+                        TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}"
+                        Command="{Binding ClearCommand}" />
+            </Grid>
+        </Border>
+
+        <VerticalStackLayout Spacing="8" IsVisible="{Binding HasCustomer, Converter={StaticResource Invert}}">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <Border Style="{StaticResource InputWrap}">
+                    <Entry Placeholder="{svc:T search_customer}" Text="{Binding Search}" ClearButtonVisibility="WhileEditing" />
+                </Border>
+                <Button Grid.Column="1" FontFamily="MDI" Text="{StaticResource IcPlus}" FontSize="20"
+                        WidthRequest="48" HeightRequest="48" CornerRadius="12" Padding="0"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
+                        TextColor="White"
+                        IsVisible="{Binding CanCreate}"
+                        Command="{Binding OpenFormCommand}" />
+            </Grid>
+
+            <Border Style="{StaticResource Card}" Padding="6" IsVisible="{Binding HasResults}">
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Results}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="models:CustomerDto">
+                            <Grid Padding="10,8" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding PickCommand, Source={RelativeSource AncestorType={x:Type vm:MobileCustomerPicker}}}"
+                                                          CommandParameter="{Binding .}" />
+                                </Grid.GestureRecognizers>
+                                <Label Text="{Binding FullName}" FontSize="14" VerticalOptions="Center"
+                                       TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                <Label Grid.Column="1" Text="{Binding Phone}" Style="{StaticResource MutedLabel}" FontSize="12"
+                                       VerticalOptions="Center" />
+                            </Grid>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </Border>
+        </VerticalStackLayout>
+    </VerticalStackLayout>
+</ContentView>

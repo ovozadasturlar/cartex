@@ -1,10 +1,10 @@
-using Cartex.Application.Common.Messaging;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
 using Cartex.Auth.Services;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Authorization;
+using Cartex.Domain.Common;
 using Cartex.Application.Common.Security;
 using Unit = Cartex.Application.Common.Messaging.Unit;
 
@@ -18,7 +18,8 @@ public sealed class UpdateUserCommandHandler(
     IApplicationDbContext db,
     IPasswordHasher passwordHasher,
     IAccessControlService accessControl,
-    IAuditService audit) : IRequestHandler<UpdateUserCommand, Unit>
+    IAuditService audit,
+    ICurrentUser currentUser) : IRequestHandler<UpdateUserCommand, Unit>
 {
     public async Task<Unit> Handle(UpdateUserCommand request, CancellationToken cancellationToken)
     {
@@ -30,10 +31,12 @@ public sealed class UpdateUserCommandHandler(
 
         await accessControl.EnsureCanManageUserAsync(user, cancellationToken);
         await accessControl.EnsureCanAssignRolesAsync(request.RoleIds, cancellationToken);
+        var defaultBranchId = await UserBranchScopePolicy.ValidateAsync(
+            db, currentUser, request.RoleIds, request.BranchIds, request.DefaultBranchId, cancellationToken);
 
-        var wasAdmin = user.UserRoles.Any(ur => ur.Role.Level >= AppRoles.AdminLevel && !ur.Role.AccessAll);
+        var wasAdmin = user.UserRoles.Any(ur => ur.Role.IsActive && ur.Role.Level >= AppRoles.AdminLevel && !ur.Role.AccessAll);
         var willBeAdmin = request.IsActive && await db.Roles
-            .AnyAsync(r => request.RoleIds.Contains(r.Id) && r.Level >= AppRoles.AdminLevel && !r.AccessAll, cancellationToken);
+            .AnyAsync(r => request.RoleIds.Contains(r.Id) && r.IsActive && r.Level >= AppRoles.AdminLevel && !r.AccessAll, cancellationToken);
         if (wasAdmin && !willBeAdmin)
             await accessControl.EnsureAdminRemainsAsync(user.Id, cancellationToken);
 
@@ -41,11 +44,15 @@ public sealed class UpdateUserCommandHandler(
 
         user.FullName = request.FullName;
         user.IsActive = request.IsActive;
-        user.DefaultBranchId = request.DefaultBranchId;
+        user.DefaultBranchId = defaultBranchId;
         user.StartPage = request.StartPage;
         user.CartDestination = request.CartDestination;
 
-        var revokeSessions = request.NewPassword is not null || (wasActive && !request.IsActive);
+        var currentRoleIds = user.UserRoles.Select(userRole => userRole.RoleId).ToHashSet();
+        var rolesChanged = !currentRoleIds.SetEquals(request.RoleIds);
+        var revokeSessions = request.NewPassword is not null
+            || rolesChanged
+            || (wasActive && !request.IsActive);
         if (request.NewPassword is not null)
             user.PasswordHash = passwordHasher.Hash(request.NewPassword);
 

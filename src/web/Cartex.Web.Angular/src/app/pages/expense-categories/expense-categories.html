@@ -1,9 +1,11 @@
 <div class="page" *transloco="let t">
   <cx-page-header [title]="t('expense_categories')" [subtitle]="t('expense_categories_subtitle')">
-    <button matButton="filled" (click)="open()">
-      <mat-icon>add</mat-icon>
-      {{ t('add') }}
-    </button>
+    @if (canCreate) {
+      <button matButton="filled" (click)="open()">
+        <mat-icon>add</mat-icon>
+        {{ t('add') }}
+      </button>
+    }
   </cx-page-header>
 
   @if (loading()) {
@@ -20,9 +22,11 @@
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef class="act"></th>
             <td mat-cell *matCellDef="let c" class="act">
-              <button matIconButton (click)="open(c)" [title]="t('edit')">
-                <mat-icon>edit</mat-icon>
-              </button>
+              @if (canEdit) {
+                <button matIconButton (click)="open(c)" [title]="t('edit')">
+                  <mat-icon>edit</mat-icon>
+                </button>
+              }
             </td>
           </ng-container>
 

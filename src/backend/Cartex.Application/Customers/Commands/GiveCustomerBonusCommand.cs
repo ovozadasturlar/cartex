@@ -1,4 +1,3 @@
-using Cartex.Application.Common.Messaging;
 using FluentValidation;
 using Cartex.Domain.Common;
 using Cartex.Domain.Enums;
@@ -25,7 +24,7 @@ public sealed class GiveCustomerBonusCommandHandler(
             throw new NotFoundException("Customer not found.");
 
         var bonus = await ledger.CustomerAccountAsync(request.CustomerId, AccountType.Bonus, cancellationToken);
-        ledger.Post(OperationType.Cashback, request.Amount, null, bonus, userId);
+        await ledger.PostAsync(OperationType.Cashback, request.Amount, null, bonus, userId, cancellationToken);
 
         audit.Add("bonus", "customers", request.CustomerId, new { request.Amount, request.Note });
 

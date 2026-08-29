@@ -18,8 +18,8 @@ public class ShiftDisciplineTests(DatabaseFixture fixture) : DatabaseTest(fixtur
     {
         using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var branch1 = (await db.Branches.FirstAsync(b => b.Name == "Filial 1")).Id;
-        var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Filial 1 ombori")).Id;
+        var branch1 = (await db.Branches.FirstAsync(b => b.Name == "Asosiy filial")).Id;
+        var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Asosiy ombor")).Id;
         var businessId = (await db.Businesses.FirstAsync()).Id;
         var adminId = (await db.Users.FirstAsync(u => u.Username == "admin")).Id;
         var productId = (await db.Products.FirstAsync(p => p.Name == "Smesitel oshxona Zegor")).Id;
@@ -99,14 +99,14 @@ public class ShiftDisciplineTests(DatabaseFixture fixture) : DatabaseTest(fixtur
         var db = scope2.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var item = await db.SaleItems.FirstAsync(i => i.SaleId == saleId);
         var sender2 = scope2.ServiceProvider.GetRequiredService<ISender>();
-        await Assert.ThrowsAsync<BusinessRuleException>(() =>
-            sender2.Send(new ReturnSaleCommand(saleId, [new ReturnLineDto(item.Id, 1, true, null)])));
+        var command = await TestReturns.ForItemAsync(db, item.Id, 1);
+        await Assert.ThrowsAsync<BusinessRuleException>(() => sender2.Send(command));
     }
 
     [Fact]
     public async Task Z_report_includes_cash_debt_repayment()
     {
-        var (branch1, warehouse1, businessId, adminId, variantId, price) = await SetupAsync();
+        var (branch1, warehouse1, businessId, adminId, variantId, _) = await SetupAsync();
         Fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
         var shiftId = await TestShift.OpenAsync(Fixture);
 

@@ -7,6 +7,7 @@ using Cartex.ApiClient.Paging;
 using Cartex.Shared.Models.AuditLogs;
 using Cartex.UI.Services;
 using Cartex.UI.ViewModels.Common;
+using Cartex.UI.Views;
 
 namespace Cartex.UI.ViewModels;
 
@@ -17,6 +18,7 @@ public partial class AuditViewModel : ViewModelBase, ILoadable
     private readonly IBusyService _busy;
     private readonly IExportService _export;
     private readonly AuthService _auth;
+    private readonly IDialogService _dialog;
 
     public ObservableCollection<AuditLogDto> Logs { get; } = [];
     public PaginationState Paging { get; } = new();
@@ -55,13 +57,14 @@ public partial class AuditViewModel : ViewModelBase, ILoadable
         catch { }
     }
 
-    public AuditViewModel(IAuditLogsApi api, IToastService toast, IBusyService busy, IExportService export, AuthService auth)
+    public AuditViewModel(IAuditLogsApi api, IToastService toast, IBusyService busy, IExportService export, AuthService auth, IDialogService dialog)
     {
         _api = api;
         _toast = toast;
         _busy = busy;
         _export = export;
         _auth = auth;
+        _dialog = dialog;
         Paging.Attach(LoadAsync);
         Paging.ConfigureSort([new(L["date"], "CreatedAt"), new(L["table_name"], "TableName"), new(L["action"], "Action")], new(L["date"], "CreatedAt"));
         Paging.Descending = true;
@@ -117,4 +120,8 @@ public partial class AuditViewModel : ViewModelBase, ILoadable
 
     [RelayCommand]
     private Task Refresh() { Paging.Page = 1; return LoadAsync(); }
+
+    [RelayCommand]
+    private async Task OpenDetail(AuditLogDto log) =>
+        await _dialog.ShowAsync<AuditDetailDialog, AuditDetailViewModel, object>(new AuditDetailViewModel(log));
 }

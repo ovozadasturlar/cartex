@@ -17,7 +17,12 @@ public partial class TariffFeatureVm : ObservableObject
     [ObservableProperty] private bool _isEnabled;
 }
 
-public partial class TariffFeaturesViewModel(ILicenseApi licenseApi, IFeaturesApi featuresApi, IToastService toast, IBusyService busy)
+public partial class TariffFeaturesViewModel(
+    ILicenseApi licenseApi,
+    IFeaturesApi featuresApi,
+    IToastService toast,
+    IBusyService busy,
+    AuthService auth)
     : ViewModelBase, ILoadable
 {
     private Dictionary<string, List<string>> _includedTariffs = [];
@@ -29,6 +34,7 @@ public partial class TariffFeaturesViewModel(ILicenseApi licenseApi, IFeaturesAp
     [ObservableProperty] private bool _isActive;
     [ObservableProperty] private string? _tariff;
     [ObservableProperty] private DateTimeOffset? _expiresAt;
+    public bool CanEdit => auth.HasPermission("features.edit");
 
     public async Task LoadAsync()
     {
@@ -38,6 +44,11 @@ public partial class TariffFeaturesViewModel(ILicenseApi licenseApi, IFeaturesAp
             {
                 var options = await licenseApi.GetOptionsAsync();
                 var status = await licenseApi.GetAsync();
+                // Litsenziya ro'yxati va features jadvali ikkalasi ham sotuvchi darvozasi —
+                // sahifa ikkisining kesishmasini (amaldagi holatni) ko'rsatadi, aks holda
+                // bazada o'chiq modul yoniq bo'lib ko'rinadi.
+                var vendorOff = (await featuresApi.GetAllAsync())
+                    .Where(f => !f.IsEnabled).Select(f => f.Code).ToHashSet();
 
                 _includedTariffs = options.Features.ToDictionary(f => f.Code, f => f.IncludedTariffs);
                 var enabled = status.EnabledFeatures.Count > 0
@@ -54,7 +65,7 @@ public partial class TariffFeaturesViewModel(ILicenseApi licenseApi, IFeaturesAp
                         Code = f.Code,
                         Name = f.Name,
                         Impact = f.Permissions.Count > 0 ? string.Join(", ", f.Permissions) : L[$"feature_effect_{f.Code}"],
-                        IsEnabled = enabled.Contains(f.Code)
+                        IsEnabled = enabled.Contains(f.Code) && !vendorOff.Contains(f.Code)
                     });
                 IsActive = status.IsActive;
                 Tariff = options.Tariffs.Contains(status.Tariff) ? status.Tariff : options.Tariffs.FirstOrDefault();
@@ -75,6 +86,7 @@ public partial class TariffFeaturesViewModel(ILicenseApi licenseApi, IFeaturesAp
     [RelayCommand]
     private async Task SaveAsync()
     {
+        if (!CanEdit) return;
         try
         {
             using (busy.Begin(L["loading"]))
@@ -85,6 +97,7 @@ public partial class TariffFeaturesViewModel(ILicenseApi licenseApi, IFeaturesAp
                     await featuresApi.SetAsync(f.Code, new SetFeatureRequest(f.IsEnabled));
             }
             ServiceLocator.Resolve<ReferenceCache>().Invalidate(CacheKeys.Features, CacheKeys.Business, CacheKeys.Rates, CacheKeys.SalesPolicy);
+            await ServiceLocator.Resolve<NavigationService>().RequestFeaturesRefreshAsync();
             toast.Success(L["success"]);
             await LoadAsync();
         }

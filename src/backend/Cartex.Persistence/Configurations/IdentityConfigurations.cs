@@ -13,7 +13,9 @@ public class RoleConfiguration : IEntityTypeConfiguration<Role>
         builder.ToTable("roles");
         builder.Property(x => x.Name).HasMaxLength(30).IsRequired();
         builder.Property(x => x.StartPage).HasMaxLength(40);
-        builder.HasIndex(x => x.Name).IsUnique();
+        builder.Property(x => x.IsActive).HasDefaultValue(true);
+        builder.Property(x => x.TemplateVersion).HasDefaultValue(0);
+        builder.HasIndex(x => x.Name).IsUnique().HasFilter("NOT \"is_deleted\"");
 
         builder.Property(x => x.GrantablePermissions)
             .HasColumnType("jsonb")
@@ -45,7 +47,7 @@ public class PermissionConfiguration : IEntityTypeConfiguration<Permission>
     {
         builder.ToTable("permissions");
         builder.Property(x => x.Name).HasMaxLength(60).IsRequired();
-        builder.HasIndex(x => x.Name).IsUnique();
+        builder.HasIndex(x => x.Name).IsUnique().HasFilter("NOT \"is_deleted\"");
     }
 }
 
@@ -76,7 +78,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(x => x.FullName).IsRequired();
         builder.Property(x => x.Username).HasMaxLength(50).IsRequired();
         builder.Property(x => x.StartPage).HasMaxLength(40);
-        builder.HasIndex(x => x.Username).IsUnique();
+        builder.HasIndex(x => x.Username).IsUnique().HasFilter("NOT \"is_deleted\"");
 
         builder.HasOne(x => x.DefaultBranch)
             .WithMany()

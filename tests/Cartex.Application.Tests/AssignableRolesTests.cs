@@ -23,7 +23,7 @@ public class AssignableRolesTests(DatabaseFixture fixture) : DatabaseTest(fixtur
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             businessId = (await db.Businesses.FirstAsync()).Id;
             developerId = (await db.Users.FirstAsync(u => u.Username == "developer")).Id;
-            branch1 = (await db.Branches.FirstAsync(b => b.Name == "Filial 1")).Id;
+            branch1 = (await db.Branches.FirstAsync(b => b.Name == "Asosiy filial")).Id;
             sellerRoleId = (await db.Roles.FirstAsync(r => r.Name == "seller")).Id;
             adminRoleId = (await db.Roles.FirstAsync(r => r.Name == "admin")).Id;
         }

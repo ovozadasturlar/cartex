@@ -14,6 +14,12 @@
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: 12px;
   margin-bottom: 16px;
+
+  /* Telefonda ikkitadan: ustma-ust qo'yilsa ro'yxatga yetguncha to'rt karta bo'yi suriladi. */
+  @media (width <= 767px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
 }
 
 .filters {
@@ -38,6 +44,11 @@
 table {
   width: 100%;
   min-width: 720px;
+
+  /* Telefonda ustunlar kamaytirilgan — jadval ekranga sig'adi. */
+  @media (width <= 767px) {
+    min-width: 0;
+  }
 }
 
 .num {
@@ -46,4 +57,13 @@ table {
 
 .strong {
   font-weight: 600;
+}
+
+.category-path {
+  max-width: 220px;
+  overflow: hidden;
+  direction: rtl;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

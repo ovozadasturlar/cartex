@@ -5,4 +5,5 @@ namespace Cartex.Domain.Entities;
 public class Manufacturer : SoftDeleteEntity
 {
     public string Name { get; set; } = null!;
+    public string? SearchFold { get; set; }
 }

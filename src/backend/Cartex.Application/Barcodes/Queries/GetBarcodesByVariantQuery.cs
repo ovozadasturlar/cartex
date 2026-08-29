@@ -1,12 +1,10 @@
-using Cartex.Persistence;
-using Cartex.Application.Common.Messaging;
+﻿using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Barcodes;
 
 namespace Cartex.Application.Barcodes.Queries;
 
 public record GetBarcodesByVariantQuery(long VariantId) : IRequest<IReadOnlyCollection<BarcodeDto>>;
-
-public record BarcodeDto(long Id, string Code, decimal PackQty);
 
 public sealed class GetBarcodesByVariantQueryHandler(IApplicationDbContext db) : IRequestHandler<GetBarcodesByVariantQuery, IReadOnlyCollection<BarcodeDto>>
 {

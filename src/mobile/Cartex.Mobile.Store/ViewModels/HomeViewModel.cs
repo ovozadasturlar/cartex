@@ -3,62 +3,134 @@ using Cartex.Mobile.Core;
 using Cartex.Mobile.Store.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Refit;
 
 namespace Cartex.Mobile.Store.ViewModels;
 
 public partial class HomeViewModel(
     MobileAuthService auth,
-    MobilePermissions perms,
+    AccessState access,
     WarehouseContext warehouse,
     CartStore cart,
+    SupplyCartStore supplyCart,
     IOrderingApi ordering,
-    ISalesApi sales) : ObservableObject
+    ISalesApi sales) : AccessAwareViewModel(access)
 {
     [ObservableProperty] private string _greeting = "";
     [ObservableProperty] private string _warehouseName = "";
-    [ObservableProperty] private bool _hasAccess = true;
-    [ObservableProperty] private bool _showQueue;
-    [ObservableProperty] private bool _showStats;
-    [ObservableProperty] private bool _hasCart;
+    [ObservableProperty] private string _initials = "";
+    [ObservableProperty] private int _cartCount;
+    [ObservableProperty] private int _supplyCount;
     [ObservableProperty] private string _cartSummary = "";
     [ObservableProperty] private int _openCarts;
-    [ObservableProperty] private int _todayCount;
+    [ObservableProperty] private string _todayCountText = "";
     [ObservableProperty] private string _todayTotal = "0";
+    [ObservableProperty] private string _todayTotalFull = "";
+    [ObservableProperty] private bool _showTodayTotalFull;
+    [ObservableProperty] private string _avgCheck = "0";
+    [ObservableProperty] private List<float> _weekValues = [];
+    [ObservableProperty] private List<string> _weekDays = ["", "", "", "", "", "", ""];
+    [ObservableProperty] private string _weekTotal = "";
+    [ObservableProperty] private bool _hasChart;
     [ObservableProperty] private bool _isRefreshing;
     [ObservableProperty] private string? _error;
 
+    public bool HasAccess => Access.CanViewHome;
+    public bool ShowStats => Access.CanViewSales;
+    public bool CanReceiveStock => Access.CanReceiveStock;
+    public bool ShowQueue => Access.CanQueue;
+    public bool CanSell => Access.CanSell;
+    public bool CanUseCart => Access.CanUseCart;
+    public bool HasCart => Access.CanUseCart && cart.Count > 0;
+
+    private bool _observingAccess;
+
     public async Task AppearAsync()
     {
-        HasAccess = perms.HasAny("sales.pick", "sales.create", "sales.view", "sales.viewAll");
+        await Access.EnsureLoadedAsync();
+        if (!_observingAccess)
+        {
+            ObserveAccess(nameof(HasAccess), nameof(ShowStats), nameof(CanReceiveStock),
+                nameof(ShowQueue), nameof(CanSell), nameof(CanUseCart), nameof(HasCart));
+            _observingAccess = true;
+        }
         if (!HasAccess) return;
-        ShowQueue = perms.HasAny("sales.pick", "sales.create", "sales.view");
-        ShowStats = perms.HasAny("sales.view", "sales.viewAll");
         var name = auth.FullName;
         Greeting = string.Format(Loc.Instance["greeting_fmt"], name.Split(' ')[0] is { Length: > 0 } first ? first : name);
+        Initials = string.Concat(name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(x => char.ToUpper(x[0])));
         WarehouseName = warehouse.WarehouseName is { Length: > 0 } wh ? wh : Loc.Instance["warehouse_none"];
-        HasCart = cart.Count > 0;
+        CartCount = cart.Count;
+        SupplyCount = supplyCart.Count;
         CartSummary = string.Format(Loc.Instance["cart_items_fmt"], cart.Count, cart.Total.ToString("N0"));
+        OnPropertyChanged(nameof(HasCart));
+        if (DateTime.UtcNow - _loadedAt < FreshFor) return;
         await LoadAsync();
     }
+
+    private static readonly TimeSpan FreshFor = TimeSpan.FromSeconds(30);
+    private DateTime _loadedAt;
 
     private async Task LoadAsync()
     {
         Error = null;
         try
         {
-            if (ShowQueue)
-                OpenCarts = (await ordering.GetAllAsync("Open", warehouse.WarehouseId)).Count;
+            var queueTask = ShowQueue
+                ? Task.Run(() => ordering.GetAllAsync("Open", warehouse.WarehouseId, "Queue"))
+                : Task.FromResult(new List<Cartex.Shared.Models.Ordering.CartListDto>());
+            // HIS-06: "tushum" — qaytarilgan qism chiqarilgan sof qiymat, boshqaruv paneli bilan
+            // bir xil ta'rifda. So'rov `sales.view` ostida ketadi: shu karta ko'rinadigan ruxsat
+            // bilan bir xil, ya'ni `reports` moduli o'chirilgan do'konda ham ishlaydi.
+            var dailyTask = ShowStats
+                ? Task.Run(() => sales.GetDailyTotalsAsync(
+                    warehouse.WarehouseId,
+                    DateTime.Today.AddDays(-6).ToUniversalTime(),
+                    DateTime.Today.AddDays(1).ToUniversalTime(),
+                    (int)DateTimeOffset.Now.Offset.TotalMinutes))
+                : Task.FromResult(new List<Cartex.Shared.Models.Sales.DailySalesPointDto>());
+            await Task.WhenAll(queueTask, dailyTask);
+            if (ShowQueue) OpenCarts = queueTask.Result.Count;
             if (ShowStats)
             {
-                var totals = await sales.GetTotalsAsync(fromDate: DateTime.Today, toDate: DateTime.Today.AddDays(1));
-                TodayCount = totals.Count;
-                TodayTotal = totals.TotalAmount.ToString("N0");
+                var daily = dailyTask.Result;
+                var today = daily.FirstOrDefault(x => x.Date.Date == DateTime.Today);
+                var revenue = today?.TotalAmount ?? 0;
+                var count = today?.Count ?? 0;
+                TodayCountText = string.Format(Loc.Instance["sales_count_fmt"], count);
+                TodayTotal = Money.Compact(revenue);
+                TodayTotalFull = Money.Text(revenue);
+                ShowTodayTotalFull = revenue >= 1_000_000;
+                AvgCheck = Money.Compact(count > 0 ? Math.Round(revenue / count) : 0);
+                BuildWeek(daily);
             }
+            _loadedAt = DateTime.UtcNow;
         }
-        catch
+        catch (Exception ex)
         {
-            Error = Loc.Instance["err_no_connection"];
+            Error = ex is ApiException api ? ApiErrors.Describe(api) : Loc.Instance["err_no_connection"];
         }
+    }
+
+    private void BuildWeek(List<Cartex.Shared.Models.Sales.DailySalesPointDto> points)
+    {
+        var names = Loc.Instance["days_short"].Split(',');
+        var byDay = points.ToDictionary(x => x.Date.Date, x => x.TotalAmount);
+        var values = new List<float>(7);
+        var days = new List<string>(7);
+        decimal sum = 0;
+        for (var i = 6; i >= 0; i--)
+        {
+            var date = DateTime.Today.AddDays(-i);
+            var amount = byDay.GetValueOrDefault(date);
+            sum += amount;
+            values.Add((float)amount);
+            days.Add(names.Length == 7 ? names[((int)date.DayOfWeek + 6) % 7] : date.Day.ToString());
+        }
+        if (!values.SequenceEqual(WeekValues))
+            WeekValues = values;
+        WeekDays = days;
+        WeekTotal = string.Format(Loc.Instance["week_total_fmt"], Money.Compact(sum));
+        HasChart = sum > 0;
     }
 
     [RelayCommand]
@@ -69,13 +141,25 @@ public partial class HomeViewModel(
     }
 
     [RelayCommand]
-    private Task NewCartAsync() => Shell.Current.GoToAsync("//main/scan");
+    private void NewCart() => Views.MainPage.Current?.Show(2);
 
     [RelayCommand]
-    private Task OpenCartAsync() => Shell.Current.GoToAsync("cart");
+    private Task OpenCartAsync() => CanUseCart ? Shell.Current.GoToAsync("cart") : Task.CompletedTask;
 
     [RelayCommand]
-    private Task OpenQueueAsync() => Shell.Current.GoToAsync("//main/queue");
+    private void OpenQueue() => Views.MainPage.Current?.Show(1);
+
+    [RelayCommand]
+    private void OpenSales() => Views.MainPage.Current?.Show(1, "sales");
+
+    [RelayCommand]
+    private Task OpenSupplyCartAsync() => CanReceiveStock ? Shell.Current.GoToAsync("receive_cart") : Task.CompletedTask;
+
+    [RelayCommand]
+    private void OpenCustomers() => Views.MainPage.Current?.Show(3);
+
+    [RelayCommand]
+    private void OpenProfile() => Views.MainPage.Current?.Show(4);
 
     [RelayCommand]
     private async Task LogoutAsync()

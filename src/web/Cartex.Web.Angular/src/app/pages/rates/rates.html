@@ -1,6 +1,6 @@
 <div class="page" *transloco="let t">
   <cx-page-header [title]="t('exchange_rates')" [subtitle]="t('currencies_subtitle')">
-    @if (canManageCurrencies) {
+    @if (canCreateCurrency) {
       <button matButton="filled" (click)="openAdd()">
         <mat-icon>add</mat-icon>
         {{ t('add_currency') }}
@@ -35,7 +35,7 @@
                 <span class="cx-chip warn">{{ t('default') }}</span>
               }
             </span>
-            <span class="meta">{{ c.name }}</span>
+            <span class="meta">{{ c.name }} · {{ c.symbol || c.code }}</span>
           </div>
           <div class="rate">
             @if (c.rate != null) {
@@ -61,8 +61,8 @@
               </button>
             </div>
           }
-          @if (canManageCurrencies) {
-            @if (!c.isBase) {
+          @if (canEditCurrency || canDeleteCurrency) {
+            @if (canEditCurrency && !c.isBase) {
               <button
                 matIconButton
                 [matTooltip]="t('make_default')"
@@ -71,12 +71,14 @@
                 <mat-icon>{{ c.isDefault ? 'star' : 'star_outline' }}</mat-icon>
               </button>
             }
-            <mat-slide-toggle
-              [checked]="c.isEnabled"
-              [disabled]="c.isBase"
-              (click)="$event.stopPropagation()"
-              (change)="toggle(c, $event)" />
-            @if (!c.isSystem) {
+            @if (canEditCurrency) {
+              <mat-slide-toggle
+                [checked]="c.isEnabled"
+                [disabled]="c.isBase"
+                (click)="$event.stopPropagation()"
+                (change)="toggle(c, $event)" />
+            }
+            @if (canDeleteCurrency && !c.isSystem) {
               <button matIconButton class="del" [matTooltip]="t('delete')" (click)="remove(c, $event)">
                 <mat-icon>delete_outline</mat-icon>
               </button>

@@ -30,7 +30,7 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
     private long _editRuleId;
     private long _editDiscountId;
 
-    public bool CanManage => _auth.HasPermission("loyalty.manage");
+    public bool CanManage => _auth.HasPermission("loyalty.edit");
 
     [ObservableProperty] private string _sectionKey = "discounts";
     public bool IsDiscountSection => SectionKey == "discounts";
@@ -128,13 +128,16 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private CategoryDto? _discountCategory;
     [ObservableProperty] private ManufacturerDto? _discountManufacturer;
     [ObservableProperty] private CustomerDto? _discountCustomer;
+    private static readonly CustomerDto EmptyDiscountCustomer = new(0, "", null, null, null, null, null, 0, 0, 0, 0);
+    public CustomerDto DiscountCustomerDisplay => DiscountCustomer ?? EmptyDiscountCustomer;
+
+    partial void OnDiscountCustomerChanged(CustomerDto? value) => OnPropertyChanged(nameof(DiscountCustomerDisplay));
     [ObservableProperty] private string _customerSearch = "";
     private CancellationTokenSource? _customerSearchCts;
 
     partial void OnCustomerSearchChanged(string value)
     {
-        _customerSearchCts?.Cancel();
-        var cts = _customerSearchCts = new CancellationTokenSource();
+        var cts = Debounce.Restart(ref _customerSearchCts);
         _ = DebouncedCustomerSearchAsync(cts.Token);
     }
 
@@ -485,7 +488,7 @@ public partial class LoyaltyViewModel : ViewModelBase, ILoadable
     {
         (string Scope, long Id, string Name)? picked = ExceptionScope?.Value switch
         {
-            "Category" when ExceptionCategory is { } c => ("Category", c.Id, c.Name),
+            "Category" when ExceptionCategory is { } c => ("Category", c.Id, c.FullPath ?? c.Name),
             "Manufacturer" when ExceptionManufacturer is { } m => ("Manufacturer", m.Id, m.Name),
             _ when ExceptionProduct is { } p => ("Product", p.Id, p.Name),
             _ => null

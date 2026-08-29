@@ -1,11 +1,10 @@
 using System.Globalization;
-using Cartex.Application.Common.Messaging;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Cartex.Persistence;
-using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
+using Cartex.Application.Common.Measurement;
 
 namespace Cartex.Application.Barcodes.Commands;
 
@@ -13,11 +12,12 @@ public record CreateBarcodeCommand(long VariantId, string Code, decimal PackQty)
 
 public record GenerateBarcodeCommand(long VariantId, decimal PackQty = 1) : ICommand<string>;
 
-public sealed class CreateBarcodeCommandHandler(IApplicationDbContext db) : IRequestHandler<CreateBarcodeCommand, long>
+public sealed class CreateBarcodeCommandHandler(IApplicationDbContext db, IQuantityPolicyService quantityPolicy) : IRequestHandler<CreateBarcodeCommand, long>
 {
     public async Task<long> Handle(CreateBarcodeCommand request, CancellationToken cancellationToken)
     {
         GeneratedPackCodes.EnsureConsistent(request.Code, request.PackQty);
+        await quantityPolicy.ValidateAsync([(request.VariantId, request.PackQty)], cancellationToken);
         if (await db.Barcodes.AnyAsync(b => b.Code == request.Code, cancellationToken))
             throw new BusinessRuleException("Bu barkod allaqachon mavjud.");
 
@@ -35,23 +35,16 @@ public sealed class CreateBarcodeCommandHandler(IApplicationDbContext db) : IReq
     }
 }
 
-public sealed class GenerateBarcodeCommandHandler(IApplicationDbContext db, IConfiguration configuration) : IRequestHandler<GenerateBarcodeCommand, string>
+public sealed class GenerateBarcodeCommandHandler(IApplicationDbContext db, IConfiguration configuration, IQuantityPolicyService quantityPolicy) : IRequestHandler<GenerateBarcodeCommand, string>
 {
     public async Task<string> Handle(GenerateBarcodeCommand request, CancellationToken cancellationToken)
     {
         if (!await db.ProductVariants.AnyAsync(v => v.Id == request.VariantId, cancellationToken))
             throw new NotFoundException("Variant not found.");
 
-        var prefix = configuration["Barcode:Prefix"]?.Trim().TrimEnd('-').ToUpperInvariant();
-        if (string.IsNullOrEmpty(prefix)) prefix = "CTX";
-        if (GeneratedPackCodes.EmbeddedQty($"{prefix}-") is not null)
-            throw new BusinessRuleException("Barcode:Prefix ichida -P<son>- bo'lagi bo'lishi mumkin emas.");
-
         var qty = request.PackQty > 1 ? request.PackQty : 1m;
-        var serial = request.VariantId.ToString("D6");
-        var code = qty > 1
-            ? $"{prefix}-P{qty.ToString("0.###", CultureInfo.InvariantCulture)}-{serial}"
-            : $"{prefix}-{serial}";
+        await quantityPolicy.ValidateAsync([(request.VariantId, qty)], cancellationToken);
+        var code = GeneratedBarcodeCode.Build(configuration, request.VariantId, qty);
 
         var existing = await db.Barcodes.FirstOrDefaultAsync(b => b.Code == code, cancellationToken);
         if (existing is not null)
@@ -67,10 +60,28 @@ public sealed class GenerateBarcodeCommandHandler(IApplicationDbContext db, ICon
     }
 }
 
+public static class GeneratedBarcodeCode
+{
+    public static string Build(IConfiguration configuration, long variantId, decimal packQty = 1)
+    {
+        var prefix = configuration["Barcode:Prefix"]?.Trim().TrimEnd('-').ToUpperInvariant();
+        if (string.IsNullOrEmpty(prefix)) prefix = "CTX";
+        if (GeneratedPackCodes.EmbeddedQty($"{prefix}-") is not null)
+            throw new BusinessRuleException("Barcode:Prefix ichida -P<son>- bo'lagi bo'lishi mumkin emas.");
+
+        var quantity = packQty > 1 ? packQty : 1m;
+        var serial = variantId.ToString("D6");
+        return quantity > 1
+            ? $"{prefix}-P{quantity.ToString("0.###", CultureInfo.InvariantCulture)}-{serial}"
+            : $"{prefix}-{serial}";
+    }
+}
+
 public sealed class CreateBarcodeCommandValidator : AbstractValidator<CreateBarcodeCommand>
 {
     public CreateBarcodeCommandValidator()
     {
         RuleFor(x => x.Code).NotEmpty().MaximumLength(60);
+        RuleFor(x => x.PackQty).GreaterThan(0);
     }
 }

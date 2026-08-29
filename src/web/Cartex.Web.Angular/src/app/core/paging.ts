@@ -15,9 +15,17 @@ export interface Paged<T> {
 export function toPaged<T>(resp: HttpResponse<T[]>): Paged<T> {
   const items = resp.body ?? [];
   const raw = resp.headers.get('X-Paging');
+  // The header is PascalCase because it comes from the server's own metadata writer; naming the
+  // shape here keeps `any` from leaking out of JSON.parse into every list page.
+  interface RawPaging {
+    TotalCount: number;
+    Page: number;
+    PageSize: number;
+    TotalPages: number;
+  }
   const meta: PagingMeta = raw
     ? (() => {
-        const m = JSON.parse(raw);
+        const m = JSON.parse(raw) as RawPaging;
         return { totalCount: m.TotalCount, page: m.Page, pageSize: m.PageSize, totalPages: m.TotalPages };
       })()
     : { totalCount: items.length, page: 1, pageSize: items.length, totalPages: 1 };

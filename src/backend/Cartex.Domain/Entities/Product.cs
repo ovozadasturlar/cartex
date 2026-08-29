@@ -17,12 +17,16 @@ public class Product : SoftDeleteEntity
     public Manufacturer? Manufacturer { get; set; }
 
     public string Name { get; set; } = null!;
+    public string? SearchFold { get; set; }
     public decimal MinStock { get; set; }
     public bool? TracksExpiryOverride { get; set; }
+    public bool? FractionalOverride { get; set; }
+    public bool? AmountEntryEnabled { get; set; }
     public string? Attributes { get; set; }
     public string? IkpuCode { get; set; }
     public decimal? VatRate { get; set; }
     public string? ImageKey { get; set; }
+    public bool IsEnabled { get; set; } = true;
 
     public ICollection<ProductVariant> Variants { get; set; } = [];
     public ICollection<ProductPack> Packs { get; set; } = [];

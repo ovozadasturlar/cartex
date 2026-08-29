@@ -1,10 +1,11 @@
-using Cartex.Application.ProductTypes.Commands;
+﻿using Cartex.Application.ProductTypes.Commands;
 using Cartex.Application.ProductTypes.Queries;
 using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
 using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Cartex.Shared.Models.Products;
 
 namespace Cartex.Api.Controllers;
 
@@ -14,7 +15,7 @@ namespace Cartex.Api.Controllers;
 public class ProductTypesController(ISender sender) : ControllerBase
 {
     [HttpGet]
-    [HasPermission(AppPermissions.Products.View)]
+    [HasPermission(AppPermissions.ProductTypes.View)]
     public async Task<ActionResult<IReadOnlyCollection<ProductTypeDto>>> GetProductTypes()
     {
         var result = await sender.Send(new GetProductTypesQuery());
@@ -22,7 +23,7 @@ public class ProductTypesController(ISender sender) : ControllerBase
     }
 
     [HttpPost]
-    [HasPermission(AppPermissions.Products.Manage)]
+    [HasPermission(AppPermissions.ProductTypes.Create)]
     public async Task<ActionResult<long>> CreateProductType(CreateProductTypeCommand command)
     {
         var id = await sender.Send(command);
@@ -30,7 +31,7 @@ public class ProductTypesController(ISender sender) : ControllerBase
     }
 
     [HttpPut("{id:long}")]
-    [HasPermission(AppPermissions.Products.Manage)]
+    [HasPermission(AppPermissions.ProductTypes.Edit)]
     public async Task<IActionResult> UpdateProductType(long id, UpdateProductTypeCommand command)
     {
         await sender.Send(command with { Id = id });

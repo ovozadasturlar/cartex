@@ -33,7 +33,7 @@ public class CatalogTests(CartexApiFactory factory)
 
         var lookup = await client.GetFromJsonAsync<ProductLookupDto>($"/api/products/by-barcode?code=LOOKUP-SKU-9&warehouseId={warehouseId}");
         Assert.NotNull(lookup);
-        Assert.Equal("Code lookup product", lookup!.ProductName);
+        Assert.Equal("Code lookup product", lookup.ProductName);
     }
 
     private sealed record UnitRow(long Id, string Name, string ShortName);

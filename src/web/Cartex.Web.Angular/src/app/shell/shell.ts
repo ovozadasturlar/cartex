@@ -1,25 +1,20 @@
-import { BreakpointObserver } from '@angular/cdk/layout';
-import { Component, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { Component, ElementRef, HostListener, computed, inject, signal, viewChild } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
-import { map } from 'rxjs';
+import { TranslocoModule } from '@jsverse/transloco';
+import { TranslocoService } from '@jsverse/transloco';
 import { AuthService } from '../core/auth.service';
-import { NAV_SECTIONS, SETTINGS_SECTIONS } from '../core/nav';
+import { FeaturesService } from '../core/features.service';
+import { LayoutService } from '../core/layout.service';
+import { NAV_SECTIONS, NavItem, SETTINGS_SECTIONS, isNavItemOpen, phoneNavItems } from '../core/nav';
+import { APP_LANGUAGES, PreferencesService } from '../core/preferences.service';
+import { SalesPolicyService } from '../core/sales-policy.service';
 import { WarehouseContextService } from '../core/warehouse-context.service';
 import { Logo } from '../shared/logo';
-
-const LANGS: Record<string, string> = {
-  'uz-latn': "O'zbekcha",
-  'uz-cyrl': 'Ўзбекча',
-  ru: 'Русский',
-  en: 'English',
-};
 
 @Component({
   selector: 'app-shell',
@@ -42,28 +37,61 @@ export class Shell {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly transloco = inject(TranslocoService);
+  readonly preferences = inject(PreferencesService);
   readonly wh = inject(WarehouseContextService);
 
-  readonly isWide = toSignal(
-    inject(BreakpointObserver).observe('(min-width: 1280px)').pipe(map((r) => r.matches)),
-    { initialValue: window.innerWidth >= 1280 },
-  );
-  readonly isDark = signal(localStorage.getItem('cartex.theme') === 'dark');
+  private readonly layout = inject(LayoutService);
+  readonly isDesktop = this.layout.isDesktop;
+  readonly isPhone = this.layout.isPhone;
+  readonly isTablet = this.layout.isTablet;
   readonly collapsed = signal(localStorage.getItem('cartex.sidenav') === 'collapsed');
-  readonly user = this.auth.currentUser;
-  readonly navSections = NAV_SECTIONS.map((s) => ({
-    ...s,
-    items: s.items.filter((i) => i.permission === null || this.auth.hasPermission(i.permission)),
-  })).filter((s) => s.items.length > 0);
-  readonly canOpenSettings = SETTINGS_SECTIONS.some((s) =>
-    s.items.some((i) => i.permission === null || this.auth.hasPermission(i.permission)),
+  readonly tabletExpanded = signal(false);
+  readonly compactNav = computed(
+    () => (this.isDesktop() && this.collapsed()) || (this.isTablet() && !this.tabletExpanded()),
   );
-  readonly languages = Object.entries(LANGS).map(([code, name]) => ({ code, name }));
-  readonly canPickWarehouse = this.auth.hasPermission('sales.create') || this.auth.hasPermission('stocks.view');
+  readonly user = this.auth.currentUser;
+  private readonly featuresService = inject(FeaturesService);
+  private readonly policyService = inject(SalesPolicyService);
+  private readonly open = (item: NavItem): boolean =>
+    isNavItemOpen(item, (p) => this.auth.hasPermission(p), (f) => this.featuresService.has(f),
+      (p) => this.policyService.has(p), this.wh.warehouses().length);
+  readonly navSections = computed(() => NAV_SECTIONS.map((s) => ({
+    ...s,
+    items: s.items.filter((i) => this.open(i)),
+  })).filter((s) => s.items.length > 0));
+  /// RUXSAT-04: sozlamalar tugmasi faqat ichida ochiq sahifa bo'lsa ko'rinadi — modul yoki
+  /// siyosat yopiq bo'lsa o'sha sahifa hisobga olinmaydi.
+  readonly canOpenSettings = computed(() => SETTINGS_SECTIONS.some((s) => s.items.some((i) => this.open(i))));
+  readonly languages = APP_LANGUAGES;
+  readonly canPickWarehouse = this.auth.hasPermission('sales.create')
+    || this.auth.hasPermission('sales.checkout')
+    || this.auth.hasPermission('stocks.view');
+  /// Telefonda pastki panelga 4 ta joy bor, shuning uchun sahifalar menyudagi tartibda emas,
+  /// telefonda haqiqatan kerak bo'ladigan tartibda tanlanadi (`PHONE_NAV_ORDER`). Ro'yxat
+  /// foydalanuvchiga moslashadi: hisobot ruxsati yo'q kassir kassa/savdo/mijoz/mahsulotni
+  /// ko'radi, egaga boshqaruv paneli ham tushadi. Qolgani "Ko'proq" menyusida.
+  readonly mobileNav = computed(() =>
+    phoneNavItems(this.navSections().flatMap((section) => section.items)));
+  readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('globalSearch');
+  readonly searchQuery = signal('');
+  readonly searchItems = computed(() => [...NAV_SECTIONS, ...SETTINGS_SECTIONS]
+    .flatMap((section) => section.items)
+    .filter((item) => this.open(item)));
+  readonly searchResults = computed(() => {
+    const query = this.searchQuery().trim().toLocaleLowerCase();
+    return query
+      ? this.searchItems().filter((item) => {
+          this.preferences.language();
+          return this.transloco.translate(item.labelKey).toLocaleLowerCase().includes(query)
+            || item.labelKey.toLocaleLowerCase().includes(query);
+        }).slice(0, 8)
+      : [];
+  });
 
   constructor() {
-    document.body.classList.toggle('dark', this.isDark());
-    if (this.canPickWarehouse) this.wh.load();
+    if (this.canPickWarehouse) void this.wh.load();
+    void this.featuresService.ensureLoaded();
+    void this.policyService.ensureLoaded();
   }
 
   onWarehouse(e: Event): void {
@@ -71,8 +99,12 @@ export class Shell {
   }
 
   toggleSidebar(nav: { toggle(): void }): void {
-    if (!this.isWide()) {
+    if (this.isPhone()) {
       nav.toggle();
+      return;
+    }
+    if (this.isTablet()) {
+      this.tabletExpanded.update((value) => !value);
       return;
     }
     this.collapsed.update((v) => !v);
@@ -80,22 +112,32 @@ export class Shell {
   }
 
   get activeLang(): string {
-    return this.transloco.getActiveLang();
+    return this.preferences.language();
   }
 
   setLang(code: string): void {
-    this.transloco.setActiveLang(code);
-    localStorage.setItem('cartex.lang', code);
+    this.preferences.setLanguage(code);
   }
 
   toggleTheme(): void {
-    this.isDark.update((v) => !v);
-    localStorage.setItem('cartex.theme', this.isDark() ? 'dark' : 'light');
-    document.body.classList.toggle('dark', this.isDark());
+    this.preferences.toggleTheme();
+  }
+
+  openSearchItem(item: NavItem): void {
+    this.searchQuery.set('');
+    void this.router.navigateByUrl(item.route);
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  onShortcut(event: KeyboardEvent): void {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLocaleLowerCase() === 'k') {
+      event.preventDefault();
+      this.searchInput()?.nativeElement.focus();
+    }
   }
 
   logout(): void {
     this.auth.logout();
-    this.router.navigate(['/login']);
+    void this.router.navigate(['/login']);
   }
 }

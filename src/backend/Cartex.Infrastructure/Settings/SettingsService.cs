@@ -13,12 +13,17 @@ public sealed class SettingsService(IApplicationDbContext db, IMemoryCache cache
 
     public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
     {
-        var json = await cache.GetOrCreateAsync(CacheKey(key), async entry =>
-        {
-            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60);
-            var setting = await db.BusinessSettings.AsNoTracking().FirstOrDefaultAsync(s => s.Key == key, cancellationToken);
-            return setting?.Value;
-        });
+        if (cache.TryGetValue(CacheKey(key), out string? json))
+            return json is null ? default : JsonSerializer.Deserialize<T>(json);
+
+        json = await db.BusinessSettings.AsNoTracking()
+            .Where(s => s.Key == key)
+            .Select(s => s.Value)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        // Yo'q qiymat keshlanmaydi: aks holda endigina yozilgan sozlama 60 soniya davomida
+        // "yo'q" bo'lib ko'rinib, chaqiruvchi uni ikkinchi marta yozib yuborardi.
+        if (json is not null) cache.Set(CacheKey(key), json, TimeSpan.FromSeconds(60));
         return json is null ? default : JsonSerializer.Deserialize<T>(json);
     }
 

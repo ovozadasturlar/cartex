@@ -1,6 +1,11 @@
 <div class="page" *transloco="let t">
   <cx-page-header [title]="t('product_types')" [subtitle]="t('product_types_subtitle')">
-    @if (canManage) {
+    @if (canExport) {
+      <button matButton="outlined" (click)="exportCsv()">
+        <mat-icon>download</mat-icon>{{ t('export') }}
+      </button>
+    }
+    @if (canCreate) {
       <button mat-flat-button (click)="openCreate()"><mat-icon>add</mat-icon>{{ t('add') }}</button>
     }
   </cx-page-header>
@@ -34,7 +39,7 @@
           </ng-container>
 
           <tr mat-header-row *matHeaderRowDef="columns"></tr>
-          <tr mat-row *matRowDef="let row; columns: columns" [class.clickable]="canManage" (click)="openEdit(row)"></tr>
+          <tr mat-row *matRowDef="let row; columns: columns" [class.clickable]="canEdit" (click)="openEdit(row)"></tr>
         </table>
       </div>
     } @else if (!loading()) {

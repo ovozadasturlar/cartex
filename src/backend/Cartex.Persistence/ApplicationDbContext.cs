@@ -1,8 +1,10 @@
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
 using System.Reflection;
 using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Npgsql;
 
 namespace Cartex.Persistence;
 
@@ -10,12 +12,17 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
 {
     private readonly bool _branchFilterDisabled;
     private readonly long[] _accessibleBranchIds;
+    private readonly ILogger<ApplicationDbContext> _logger;
 
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, ICurrentUser currentUser)
+    public ApplicationDbContext(
+        DbContextOptions<ApplicationDbContext> options,
+        ICurrentUser currentUser,
+        ILogger<ApplicationDbContext> logger)
         : base(options)
     {
         _branchFilterDisabled = !currentUser.IsAuthenticated || currentUser.CanAccessAllBranches;
         _accessibleBranchIds = [.. currentUser.BranchIds];
+        _logger = logger;
     }
 
     public DbSet<Business> Businesses => Set<Business>();
@@ -34,8 +41,10 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<Barcode> Barcodes => Set<Barcode>();
     public DbSet<ProductPack> ProductPacks => Set<ProductPack>();
     public DbSet<Warehouse> Warehouses => Set<Warehouse>();
+    public DbSet<BranchCatalogEntry> BranchCatalogEntries => Set<BranchCatalogEntry>();
     public DbSet<Stock> Stocks => Set<Stock>();
     public DbSet<ProductPrice> ProductPrices => Set<ProductPrice>();
+    public DbSet<ProductPriceHistory> ProductPriceHistory => Set<ProductPriceHistory>();
     public DbSet<StockTransfer> StockTransfers => Set<StockTransfer>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Supplier> Suppliers => Set<Supplier>();
@@ -53,6 +62,7 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<NotificationOutbox> NotificationOutbox => Set<NotificationOutbox>();
     public DbSet<Cart> Carts => Set<Cart>();
     public DbSet<CartItem> CartItems => Set<CartItem>();
+    public DbSet<CartPayment> CartPayments => Set<CartPayment>();
     public DbSet<Feature> Features => Set<Feature>();
     public DbSet<LicenseState> LicenseStates => Set<LicenseState>();
     public DbSet<BusinessSetting> BusinessSettings => Set<BusinessSetting>();
@@ -67,17 +77,81 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<RefreshSession> RefreshSessions => Set<RefreshSession>();
     public DbSet<OtpChallenge> OtpChallenges => Set<OtpChallenge>();
     public DbSet<CustomerSession> CustomerSessions => Set<CustomerSession>();
-    public DbSet<SmsMessage> SmsMessages => Set<SmsMessage>();
+    public DbSet<NotificationDelivery> NotificationDeliveries => Set<NotificationDelivery>();
+    public DbSet<NotificationDeliveryAttempt> NotificationDeliveryAttempts => Set<NotificationDeliveryAttempt>();
     public DbSet<Prepack> Prepacks => Set<Prepack>();
     public DbSet<HardwareKey> HardwareKeys => Set<HardwareKey>();
+    public DbSet<PrintNode> PrintNodes => Set<PrintNode>();
+    public DbSet<PrinterEndpoint> PrinterEndpoints => Set<PrinterEndpoint>();
+    public DbSet<PrintRoutingPolicy> PrintRoutingPolicies => Set<PrintRoutingPolicy>();
+    public DbSet<PrintRouteTarget> PrintRouteTargets => Set<PrintRouteTarget>();
+    public DbSet<PrintRequesterDevice> PrintRequesterDevices => Set<PrintRequesterDevice>();
+    public DbSet<PrintJob> PrintJobs => Set<PrintJob>();
+    public DbSet<PrintAttempt> PrintAttempts => Set<PrintAttempt>();
+    public DbSet<SmsGatewayDevice> SmsGatewayDevices => Set<SmsGatewayDevice>();
+    public DbSet<SmsGatewayJob> SmsGatewayJobs => Set<SmsGatewayJob>();
+    public DbSet<CustomerSmsRoute> CustomerSmsRoutes => Set<CustomerSmsRoute>();
+    public DbSet<CustomerPaymentDocument> CustomerPaymentDocuments => Set<CustomerPaymentDocument>();
+    public DbSet<CustomerPaymentTender> CustomerPaymentTenders => Set<CustomerPaymentTender>();
+    public DbSet<CustomerPaymentAllocation> CustomerPaymentAllocations => Set<CustomerPaymentAllocation>();
+    public DbSet<CustomerRefundDocument> CustomerRefundDocuments => Set<CustomerRefundDocument>();
+    public DbSet<CustomerRefundTender> CustomerRefundTenders => Set<CustomerRefundTender>();
+    public DbSet<CustomerReturnDocument> CustomerReturnDocuments => Set<CustomerReturnDocument>();
+    public DbSet<CustomerReturnLine> CustomerReturnLines => Set<CustomerReturnLine>();
+    public DbSet<CustomerReturnSettlement> CustomerReturnSettlements => Set<CustomerReturnSettlement>();
+    public DbSet<InventoryMovement> InventoryMovements => Set<InventoryMovement>();
+    public DbSet<StockWriteOffDocument> StockWriteOffDocuments => Set<StockWriteOffDocument>();
+    public DbSet<StockWriteOffLine> StockWriteOffLines => Set<StockWriteOffLine>();
+    public DbSet<Party> Parties => Set<Party>();
+    public DbSet<PartnerProfile> PartnerProfiles => Set<PartnerProfile>();
+    public DbSet<ParticipantRoleDefinition> ParticipantRoleDefinitions => Set<ParticipantRoleDefinition>();
+    public DbSet<SaleParticipant> SaleParticipants => Set<SaleParticipant>();
+    public DbSet<CartParticipant> CartParticipants => Set<CartParticipant>();
+    public DbSet<PartnerProgram> PartnerPrograms => Set<PartnerProgram>();
+    public DbSet<PartnerRewardRule> PartnerRewardRules => Set<PartnerRewardRule>();
+    public DbSet<PartnerRewardEntry> PartnerRewardEntries => Set<PartnerRewardEntry>();
+    public DbSet<PartnerRedemptionDocument> PartnerRedemptionDocuments => Set<PartnerRedemptionDocument>();
+    public DbSet<OfflineAuthorityLease> OfflineAuthorityLeases => Set<OfflineAuthorityLease>();
+    public DbSet<OfflineSyncEvent> OfflineSyncEvents => Set<OfflineSyncEvent>();
 
-    private readonly List<Action> _afterCommit = [];
+    private readonly List<Func<Task>> _afterCommit = [];
 
     public void RunAfterCommit(Action action)
     {
         if (Database.CurrentTransaction is null) action();
-        else _afterCommit.Add(action);
+        else _afterCommit.Add(() => { action(); return Task.CompletedTask; });
     }
+
+    public Task RunAfterCommitAsync(Func<Task> action)
+    {
+        if (Database.CurrentTransaction is null) return action();
+        _afterCommit.Add(action);
+        return Task.CompletedTask;
+    }
+
+    public Task ReloadAsync(object entity, CancellationToken cancellationToken = default)
+    {
+        var entry = Entry(entity);
+        if (entry.State is EntityState.Modified or EntityState.Added)
+            return Task.CompletedTask;
+        return entry.ReloadAsync(cancellationToken);
+    }
+
+    public async Task<List<TEntity>> LockAsync<TEntity>(FormattableString sql, CancellationToken cancellationToken = default)
+        where TEntity : BaseEntity
+    {
+        var set = Set<TEntity>();
+        var tracked = set.Local.Select(x => x.Id).ToHashSet();
+        var rows = await set.FromSqlInterpolated(sql).ToListAsync(cancellationToken);
+        foreach (var row in rows)
+            if (tracked.Contains(row.Id))
+                await ReloadAsync(row, cancellationToken);
+        return rows;
+    }
+
+    public long TransactionGeneration { get; private set; }
+
+    private const int MaxTransactionAttempts = 3;
 
     public async Task<T> ExecuteInTransactionAsync<T>(Func<Task<T>> action, CancellationToken cancellationToken = default)
     {
@@ -87,19 +161,55 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         var strategy = Database.CreateExecutionStrategy();
         return await strategy.ExecuteAsync(async () =>
         {
-            _afterCommit.Clear();
-            await using var transaction = await Database.BeginTransactionAsync(cancellationToken);
-            var result = await action();
-            await transaction.CommitAsync(cancellationToken);
-            foreach (var deferred in _afterCommit) deferred();
-            _afterCommit.Clear();
-            return result;
+            for (var attempt = 1; ; attempt++)
+            {
+                _afterCommit.Clear();
+                TransactionGeneration++;
+                try
+                {
+                    await using var transaction = await Database.BeginTransactionAsync(cancellationToken);
+                    var result = await action();
+                    await transaction.CommitAsync(cancellationToken);
+                    await DrainAfterCommitAsync();
+                    return result;
+                }
+                catch (Exception exception) when (attempt < MaxTransactionAttempts && IsLockConflict(exception))
+                {
+                    ChangeTracker.Clear();
+                    await Task.Delay(Random.Shared.Next(20, 80) * attempt, cancellationToken);
+                }
+            }
         });
+    }
+
+    private async Task DrainAfterCommitAsync()
+    {
+        foreach (var deferred in _afterCommit)
+        {
+            try
+            {
+                await deferred();
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(exception, "After-commit action failed.");
+            }
+        }
+        _afterCommit.Clear();
+    }
+
+    private static bool IsLockConflict(Exception exception)
+    {
+        for (var current = exception; current is not null; current = current.InnerException)
+            if (current is PostgresException { SqlState: PostgresErrorCodes.DeadlockDetected or PostgresErrorCodes.SerializationFailure })
+                return true;
+        return false;
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasPostgresExtension("pg_trgm");
+        modelBuilder.HasSequence<long>("document_number_seq");
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
 
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
@@ -111,6 +221,10 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
 
         base.OnModelCreating(modelBuilder);
     }
+
+    public Task<long> NextDocumentSequenceAsync(CancellationToken cancellationToken = default) =>
+        Database.SqlQueryRaw<long>("SELECT nextval('document_number_seq') AS \"Value\"")
+            .SingleAsync(cancellationToken);
 
     private static readonly MethodInfo ConfigureFilterMethod =
         typeof(ApplicationDbContext).GetMethod(nameof(ConfigureGlobalFilter), BindingFlags.Instance | BindingFlags.NonPublic)!;

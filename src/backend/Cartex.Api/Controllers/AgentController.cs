@@ -1,9 +1,10 @@
-using Cartex.Application.Agents.Queries;
+﻿using Cartex.Application.Agents.Queries;
 using Cartex.Application.Common.Messaging;
 using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Cartex.Shared.Models.Agents;
 
 namespace Cartex.Api.Controllers;
 

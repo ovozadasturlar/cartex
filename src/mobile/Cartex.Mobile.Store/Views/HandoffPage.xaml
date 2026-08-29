@@ -4,62 +4,162 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:vm="clr-namespace:Cartex.Mobile.Store.ViewModels"
+    xmlns:models="clr-namespace:Cartex.Shared.Models.Ordering;assembly=Cartex.Shared"
     xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
     x:DataType="vm:HandoffViewModel"
-    Title="{svc:T handoff_title}">
-    <ScrollView>
-        <VerticalStackLayout Padding="24,20" Spacing="16">
-            <Border BackgroundColor="White" StrokeThickness="0" StrokeShape="RoundRectangle 24" Padding="18"
-                    HorizontalOptions="Center">
-                <Image Source="{Binding QrSource}" WidthRequest="240" HeightRequest="240" />
-            </Border>
-            <Entry Text="{Binding Code}" IsReadOnly="True" FontSize="13" HorizontalTextAlignment="Center"
-                   CharacterSpacing="1.5"
-                   TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
-            <Border StrokeThickness="0" StrokeShape="RoundRectangle 999" Padding="16,6" HorizontalOptions="Center"
-                    BackgroundColor="{AppThemeBinding Light={StaticResource InfoBg}, Dark={StaticResource InfoBgDark}}">
-                <Border.Triggers>
-                    <DataTrigger TargetType="Border" Binding="{Binding Status}" Value="Confirmed">
-                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource WarnBg}, Dark={StaticResource WarnBgDark}}" />
-                    </DataTrigger>
-                    <DataTrigger TargetType="Border" Binding="{Binding Status}" Value="CheckedOut">
-                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}" />
-                    </DataTrigger>
-                    <DataTrigger TargetType="Border" Binding="{Binding Status}" Value="Cancelled">
-                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource DangerBg}, Dark={StaticResource DangerBgDark}}" />
-                    </DataTrigger>
-                </Border.Triggers>
-                <Label Text="{Binding StatusText}" FontSize="13" FontAttributes="Bold"
-                       TextColor="{AppThemeBinding Light={StaticResource Info}, Dark={StaticResource InfoDark}}">
-                    <Label.Triggers>
-                        <DataTrigger TargetType="Label" Binding="{Binding Status}" Value="Confirmed">
-                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Warn}, Dark={StaticResource WarnDark}}" />
-                        </DataTrigger>
-                        <DataTrigger TargetType="Label" Binding="{Binding Status}" Value="CheckedOut">
-                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
-                        </DataTrigger>
-                        <DataTrigger TargetType="Label" Binding="{Binding Status}" Value="Cancelled">
-                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
-                        </DataTrigger>
-                    </Label.Triggers>
-                </Label>
-            </Border>
-            <VerticalStackLayout Spacing="2" HorizontalOptions="Center"
-                                 IsVisible="{Binding TotalText, Converter={StaticResource NotEmpty}}">
-                <Label Text="{svc:T total}" Style="{StaticResource MutedLabel}" HorizontalOptions="Center" />
-                <Label Text="{Binding TotalText}" Style="{StaticResource StatValue}" FontSize="26" HorizontalOptions="Center" />
+    Title="{svc:T cart_details}">
+
+    <Grid RowDefinitions="*,Auto">
+        <RefreshView IsRefreshing="{Binding IsLoading, Mode=OneWay}" Command="{Binding RefreshCommand}">
+            <ScrollView>
+                <VerticalStackLayout Padding="16" Spacing="12">
+                    <Border Style="{StaticResource Card}" Padding="16">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="{Binding Code}" FontSize="13" CharacterSpacing="1.2"
+                                       TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+                                <Label Text="{Binding CustomerName}" FontSize="18" FontAttributes="Bold"
+                                       IsVisible="{Binding HasCustomer}"
+                                       TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                <Label Text="{svc:T no_customer}" FontSize="15" IsVisible="{Binding HasCustomer, Converter={StaticResource Invert}}"
+                                       TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+                            </VerticalStackLayout>
+                            <Border Grid.Column="1" StrokeThickness="0" StrokeShape="RoundRectangle 999" Padding="12,6"
+                                    VerticalOptions="Start"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource InfoBg}, Dark={StaticResource InfoBgDark}}">
+                                <Border.Triggers>
+                                    <DataTrigger TargetType="Border" Binding="{Binding IsConfirmed}" Value="True">
+                                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource WarnBg}, Dark={StaticResource WarnBgDark}}" />
+                                    </DataTrigger>
+                                    <DataTrigger TargetType="Border" Binding="{Binding IsSold}" Value="True">
+                                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}" />
+                                    </DataTrigger>
+                                    <DataTrigger TargetType="Border" Binding="{Binding IsCancelled}" Value="True">
+                                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource DangerBg}, Dark={StaticResource DangerBgDark}}" />
+                                    </DataTrigger>
+                                </Border.Triggers>
+                                <Label Text="{Binding StatusText}" FontSize="12" FontAttributes="Bold"
+                                       TextColor="{AppThemeBinding Light={StaticResource Info}, Dark={StaticResource InfoDark}}" />
+                            </Border>
+                        </Grid>
+                    </Border>
+
+                    <Border BackgroundColor="White" StrokeThickness="0" StrokeShape="RoundRectangle 24" Padding="16"
+                            HorizontalOptions="Center" IsVisible="{Binding CanShowQr}">
+                        <VerticalStackLayout Spacing="8">
+                            <Image Source="{Binding QrSource}" WidthRequest="220" HeightRequest="220" />
+                            <Label Text="{svc:T handoff_hint}" FontSize="12" TextColor="#667085"
+                                   HorizontalTextAlignment="Center" MaximumWidthRequest="240" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}" Padding="14">
+                        <VerticalStackLayout Spacing="10">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="{svc:T products}" FontSize="15" FontAttributes="Bold"
+                                       TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                <Label Grid.Column="1" Text="{Binding TotalText}" FontSize="18" FontAttributes="Bold"
+                                       TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                            </Grid>
+                            <BoxView HeightRequest="1" BackgroundColor="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}" />
+                            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Items}" Spacing="10">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:HandoffItemRow">
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                            <VerticalStackLayout Spacing="1">
+                                                <Label Text="{Binding Name}" FontSize="14" LineBreakMode="TailTruncation"
+                                                       TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                                <Label Text="{Binding QuantityPrice}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                                            </VerticalStackLayout>
+                                            <Label Grid.Column="1" Text="{Binding Total}" FontSize="14" FontAttributes="Bold"
+                                                   VerticalOptions="Center"
+                                                   TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}" Padding="14" IsVisible="{Binding HasParticipants}">
+                        <VerticalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding Participants}">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="models:CartParticipantDto">
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                        <Label Text="{Binding RoleLabel}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                                        <Label Grid.Column="1" Text="{Binding PartyName}" FontSize="14" FontAttributes="Bold"
+                                               TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}" Padding="14" IsVisible="{Binding HasClaimant}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                            <Label Text="{StaticResource IcAccount}" Style="{StaticResource Icon}" />
+                            <VerticalStackLayout Grid.Column="1" Spacing="1">
+                                <Label Text="{svc:T cashier}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                                <Label Text="{Binding ClaimedBy}" FontSize="14" FontAttributes="Bold"
+                                       TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}" Padding="14" IsVisible="{Binding HasNote}">
+                        <VerticalStackLayout Spacing="3">
+                            <Label Text="{svc:T note}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                            <Label Text="{Binding Note}" FontSize="14"
+                                   TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Padding="14" StrokeThickness="0" StrokeShape="RoundRectangle 14"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource DangerBg}, Dark={StaticResource DangerBgDark}}"
+                            IsVisible="{Binding HasCancellationReason}">
+                        <VerticalStackLayout Spacing="3">
+                            <Label Text="{svc:T cancellation_reason}" FontSize="12"
+                                   TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+                            <Label Text="{Binding CancellationReason}" FontSize="14"
+                                   TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <VerticalStackLayout Spacing="10" Padding="0,24" IsVisible="{Binding HasError}">
+                        <Label Text="{Binding Error}" Style="{StaticResource TxDanger}" HorizontalTextAlignment="Center" />
+                        <Button Text="{svc:T retry}" Style="{StaticResource BtnOutline}" Command="{Binding RefreshCommand}" />
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </ScrollView>
+        </RefreshView>
+
+        <Border Grid.Row="1" StrokeThickness="1" Padding="16,12"
+                IsVisible="{Binding HasLoaded}"
+                BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}"
+                Stroke="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}">
+            <VerticalStackLayout Spacing="8">
+                <Button Text="{svc:T edit_cart}" Style="{StaticResource BtnOutline}"
+                        IsVisible="{Binding CanEdit}" Command="{Binding EditCommand}" />
+                <Button Text="{svc:T claim_checkout}" Style="{StaticResource BtnPrimary}"
+                        IsVisible="{Binding CanClaim}" Command="{Binding ClaimCommand}"
+                        IsEnabled="{Binding IsBusy, Converter={StaticResource Invert}}" />
+                <Button Text="{svc:T checkout_complete}" Style="{StaticResource BtnPrimary}"
+                        IsVisible="{Binding CanCheckout}" Command="{Binding CheckoutCommand}"
+                        IsEnabled="{Binding IsBusy, Converter={StaticResource Invert}}" />
+                <Button Text="{svc:T open_sale}" Style="{StaticResource BtnPrimary}"
+                        IsVisible="{Binding CanOpenSale}" Command="{Binding OpenSaleCommand}" />
+                <Button Text="{svc:T requeue}" Style="{StaticResource BtnPrimary}"
+                        IsVisible="{Binding CanRequeue}" Command="{Binding RequeueCommand}"
+                        IsEnabled="{Binding IsBusy, Converter={StaticResource Invert}}" />
+                <Button Text="{svc:T cancel_cart}" Style="{StaticResource BtnOutline}"
+                        IsVisible="{Binding CanCancel}" Command="{Binding CancelCartCommand}"
+                        IsEnabled="{Binding IsBusy, Converter={StaticResource Invert}}"
+                        TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
+                        BorderColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
             </VerticalStackLayout>
-            <Label Text="{svc:T handoff_hint}" Style="{StaticResource MutedLabel}" HorizontalTextAlignment="Center"
-                   IsVisible="{Binding IsOpen}" />
-            <VerticalStackLayout Spacing="6" IsVisible="{Binding IsSold}">
-                <Label Text="{StaticResource IcCheck}" Style="{StaticResource Icon}" FontSize="72" />
-                <Label Text="{svc:T handoff_sold}" FontSize="17" FontAttributes="Bold" HorizontalOptions="Center"
-                       TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
-            </VerticalStackLayout>
-            <Button Text="{svc:T cancel_cart}" Style="{StaticResource BtnOutline}" IsVisible="{Binding IsOpen}"
-                    TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
-                    BorderColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
-                    Command="{Binding CancelCartCommand}" />
-        </VerticalStackLayout>
-    </ScrollView>
+        </Border>
+
+        <ActivityIndicator Grid.RowSpan="2" IsRunning="{Binding IsLoading}" IsVisible="{Binding IsLoading}"
+                           VerticalOptions="Center" HorizontalOptions="Center" />
+    </Grid>
 </ContentPage>

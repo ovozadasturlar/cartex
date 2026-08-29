@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
@@ -37,12 +37,15 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
 
     [ObservableProperty] private string _searchText = "";
     [ObservableProperty] private SupplierDto? _selectedSupplier;
-    [ObservableProperty] private SupplierTotalsDto? _totals;
+    [ObservableProperty] private SupplierTotalsDto _totals = new(0, 0, 0);
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private bool _isLedgerLoading;
     [ObservableProperty] private bool _isSuppliesLoading;
     [ObservableProperty] private bool _isSuppliesTab;
 
+    /// Mijozlar sahifasidagi kabi: birinchi ekran ro'yxat, tanlangach o'sha yetkazib
+    /// beruvchining profili to'liq sahifa bo'lib ochiladi.
+    [ObservableProperty] private bool _isProfileOpen;
     [ObservableProperty] private bool _isEditOpen;
     [ObservableProperty] private bool _isNew;
     [ObservableProperty] private string _editName = "";
@@ -64,8 +67,28 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
     partial void OnIsRepayOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
 
     public bool IsEmpty => Suppliers.Count == 0;
+
+    [RelayCommand]
+    private void OpenProfile(SupplierDto supplier)
+    {
+        if (supplier is null) return;
+        SelectedSupplier = supplier;
+        IsProfileOpen = true;
+    }
+
+    [RelayCommand]
+    private void CloseProfile()
+    {
+        IsProfileOpen = false;
+        SelectedSupplier = null;
+    }
+
     public bool HasSelection => SelectedSupplier is not null;
-    public bool CanManage => _auth.HasPermission("suppliers.manage");
+    private static readonly SupplierDto EmptySupplier = new(0, "", null, 0);
+    public SupplierDto SelectedSupplierDisplay => SelectedSupplier ?? EmptySupplier;
+    public bool CanCreate => _auth.HasPermission("suppliers.create");
+    public bool CanEdit => _auth.HasPermission("suppliers.edit");
+    public bool CanPay => _auth.HasPermission("suppliers.pay");
     public bool CanExport => _auth.HasPermission("reports.export");
     public bool CanViewSupplies => _auth.HasPermission("supplies.view");
     public bool SelectedIsAdvance => SelectedSupplier is { Payable: < 0 };
@@ -100,15 +123,14 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
 
     private void ResetState()
     {
-        _searchCts?.Cancel();
+        Debounce.Cancel(ref _searchCts);
         SelectedSupplier = null;
         Suppliers.Clear();
-        Totals = null;
+        Totals = new SupplierTotalsDto(0, 0, 0);
         IsEditOpen = false;
         IsRepayOpen = false;
         IsSuppliesTab = false;
-        _searchText = "";
-        OnPropertyChanged(nameof(SearchText));
+        SearchText = "";
         OnPropertyChanged(nameof(IsEmpty));
     }
 
@@ -118,7 +140,7 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
         {
             var business = await _cache.GetAsync(CacheKeys.Business, _businessApi.GetAsync);
             _baseCurrency = business.Currency;
-            IsMulticurrency = business.Multicurrency;
+            IsMulticurrency = business.PricingMulticurrency;
             PayCurrencies.Clear();
             PayCurrencies.Add(_baseCurrency);
             if (IsMulticurrency)
@@ -130,7 +152,9 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
 
     private void RaisePermissions()
     {
-        OnPropertyChanged(nameof(CanManage));
+        OnPropertyChanged(nameof(CanCreate));
+        OnPropertyChanged(nameof(CanEdit));
+        OnPropertyChanged(nameof(CanPay));
         OnPropertyChanged(nameof(CanExport));
         OnPropertyChanged(nameof(CanViewSupplies));
     }
@@ -140,7 +164,13 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
     {
         try
         {
-            var all = await _api.GetAllAsync();
+            var search = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
+            var response = await _api.QueryAsync(QueryRequest.Create()
+                .Page(0, 0)
+                .Sort(Paging.SortBy, Paging.Descending)
+                .Search(search)
+                .Build());
+            var all = response.Content ?? [];
             await _export.ExportAsync(L["suppliers"], all,
             [
                 new(L["name"], s => s.Name),
@@ -178,8 +208,7 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
 
     partial void OnSearchTextChanged(string value)
     {
-        _searchCts?.Cancel();
-        var cts = _searchCts = new CancellationTokenSource();
+        var cts = Debounce.Restart(ref _searchCts);
         _ = DebouncedSearchAsync(cts.Token);
     }
 
@@ -195,14 +224,13 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
 
     private CancellationToken NewLedgerToken()
     {
-        _ledgerCts?.Cancel();
-        _ledgerCts?.Dispose();
-        return (_ledgerCts = new CancellationTokenSource()).Token;
+        return Debounce.Restart(ref _ledgerCts).Token;
     }
 
     partial void OnSelectedSupplierChanged(SupplierDto? value)
     {
         OnPropertyChanged(nameof(HasSelection));
+        OnPropertyChanged(nameof(SelectedSupplierDisplay));
         OnPropertyChanged(nameof(SelectedInitials));
         OnPropertyChanged(nameof(SelectedIsAdvance));
         OnPropertyChanged(nameof(SelectedPayableAmount));
@@ -211,7 +239,7 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
         _detailSupplierId = value?.Id ?? 0;
         LedgerPaging.Page = 1;
         SuppliesPaging.Page = 1;
-        if (value is null) { _ledgerCts?.Cancel(); return; }
+        if (value is null) { Debounce.Cancel(ref _ledgerCts); return; }
         _ = DebouncedLedgerAsync(value.Id, NewLedgerToken());
         if (IsSuppliesTab) _ = LoadSuppliesAsync(value.Id);
     }
@@ -270,6 +298,7 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void OpenCreate()
     {
+        if (!CanCreate) return;
         IsNew = true;
         _editId = 0;
         EditName = "";
@@ -280,6 +309,7 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void OpenEdit(SupplierDto supplier)
     {
+        if (!CanEdit) return;
         IsNew = false;
         _editId = supplier.Id;
         EditName = supplier.Name;
@@ -293,6 +323,7 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void OpenRepay()
     {
+        if (!CanPay) return;
         if (SelectedSupplier is null) return;
         RepayAmount = 0;
         RepayModes.Clear();
@@ -314,6 +345,7 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task RepayAsync()
     {
+        if (!CanPay) return;
         if (SelectedSupplier is null || RepayAmount <= 0) { _toast.Error(L["error"]); return; }
         var id = SelectedSupplier.Id;
         try
@@ -335,6 +367,7 @@ public partial class SuppliersViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task SaveAsync()
     {
+        if (IsNew ? !CanCreate : !CanEdit) return;
         if (string.IsNullOrWhiteSpace(EditName)) { _toast.Error(L["error"]); return; }
         var phone = string.IsNullOrWhiteSpace(EditPhone) ? null : EditPhone.Trim();
         try

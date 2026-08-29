@@ -1,8 +1,10 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Cartex.Auth.Services;
+using Cartex.Domain.Enums;
 using Cartex.Domain.Entities;
 using Cartex.Persistence;
+using Cartex.Persistence.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -36,6 +38,8 @@ public class StoreApiTests(CartexApiFactory factory)
         await db.SaveChangesAsync();
 
         db.ProductPrices.Add(new ProductPrice { VariantId = variant.Id, WarehouseId = null, SellingPrice = 12000m, Currency = baseCode });
+        scope.ServiceProvider.GetRequiredService<InventoryReasonState>().Declare(
+            new(InventoryMovementKind.Adjustment, "TestSetup", null, InventoryLocation.External()));
         db.Stocks.Add(new Stock { BranchId = warehouse.BranchId, VariantId = variant.Id, WarehouseId = warehouse.Id, Quantity = 50m, PurchasePrice = 9000m });
         await db.SaveChangesAsync();
 
@@ -55,6 +59,7 @@ public class StoreApiTests(CartexApiFactory factory)
     {
         var dev = await AuthHelper.LoginAsync(factory, "developer", "developer123");
         (await dev.PutAsJsonAsync("/api/features/ordering", new { isEnabled = true })).EnsureSuccessStatusCode();
+        (await dev.PutAsJsonAsync("/api/features/modules/ordering", new { isEnabled = true })).EnsureSuccessStatusCode();
 
         var admin = await AuthHelper.LoginAsync(factory, "admin", "admin123");
         var created = await admin.PostAsJsonAsync("/api/customers", new { fullName = "Store " + phone, phone, discountPct = 0 });
@@ -90,7 +95,7 @@ public class StoreApiTests(CartexApiFactory factory)
         var catalog = await client.GetFromJsonAsync<List<CatalogItem>>($"/api/store/catalog?warehouseId={warehouseId}");
         var item = catalog!.FirstOrDefault(c => c.VariantId == variantId);
         Assert.NotNull(item);
-        Assert.Equal(12000m, item!.Price);
+        Assert.Equal(12000m, item.Price);
         Assert.True(item.Available);
 
         var body = new { warehouseId, items = new[] { new { variantId, quantity = 2m } } };

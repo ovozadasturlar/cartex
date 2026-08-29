@@ -1,14 +1,11 @@
-using Cartex.Persistence;
-using Cartex.Application.Common.Messaging;
+﻿using Cartex.Persistence;
+using Cartex.Application.Common.Catalog;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Reports;
 
 namespace Cartex.Application.Reports.Queries;
 
 public record GetInventoryValuationReportQuery(long? WarehouseId) : IRequest<InventoryValuationReportDto>;
-
-public record InventoryValuationGroupDto(string? Name, decimal Quantity, decimal Cost, decimal Retail);
-
-public record InventoryValuationReportDto(decimal TotalCost, decimal TotalRetail, List<InventoryValuationGroupDto> ByWarehouse, List<InventoryValuationGroupDto> ByCategory);
 
 public sealed class GetInventoryValuationReportQueryHandler(IApplicationDbContext db) : IRequestHandler<GetInventoryValuationReportQuery, InventoryValuationReportDto>
 {
@@ -22,7 +19,7 @@ public sealed class GetInventoryValuationReportQueryHandler(IApplicationDbContex
             .Select(s => new
             {
                 WarehouseName = s.Warehouse.Name,
-                CategoryName = s.Variant.Product.Category != null ? s.Variant.Product.Category.Name : null,
+                s.Variant.Product.CategoryId,
                 s.Quantity,
                 Cost = s.Quantity * s.PurchasePrice,
                 Retail = s.Quantity * ((s.Variant.Prices.Where(pp => pp.WarehouseId == s.WarehouseId).Select(pp => (decimal?)pp.SellingPrice).FirstOrDefault()
@@ -30,6 +27,7 @@ public sealed class GetInventoryValuationReportQueryHandler(IApplicationDbContex
             })
             .ToListAsync(cancellationToken);
 
+        var categoryPaths = await CategoryPathLookup.LoadAsync(db, cancellationToken);
         var byWarehouse = rows
             .GroupBy(r => r.WarehouseName)
             .Select(g => new InventoryValuationGroupDto(g.Key, g.Sum(x => x.Quantity), g.Sum(x => x.Cost), g.Sum(x => x.Retail)))
@@ -37,7 +35,7 @@ public sealed class GetInventoryValuationReportQueryHandler(IApplicationDbContex
             .ToList();
 
         var byCategory = rows
-            .GroupBy(r => r.CategoryName)
+            .GroupBy(r => r.CategoryId is { } categoryId ? categoryPaths.GetValueOrDefault(categoryId) : null)
             .Select(g => new InventoryValuationGroupDto(g.Key, g.Sum(x => x.Quantity), g.Sum(x => x.Cost), g.Sum(x => x.Retail)))
             .OrderByDescending(g => g.Cost)
             .ToList();

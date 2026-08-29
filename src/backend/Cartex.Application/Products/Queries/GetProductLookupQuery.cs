@@ -1,21 +1,11 @@
-using Cartex.Persistence;
-using Cartex.Application.Common.Messaging;
+﻿using Cartex.Persistence;
 using Cartex.Application.ProductPacks.Queries;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Products;
 
 namespace Cartex.Application.Products.Queries;
 
 public record GetProductLookupQuery : IRequest<IReadOnlyCollection<ProductOptionDto>>;
-
-public record ProductOptionDto(
-    long Id,
-    long DefaultVariantId,
-    string Name,
-    string? Dimension,
-    long? UnitId = null,
-    string? UnitShortName = null,
-    IReadOnlyCollection<ProductPackDto>? Packs = null,
-    string? ImageKey = null);
 
 public sealed class GetProductLookupQueryHandler(IApplicationDbContext db)
     : IRequestHandler<GetProductLookupQuery, IReadOnlyCollection<ProductOptionDto>>

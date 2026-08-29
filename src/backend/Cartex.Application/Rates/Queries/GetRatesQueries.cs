@@ -1,10 +1,8 @@
-using Cartex.Application.Common.Messaging;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
+using Cartex.Shared.Models.Rates;
 
 namespace Cartex.Application.Rates.Queries;
-
-public record RateDto(string Code, decimal Rate, DateTime EffectiveAt, string Source);
 
 public record GetCurrentRatesQuery : IRequest<IReadOnlyCollection<RateDto>>;
 

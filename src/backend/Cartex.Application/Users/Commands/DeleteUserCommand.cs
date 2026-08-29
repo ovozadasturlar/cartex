@@ -1,14 +1,14 @@
-using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
 using Cartex.Domain.Authorization;
+using Cartex.Domain.Common;
 using Cartex.Application.Common.Security;
 
 namespace Cartex.Application.Users.Commands;
 
 public record DeleteUserCommand(long Id) : ICommand<Unit>;
 
-public sealed class DeleteUserCommandHandler(IApplicationDbContext db, IAccessControlService accessControl, IAuditService audit) : IRequestHandler<DeleteUserCommand, Unit>
+public sealed class DeleteUserCommandHandler(IApplicationDbContext db, ICurrentUser currentUser, IAccessControlService accessControl, IAuditService audit) : IRequestHandler<DeleteUserCommand, Unit>
 {
     public async Task<Unit> Handle(DeleteUserCommand request, CancellationToken cancellationToken)
     {
@@ -19,6 +19,9 @@ public sealed class DeleteUserCommandHandler(IApplicationDbContext db, IAccessCo
 
         await accessControl.EnsureCanManageUserAsync(user, cancellationToken);
 
+        if (currentUser.UserId == user.Id)
+            throw new BusinessRuleException("You cannot delete your own user.");
+
         if (user.UserRoles.Any(ur => ur.Role.AccessAll))
             throw new BusinessRuleException("This user cannot be deleted.");
 
@@ -27,6 +30,7 @@ public sealed class DeleteUserCommandHandler(IApplicationDbContext db, IAccessCo
 
         audit.Add("user.delete", "users", user.Id, new { user.Username, user.FullName });
 
+        await db.RefreshSessions.Where(x => x.UserId == user.Id).ExecuteDeleteAsync(cancellationToken);
         db.Users.Remove(user);
         await db.SaveChangesAsync(cancellationToken);
 

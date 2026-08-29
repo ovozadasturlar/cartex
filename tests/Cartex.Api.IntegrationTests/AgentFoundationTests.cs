@@ -81,12 +81,17 @@ public class AgentFoundationTests(CartexApiFactory factory)
     {
         var dev = await AuthHelper.LoginAsync(factory, "developer", "developer123");
         (await dev.PutAsJsonAsync("/api/features/agents", new { isEnabled = true })).EnsureSuccessStatusCode();
+        (await dev.PutAsJsonAsync("/api/features/modules/agents", new { isEnabled = true })).EnsureSuccessStatusCode();
 
         var admin = await AuthHelper.LoginAsync(factory, "admin", "admin123");
+        long? assignedWarehouseId = null;
+        string? assignedWarehouseName = null;
         try
         {
             var warehouses = await admin.GetFromJsonAsync<List<IdName>>("/api/warehouses");
             var warehouseId = warehouses![0].Id;
+            assignedWarehouseId = warehouseId;
+            assignedWarehouseName = warehouses[0].Name;
 
             var adminId = await GetUserIdAsync(admin, "admin");
             (await admin.PutAsJsonAsync($"/api/warehouses/{warehouseId}",
@@ -109,6 +114,9 @@ public class AgentFoundationTests(CartexApiFactory factory)
         }
         finally
         {
+            if (assignedWarehouseId is not null)
+                (await admin.PutAsJsonAsync($"/api/warehouses/{assignedWarehouseId}",
+                    new { name = assignedWarehouseName, isOnline = false, assignedUserId = 0 })).EnsureSuccessStatusCode();
             (await dev.PutAsJsonAsync("/api/features/agents", new { isEnabled = false })).EnsureSuccessStatusCode();
         }
     }

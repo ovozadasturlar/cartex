@@ -1,10 +1,24 @@
 using Cartex.Shared.Models.Settings;
+using Cartex.Shared.Models.Catalog;
 using Refit;
 
 namespace Cartex.ApiClient.Api;
 
 public interface ISettingsApi
 {
+    [Get("/api/settings/catalog")]
+    Task<CatalogSettingsDto> GetCatalogAsync();
+
+    [Put("/api/settings/catalog")]
+    Task UpdateCatalogAsync([Body] CatalogSettingsDto settings);
+
+    [Multipart]
+    [Post("/api/settings/catalog/pack")]
+    Task<CatalogPackDto> UploadCatalogPackAsync(StreamPart pack, StreamPart manifest);
+
+    [Delete("/api/settings/catalog/pack")]
+    Task DeleteCatalogPackAsync();
+
     [Get("/api/settings")]
     Task<SettingsDto> GetAsync();
 
@@ -23,12 +37,6 @@ public interface ISettingsApi
     [Put("/api/settings/sms")]
     Task UpdateSmsAsync([Body] UpdateSmsSettingsRequest request);
 
-    [Get("/api/settings/sms/journal")]
-    Task<List<SmsMessageDto>> GetSmsJournalAsync([Query] int page = 1, [Query] int pageSize = 50);
-
-    [Get("/api/settings/sms/stats")]
-    Task<SmsStatsDto> GetSmsStatsAsync();
-
     [Put("/api/settings/notification")]
     Task UpdateNotificationAsync([Body] UpdateNotificationSettingsRequest request);
 
@@ -38,11 +46,23 @@ public interface ISettingsApi
     [Put("/api/settings/receipt")]
     Task UpdateReceiptAsync([Body] UpdateReceiptSettingsRequest request);
 
+    [Get("/api/settings/proforma")]
+    Task<ProformaSettingsDto> GetProformaAsync();
+
+    [Put("/api/settings/proforma")]
+    Task UpdateProformaAsync([Body] UpdateProformaSettingsRequest request);
+
+    [Get("/api/settings/barcode-label")]
+    Task<BarcodeLabelSettingsDto> GetBarcodeLabelAsync();
+
+    [Put("/api/settings/barcode-label")]
+    Task UpdateBarcodeLabelAsync([Body] UpdateBarcodeLabelSettingsRequest request);
+
     [Get("/api/settings/sales-policy")]
     Task<SalesPolicyDto> GetSalesPolicyAsync();
 
     [Put("/api/settings/sales-policy")]
-    Task UpdateSalesPolicyAsync([Body] UpdateSalesPolicyRequest request);
+    Task UpdateSalesPolicyAsync([Body] SalesPolicyDto policy);
 
     [Get("/api/settings/login-methods")]
     Task<LoginMethodsSettingsDto> GetLoginMethodsAsync();

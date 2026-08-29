@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using SkiaSharp;
@@ -10,25 +9,28 @@ namespace Cartex.UI.Services;
 
 public static class TsplLabel
 {
-    public static byte[] Build(string code, string name, int quantity, LabelOptions options)
+    public record PreviewResult(byte[] Image, bool MayClip);
+
+    public static byte[] Build(string code, string name, int quantity, LabelOptions options, string? priceText = null, string? sku = null)
     {
         var dotsPerMm = options.Dpi / 25.4;
         var widthDots = (int)Math.Round(options.WidthMm * dotsPerMm + 7) / 8 * 8;
         var heightDots = (int)Math.Round(options.HeightMm * dotsPerMm);
-        var bitmap = Render(code, name, widthDots, heightDots, dotsPerMm, options);
+        using var bitmap = RenderBitmap(code, name, priceText, sku, widthDots, heightDots, dotsPerMm, options);
 
         using var stream = new MemoryStream();
         void Command(string text) => Write(stream, text + "\r\n");
 
         Command($"SIZE {Mm(options.WidthMm)} mm,{Mm(options.HeightMm)} mm");
-        Command($"GAP {Mm(options.GapMm)} mm,0 mm");
+        if (!options.UsePrinterGapCalibration)
+            Command($"GAP {Mm(options.GapMm)} mm,0 mm");
         Command("DIRECTION 1");
         Command("REFERENCE 0,0");
         Command($"DENSITY {options.Density}");
         Command($"SPEED {options.Speed}");
         Command("CLS");
         Write(stream, $"BITMAP 0,0,{widthDots / 8},{heightDots},0,");
-        stream.Write(bitmap);
+        stream.Write(ToMonochrome(bitmap.PeekPixels(), widthDots, heightDots));
         Write(stream, "\r\n");
         Command($"PRINT {Math.Clamp(quantity, 1, 999)},1");
 
@@ -37,8 +39,67 @@ public static class TsplLabel
 
     public static byte[] BuildCalibration(LabelOptions options)
     {
-        var tspl = $"SIZE {Mm(options.WidthMm)} mm,{Mm(options.HeightMm)} mm\r\nDIRECTION 1\r\nGAPDETECT\r\n";
-        return Encoding.ASCII.GetBytes(tspl);
+        using var stream = new MemoryStream();
+        void Command(string text) => Write(stream, text + "\r\n");
+
+        Command($"SIZE {Mm(options.WidthMm)} mm,{Mm(options.HeightMm)} mm");
+        Command("DIRECTION 1");
+        Command("REFERENCE 0,0");
+        Command("GAPDETECT");
+        Command("HOME");
+        return stream.ToArray();
+    }
+
+    public static byte[] RenderPng(string code, string name, string? priceText, LabelOptions options, string? sku = null)
+        => RenderPreview(code, name, priceText, options, sku).Image;
+
+    public static byte[] RenderPrintPng(string code, string name, string? priceText, LabelOptions options, string? sku = null)
+        => RenderImage(code, name, priceText, options, sku).Image;
+
+    public static PreviewResult RenderPreview(string code, string name, string? priceText, LabelOptions options, string? sku = null)
+        => RenderImage(code, name, priceText, options with { Rotation = 0 }, sku);
+
+    private static PreviewResult RenderImage(string code, string name, string? priceText, LabelOptions options, string? sku)
+    {
+        var dotsPerMm = options.Dpi / 25.4;
+        var widthDots = (int)Math.Round(options.WidthMm * dotsPerMm + 7) / 8 * 8;
+        var heightDots = (int)Math.Round(options.HeightMm * dotsPerMm);
+        using var bitmap = RenderBitmap(code, name, priceText, sku, widthDots, heightDots, dotsPerMm, options);
+        using var image = SKImage.FromBitmap(bitmap);
+        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+        return new PreviewResult(
+            data.ToArray(),
+            InkTouchesEdge(bitmap, Math.Max(1, (int)Math.Round(dotsPerMm * 0.5))));
+    }
+
+    private static bool InkTouchesEdge(SKBitmap bitmap, int inset)
+    {
+        static bool IsInk(SKColor color) =>
+            (color.Red * 299 + color.Green * 587 + color.Blue * 114) / 1000 < 128;
+
+        var right = bitmap.Width - inset;
+        var bottom = bitmap.Height - inset;
+        for (var y = 0; y < bitmap.Height; y++)
+        {
+            for (var x = 0; x < inset; x++)
+                if (IsInk(bitmap.GetPixel(x, y)))
+                    return true;
+            for (var x = right; x < bitmap.Width; x++)
+                if (IsInk(bitmap.GetPixel(x, y)))
+                    return true;
+        }
+
+        for (var x = inset; x < right; x++)
+        {
+            for (var y = 0; y < inset; y++)
+                if (IsInk(bitmap.GetPixel(x, y)))
+                    return true;
+            for (var y = bottom; y < bitmap.Height; y++)
+                if (IsInk(bitmap.GetPixel(x, y)))
+                    return true;
+        }
+
+        return false;
     }
 
     private static string Mm(double value) => value.ToString("0.#", CultureInfo.InvariantCulture);
@@ -60,12 +121,12 @@ public static class TsplLabel
         return right >= left ? (left, right) : (0, bitmap.Width - 1);
     }
 
-    private static byte[] Render(string code, string name, int widthDots, int heightDots, double dotsPerMm, LabelOptions options)
+    private static SKBitmap RenderBitmap(string code, string name, string? priceText, string? sku, int widthDots, int heightDots, double dotsPerMm, LabelOptions options)
     {
         int Dots(double mm) => (int)Math.Round(mm * dotsPerMm);
 
-        using var surface = SKSurface.Create(new SKImageInfo(widthDots, heightDots, SKColorType.Rgba8888, SKAlphaType.Opaque));
-        var canvas = surface.Canvas;
+        var bitmap = new SKBitmap(new SKImageInfo(widthDots, heightDots, SKColorType.Rgba8888, SKAlphaType.Opaque));
+        using var canvas = new SKCanvas(bitmap);
         canvas.Clear(SKColors.White);
 
         var shiftX = Dots(options.ShiftXMm);
@@ -78,29 +139,56 @@ public static class TsplLabel
         else
             canvas.Translate(-shiftX, -shiftY);
 
-        using var paint = new SKPaint { Color = SKColors.Black, IsAntialias = false };
+        using var paint = new SKPaint();
+        paint.Color = SKColors.Black;
+        paint.IsAntialias = false;
         var sideMargin = Dots(2);
         var edgeMargin = Dots(2.5);
         var usable = widthDots - sideMargin * 2;
 
-        using var nameFont = new SKFont(SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold) ?? SKTypeface.Default, heightDots * 0.09f);
-        using var codeFont = new SKFont(SKTypeface.FromFamilyName("Consolas") ?? SKTypeface.Default, heightDots * 0.1f);
+        float FontSize(double fraction, double minMm, double maxMm) => Math.Clamp((float)(heightDots * fraction), Dots(minMm), Dots(maxMm));
+        using var nameFont = new SKFont(SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold) ?? SKTypeface.Default, FontSize(0.075, 2.4, 4.4));
+        using var priceFont = new SKFont(SKTypeface.FromFamilyName("Arial", SKFontStyle.Bold) ?? SKTypeface.Default, FontSize(0.13, 3.4, 5.5));
+        using var codeFont = new SKFont(SKTypeface.FromFamilyName("Consolas") ?? SKTypeface.Default, FontSize(0.075, 2.4, 3.3));
 
-        var lines = WrapLines(name, nameFont, usable, 2);
-        var nameHeight = lines.Count * nameFont.Spacing;
+        var showSku = options.ShowSku && !string.IsNullOrWhiteSpace(sku);
+        var priceHeight = string.IsNullOrWhiteSpace(priceText) ? 0 : priceFont.Spacing;
+        var skuHeight = showSku ? codeFont.Spacing : 0;
         var codeHeight = codeFont.Spacing;
         var spacing = Dots(1);
-
         var contentTop = (float)edgeMargin;
         var contentBottom = heightDots - edgeMargin;
-        var barcodeHeight = (int)Math.Max(Dots(6), contentBottom - contentTop - nameHeight - codeHeight - spacing * 2);
-        var block = nameHeight + spacing + barcodeHeight + spacing + codeHeight;
+        var reservedHeight = priceHeight + skuHeight + codeHeight + Dots(7) + spacing * 2;
+        if (priceHeight > 0) reservedHeight += spacing;
+        if (skuHeight > 0) reservedHeight += spacing;
+        var fittingNameLines = Math.Max(1, (int)Math.Floor((contentBottom - contentTop - reservedHeight) / nameFont.Spacing));
+        var requestedNameLines = options.NameLines <= 0 ? fittingNameLines : Math.Min(options.NameLines, fittingNameLines);
+        var lines = WrapLines(name, nameFont, usable, requestedNameLines);
+        var nameHeight = lines.Count * nameFont.Spacing;
+        var priceSpacing = priceHeight > 0 ? spacing : 0;
+        var skuSpacing = skuHeight > 0 ? spacing : 0;
+        var barcodeHeight = (int)Math.Max(Dots(7), contentBottom - contentTop - nameHeight - priceHeight - skuHeight - codeHeight - spacing * 2 - priceSpacing - skuSpacing);
+        var block = nameHeight + priceHeight + skuHeight + barcodeHeight + codeHeight + spacing * 2 + priceSpacing + skuSpacing;
         var top = contentTop + (contentBottom - contentTop - block) / 2;
 
         foreach (var line in lines)
         {
             canvas.DrawText(line, widthDots / 2f, top + nameFont.Size, SKTextAlign.Center, nameFont, paint);
             top += nameFont.Spacing;
+        }
+
+        if (showSku)
+        {
+            top += spacing;
+            canvas.DrawText($"SKU: {sku!.Trim()}", widthDots / 2f, top + codeFont.Size, SKTextAlign.Center, codeFont, paint);
+            top += codeFont.Spacing;
+        }
+
+        if (priceHeight > 0)
+        {
+            top += spacing;
+            canvas.DrawText(priceText!, widthDots / 2f, top + priceFont.Size, SKTextAlign.Center, priceFont, paint);
+            top += priceFont.Spacing;
         }
 
         using var barcode = RenderBarcode(code, usable, barcodeHeight);
@@ -111,9 +199,7 @@ public static class TsplLabel
         canvas.DrawText(code, widthDots / 2f, top + spacing + barcodeHeight + spacing + codeFont.Size, SKTextAlign.Center, codeFont, paint);
         canvas.Flush();
 
-        using var image = surface.Snapshot();
-        using var pixmap = image.PeekPixels();
-        return ToMonochrome(pixmap, widthDots, heightDots);
+        return bitmap;
     }
 
     private static SKBitmap RenderBarcode(string code, int width, int height)

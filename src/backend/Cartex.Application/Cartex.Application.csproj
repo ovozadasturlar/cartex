@@ -1,29 +1,30 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <Using Include="Cartex.Domain.Common.Exceptions" />
-    <Using Include="Cartex.Application.Common.Messaging" />
-  </ItemGroup>
+    <ItemGroup>
+        <Using Include="Cartex.Domain.Common.Exceptions" />
+        <Using Include="Cartex.Application.Common.Messaging" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <InternalsVisibleTo Include="Cartex.UnitTests" />
-  </ItemGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="Cartex.UnitTests" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="FluentValidation" Version="12.1.1" />
-    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="FluentValidation" Version="12.1.1" />
+        <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Cartex.Domain\Cartex.Domain.csproj" />
-    <ProjectReference Include="..\Cartex.Persistence\Cartex.Persistence.csproj" />
-    <ProjectReference Include="..\Cartex.Auth\Cartex.Auth.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Cartex.Domain\Cartex.Domain.csproj" />
+        <ProjectReference Include="..\Cartex.Persistence\Cartex.Persistence.csproj" />
+        <ProjectReference Include="..\Cartex.Auth\Cartex.Auth.csproj" />
+        <ProjectReference Include="..\..\shared\Cartex.Shared\Cartex.Shared.csproj" />
+    </ItemGroup>
 
 </Project>

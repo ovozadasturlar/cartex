@@ -1,5 +1,4 @@
 using System.Net;
-using Cartex.Mobile.Agent.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Refit;
@@ -7,7 +6,7 @@ using Cartex.Mobile.Core;
 
 namespace Cartex.Mobile.Agent.ViewModels;
 
-public partial class LoginViewModel(MobileAuthService auth, SessionStore session) : ObservableObject
+public partial class LoginViewModel(MobileAuthService auth, AccessState access, SessionStore session) : ObservableObject, IQueryAttributable
 {
     [ObservableProperty] private string _serverUrl = session.ServerUrl;
     [ObservableProperty] private string _username = "";
@@ -32,6 +31,15 @@ public partial class LoginViewModel(MobileAuthService auth, SessionStore session
     private void ToggleServer() => IsServerVisible = !IsServerVisible;
 
     [RelayCommand]
+    private Task ScanServerAsync() => Shell.Current.GoToAsync("server-scan");
+
+    public void ApplyQueryAttributes(IDictionary<string, object> query)
+    {
+        if (query.TryGetValue("server", out var value))
+            ServerUrl = (string)value;
+    }
+
+    [RelayCommand]
     private void ToggleEye()
     {
         HidePassword = !HidePassword;
@@ -41,7 +49,7 @@ public partial class LoginViewModel(MobileAuthService auth, SessionStore session
     [RelayCommand]
     private async Task ChooseLanguageAsync()
     {
-        var choice = await Shell.Current.CurrentPage.DisplayActionSheet(
+        var choice = await Shell.Current.CurrentPage.DisplayActionSheetAsync(
             Loc.Instance["language"], Loc.Instance["cancel"], null, LangNames);
         var index = Array.IndexOf(LangNames, choice);
         if (index < 0) return;
@@ -69,7 +77,8 @@ public partial class LoginViewModel(MobileAuthService auth, SessionStore session
             if (!restored) IsChecking = false;
         }
         if (!restored) return;
-        await Shell.Current.GoToAsync("//home", false);
+        await access.EnsureLoadedAsync();
+        await Shell.Current.GoToAsync("//catalog", false);
         _ = auth.ValidateSessionAsync();
         if (AppLock.PinEnabled)
             await Shell.Current.GoToAsync("pin", false);
@@ -82,7 +91,7 @@ public partial class LoginViewModel(MobileAuthService auth, SessionStore session
         try
         {
             if (Shell.Current?.CurrentPage is not { } page) return;
-            if (await page.DisplayAlert(Loc.Instance["pin_offer_title"], Loc.Instance["pin_offer_msg"],
+            if (await page.DisplayAlertAsync(Loc.Instance["pin_offer_title"], Loc.Instance["pin_offer_msg"],
                     Loc.Instance["pin_offer_yes"], Loc.Instance["later"]))
                 await Shell.Current.GoToAsync("pin?setup=1");
         }
@@ -109,8 +118,9 @@ public partial class LoginViewModel(MobileAuthService auth, SessionStore session
         {
             session.ServerUrl = ServerUrl.Trim();
             await auth.LoginAsync(Username.Trim(), Password);
+            await access.RefreshAsync();
             Password = "";
-            await Shell.Current.GoToAsync("//home");
+            await Shell.Current.GoToAsync("//catalog");
             _ = OfferPinSetupAsync();
         }
         catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)

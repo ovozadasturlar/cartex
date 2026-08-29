@@ -11,7 +11,7 @@ public static class ProductPriceWriter
         var price = db.ProductPrices.Local.FirstOrDefault(p => p.VariantId == variantId && p.WarehouseId == warehouseId)
             ?? await db.ProductPrices.FirstOrDefaultAsync(p => p.VariantId == variantId && p.WarehouseId == warehouseId, cancellationToken);
 
-        var code = currency ?? await db.Businesses.Select(b => b.Currency).FirstAsync(cancellationToken);
+        var code = currency ?? price?.Currency ?? await db.Businesses.Select(b => b.Currency).FirstAsync(cancellationToken);
 
         if (price is null)
             db.ProductPrices.Add(new ProductPrice { VariantId = variantId, WarehouseId = warehouseId, SellingPrice = sellingPrice, Currency = code });

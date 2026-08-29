@@ -15,7 +15,7 @@ public class BusinessTests(CartexApiFactory factory)
         var client = await AuthHelper.LoginAsync(factory, "admin", "admin123");
         var business = await client.GetFromJsonAsync<BusinessDto>("/api/business");
         Assert.NotNull(business);
-        Assert.True(business!.IsOnboarded);
+        Assert.True(business.IsOnboarded);
         Assert.False(string.IsNullOrEmpty(business.Currency));
     }
 

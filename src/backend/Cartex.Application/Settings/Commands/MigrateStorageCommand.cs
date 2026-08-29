@@ -1,7 +1,5 @@
 using Cartex.Application.Common.Interfaces;
-using Cartex.Application.Common.Messaging;
 using Cartex.Application.Common.Settings;
-using Cartex.Domain.Common;
 using Cartex.Persistence;
 
 using Unit = Cartex.Application.Common.Messaging.Unit;

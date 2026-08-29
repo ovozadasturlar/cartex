@@ -25,7 +25,8 @@ public partial class TransfersViewModel : ViewModelBase, ILoadable
     public ObservableCollection<StockTransferDto> Transfers { get; } = [];
     public ObservableCollection<IdOption> WarehouseOptions { get; } = [];
     public ObservableCollection<IdOption> FilterWarehouseOptions { get; } = [];
-    public ObservableCollection<IdOption> ProductOptions { get; } = [];
+    [ObservableProperty] private IReadOnlyList<IdOption> _productOptions = [];
+    private Task? _productCatalogTask;
 
     [ObservableProperty] private bool _isEditOpen;
     [ObservableProperty] private IdOption? _fromWarehouse;
@@ -57,15 +58,19 @@ public partial class TransfersViewModel : ViewModelBase, ILoadable
 
     [ObservableProperty] private StockTransferDto? _selectedTransfer;
     [ObservableProperty] private bool _isDetailOpen;
+    private static readonly StockTransferDto EmptyTransfer = new(0, "", 0, "", "", "", DateTime.MinValue, "");
+    public StockTransferDto SelectedTransferDisplay => SelectedTransfer ?? EmptyTransfer;
 
     public bool IsModalOpen => IsEditOpen || IsDetailOpen;
     partial void OnIsEditOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsDetailOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
 
     public PaginationState Paging { get; } = new();
-    [ObservableProperty] private StockTransfersTotalsDto? _totals;
+    [ObservableProperty] private StockTransfersTotalsDto _totals = new(0, 0);
     public bool IsEmpty => Transfers.Count == 0;
     public bool CanExport => _auth.HasPermission("reports.export");
+    public bool CanCreate => _auth.HasPermission("stock_transfers.create");
+    public bool CanReceive => _auth.HasPermission("stock_transfers.receive");
 
     public TransfersViewModel(IStockTransfersApi api, IWarehousesApi warehousesApi, IProductsApi productsApi, IToastService toast, IBusyService busy, IExportService export, AuthService auth, ReferenceCache cache)
     {
@@ -90,9 +95,15 @@ public partial class TransfersViewModel : ViewModelBase, ILoadable
         FilterWarehouse = null;
         DateFrom = DateTimeOffset.Now.AddDays(-30);
         DateTo = DateTimeOffset.Now;
-        Totals = null;
+        Totals = new StockTransfersTotalsDto(0, 0);
         Paging.Page = 1;
         OnPropertyChanged(nameof(IsEmpty));
+    }
+
+    public override void OnNavigatedFrom()
+    {
+        IsEditOpen = false;
+        IsDetailOpen = false;
     }
 
     private async Task LoadTransfersAsync()
@@ -119,9 +130,26 @@ public partial class TransfersViewModel : ViewModelBase, ILoadable
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
+    private Task EnsureProductCatalogAsync() => _productCatalogTask ??= LoadProductCatalogAsync();
+
+    private async Task LoadProductCatalogAsync()
+    {
+        try
+        {
+            var products = await _cache.GetAsync(CacheKeys.ProductLookup, _productsApi.GetLookupAsync);
+            ProductOptions = products.Select(product => new IdOption(product.DefaultVariantId, product.Name)).ToList();
+        }
+        finally
+        {
+            _productCatalogTask = null;
+        }
+    }
+
     private void RaisePermissions()
     {
         OnPropertyChanged(nameof(CanExport));
+        OnPropertyChanged(nameof(CanCreate));
+        OnPropertyChanged(nameof(CanReceive));
     }
 
     public async Task LoadAsync()
@@ -132,8 +160,6 @@ public partial class TransfersViewModel : ViewModelBase, ILoadable
             using (_busy.Begin(L["loading"]))
             {
                 var warehousesTask = _cache.GetAsync(CacheKeys.Warehouses, () => _warehousesApi.GetAllAsync());
-                var productsTask = _cache.GetAsync(CacheKeys.ProductLookup, _productsApi.GetLookupAsync);
-
                 var warehouses = await warehousesTask;
                 WarehouseOptions.Clear();
                 FilterWarehouseOptions.Clear();
@@ -144,10 +170,6 @@ public partial class TransfersViewModel : ViewModelBase, ILoadable
                     FilterWarehouseOptions.Add(new IdOption(w.Id, w.Name));
                 }
                 FilterWarehouse = FilterWarehouseOptions.FirstOrDefault();
-
-                var products = await productsTask;
-                ProductOptions.Clear();
-                foreach (var p in products) ProductOptions.Add(new IdOption(p.DefaultVariantId, p.Name));
 
                 await LoadTransfersAsync();
             }
@@ -190,8 +212,10 @@ public partial class TransfersViewModel : ViewModelBase, ILoadable
     private void CloseDetail() => IsDetailOpen = false;
 
     [RelayCommand]
-    private void OpenCreate()
+    private async Task OpenCreateAsync()
     {
+        if (!CanCreate) return;
+        await EnsureProductCatalogAsync();
         FromWarehouse = WarehouseOptions.FirstOrDefault();
         ToWarehouse = WarehouseOptions.Skip(1).FirstOrDefault() ?? WarehouseOptions.FirstOrDefault();
         Product = ProductOptions.FirstOrDefault();
@@ -199,12 +223,15 @@ public partial class TransfersViewModel : ViewModelBase, ILoadable
         IsEditOpen = true;
     }
 
+    partial void OnSelectedTransferChanged(StockTransferDto? value) => OnPropertyChanged(nameof(SelectedTransferDisplay));
+
     [RelayCommand]
     private void CancelEdit() => IsEditOpen = false;
 
     [RelayCommand]
     private async Task SaveAsync()
     {
+        if (!CanCreate) return;
         if (FromWarehouse?.Id is null || ToWarehouse?.Id is null || Product?.Id is null
             || FromWarehouse.Id == ToWarehouse.Id || Quantity <= 0) { _toast.Error(L["error"]); return; }
         try
@@ -221,6 +248,7 @@ public partial class TransfersViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task ReceiveAsync(StockTransferDto transfer)
     {
+        if (!CanReceive) return;
         try
         {
             using (_busy.Begin(L["loading"]))

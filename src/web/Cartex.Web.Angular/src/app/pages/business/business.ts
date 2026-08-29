@@ -44,12 +44,13 @@ export class BusinessSettings implements OnInit {
   readonly loading = signal(true);
   readonly busy = signal(false);
   readonly uploading = signal(false);
-  readonly multicurrency = signal(false);
+  readonly pricingMulticurrency = signal(false);
+  readonly salesMulticurrency = signal(false);
   readonly logoPreview = signal<string | null>(null);
-  readonly canManage = this.auth.hasPermission('business.manage');
-  readonly canFeatures = this.auth.hasPermission('features.manage');
+  readonly canManage = this.auth.hasPermission('business.edit');
+  readonly canFeatures = this.auth.hasPermission('features.edit');
+  readonly canSecurity = this.auth.hasPermission('settings.security');
 
-  readonly shiftPolicies = ['Off', 'CashOnly', 'AllSales'];
 
   name = '';
   legalName = '';
@@ -59,16 +60,7 @@ export class BusinessSettings implements OnInit {
   website = '';
   address = '';
   private logoImageKey: string | null = null;
-
-  shiftPolicy = 'CashOnly';
-  maxDiscountPercent = 0;
-  defaultMinStock = 0;
-  staleRateDays = 3;
-  allowDebtSales = true;
-  allowCustomerCredit = false;
-  requireDebtDueDate = true;
-  requireSupplier = false;
-  private policyLoaded = false;
+  private monochromeLogoImageKey: string | null = null;
 
   qrEnabled = false;
   qrRefreshSeconds = 120;
@@ -76,25 +68,17 @@ export class BusinessSettings implements OnInit {
   private loginLoaded = false;
 
   async ngOnInit(): Promise<void> {
-    try {
-      const policy = await lastValueFrom(this.settings.salesPolicy());
-      this.shiftPolicy = policy.shiftPolicy;
-      this.maxDiscountPercent = policy.maxDiscountPercent;
-      this.defaultMinStock = policy.defaultMinStock;
-      this.staleRateDays = policy.staleRateDays;
-      this.allowDebtSales = policy.allowDebtSales;
-      this.allowCustomerCredit = policy.allowCustomerCredit;
-      this.requireDebtDueDate = policy.requireDebtDueDate;
-      this.requireSupplier = policy.requireSupplier;
-      this.policyLoaded = true;
-    } catch {}
-    try {
-      const login = await lastValueFrom(this.settings.loginMethods());
-      this.qrEnabled = login.qrEnabled;
-      this.qrRefreshSeconds = login.qrRefreshSeconds;
-      this.keyEnabled = login.keyEnabled;
-      this.loginLoaded = true;
-    } catch {}
+    if (this.canSecurity) {
+      try {
+        const login = await lastValueFrom(this.settings.loginMethods());
+        this.qrEnabled = login.qrEnabled;
+        this.qrRefreshSeconds = login.qrRefreshSeconds;
+        this.keyEnabled = login.keyEnabled;
+        this.loginLoaded = true;
+      } catch {
+        // Login methods are optional here: the page still works without them.
+      }
+    }
     try {
       this.apply(await lastValueFrom(this.api.get()));
     } catch (e) {
@@ -134,30 +118,7 @@ export class BusinessSettings implements OnInit {
           website: this.website.trim() || null,
           address: this.address.trim() || null,
           logoImageKey: this.logoImageKey,
-        }),
-      );
-      this.notify.success(message);
-    } catch (e) {
-      this.notify.error(e);
-    } finally {
-      this.busy.set(false);
-    }
-  }
-
-  async savePolicy(message: string): Promise<void> {
-    if (!this.policyLoaded) return;
-    this.busy.set(true);
-    try {
-      await lastValueFrom(
-        this.settings.updateSalesPolicy({
-          shiftPolicy: this.shiftPolicy,
-          maxDiscountPercent: this.maxDiscountPercent || 0,
-          defaultMinStock: this.defaultMinStock || 0,
-          staleRateDays: Math.round(this.staleRateDays) || 3,
-          allowDebtSales: this.allowDebtSales,
-          allowCustomerCredit: this.allowCustomerCredit,
-          requireDebtDueDate: this.requireDebtDueDate,
-          requireSupplier: this.requireSupplier,
+          monochromeLogoImageKey: this.monochromeLogoImageKey,
         }),
       );
       this.notify.success(message);
@@ -169,7 +130,7 @@ export class BusinessSettings implements OnInit {
   }
 
   async saveLoginMethods(message: string): Promise<void> {
-    if (!this.loginLoaded) return;
+    if (!this.canSecurity || !this.loginLoaded) return;
     this.busy.set(true);
     try {
       await lastValueFrom(
@@ -187,14 +148,15 @@ export class BusinessSettings implements OnInit {
     }
   }
 
-  async toggleMulticurrency(value: boolean, message: string): Promise<void> {
-    this.multicurrency.set(value);
+  async toggleMulticurrency(feature: 'multicurrency_pricing' | 'multicurrency_sales', value: boolean, message: string): Promise<void> {
+    const target = feature === 'multicurrency_pricing' ? this.pricingMulticurrency : this.salesMulticurrency;
+    target.set(value);
     this.busy.set(true);
     try {
-      await lastValueFrom(this.features.set('multicurrency', value));
+      await lastValueFrom(this.features.set(feature, value));
       this.notify.success(message);
     } catch (e) {
-      this.multicurrency.set(!value);
+      target.set(!value);
       this.notify.error(e);
     } finally {
       this.busy.set(false);
@@ -210,7 +172,9 @@ export class BusinessSettings implements OnInit {
     this.website = b.website ?? '';
     this.address = b.address ?? '';
     this.logoImageKey = b.logoImageKey;
+    this.monochromeLogoImageKey = b.monochromeLogoImageKey;
     if (b.logoImageKey) this.logoPreview.set(`/api/storage/content?key=${encodeURIComponent(b.logoImageKey)}`);
-    this.multicurrency.set(b.multicurrency);
+    this.pricingMulticurrency.set(b.pricingMulticurrency);
+    this.salesMulticurrency.set(b.salesMulticurrency);
   }
 }

@@ -1,10 +1,11 @@
-using Cartex.Application.Stocks.Commands;
+﻿using Cartex.Application.Stocks.Commands;
 using Cartex.Application.Stocks.Queries;
 using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
 using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Cartex.Shared.Models.Stocks;
 
 namespace Cartex.Api.Controllers;
 
@@ -24,9 +25,18 @@ public class StocksController(ISender sender) : ControllerBase
     [HttpGet("on-hand")]
     [HasPermission(AppPermissions.Stocks.View)]
     public async Task<ActionResult<StockOnHandPageDto>> GetOnHand([FromQuery] long warehouseId, [FromQuery] long? categoryId = null,
-        [FromQuery] string? search = null, [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
+        [FromQuery] string? search = null, [FromQuery] int page = 1, [FromQuery] int pageSize = 50, [FromQuery] bool forSale = false)
     {
-        var result = await sender.Send(new GetStockOnHandQuery(warehouseId, categoryId, search, page, pageSize));
+        var result = await sender.Send(new GetStockOnHandQuery(warehouseId, categoryId, search, page, pageSize, forSale));
+        return Ok(result);
+    }
+
+    [HttpPost("on-hand/by-variants")]
+    [HasPermission(AppPermissions.Stocks.View)]
+    public async Task<ActionResult<IReadOnlyList<StockOnHandDto>>> GetOnHandByVariants(
+        [FromQuery] long warehouseId, [FromBody] IReadOnlyList<long> variantIds)
+    {
+        var result = await sender.Send(new GetStockOnHandByVariantsQuery(warehouseId, variantIds));
         return Ok(result);
     }
 
@@ -35,6 +45,16 @@ public class StocksController(ISender sender) : ControllerBase
     public async Task<ActionResult<IReadOnlyCollection<ExpiringStockDto>>> GetExpiring([FromQuery] int withinDays = 30)
     {
         var result = await sender.Send(new GetExpiringStocksQuery(withinDays));
+        return Ok(result);
+    }
+
+    [HttpGet("movements")]
+    [HasPermission(AppPermissions.Stocks.View)]
+    public async Task<ActionResult<IReadOnlyCollection<InventoryMovementDto>>> GetMovements(
+        [FromQuery] long variantId, [FromQuery] long? warehouseId = null,
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
+    {
+        var result = await sender.Send(new GetInventoryMovementsQuery(variantId, warehouseId, page, pageSize));
         return Ok(result);
     }
 
@@ -47,10 +67,18 @@ public class StocksController(ISender sender) : ControllerBase
     }
 
     [HttpPost("adjust")]
-    [HasPermission(AppPermissions.Stocks.Manage)]
+    [HasPermission(AppPermissions.Stocks.Adjust)]
     public async Task<IActionResult> Adjust(AdjustStockCommand command)
     {
         await sender.Send(command);
         return NoContent();
+    }
+
+    [HttpPost("opening-balance")]
+    [HasPermission(AppPermissions.Stocks.Reconcile)]
+    public async Task<ActionResult<OpeningStockBackfillDto>> BackfillOpeningBalance()
+    {
+        var result = await sender.Send(new BackfillOpeningStockCommand());
+        return Ok(result);
     }
 }

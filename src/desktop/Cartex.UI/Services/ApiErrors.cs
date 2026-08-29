@@ -1,7 +1,4 @@
-using System;
-using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Text.Json;
 using Refit;
 
@@ -17,6 +14,31 @@ public static class ApiErrors
         ex is HttpRequestException
         || ex.InnerException is HttpRequestException or System.Net.Sockets.SocketException
         || (ex is TaskCanceledException && ex.InnerException is TimeoutException);
+
+    /// problem+json dagi `code` — klient xatoni matn bo'yicha emas, kod bo'yicha ajratsin.
+    public static string? CodeOf(Exception ex)
+    {
+        if (ex is not ApiException { Content: { Length: > 0 } content }) return null;
+        try
+        {
+            using var doc = JsonDocument.Parse(content);
+            return doc.RootElement.TryGetProperty("code", out var code) ? code.GetString() : null;
+        }
+        catch (JsonException) { return null; }
+    }
+
+    /// problem+json dagi `details` — qoida buzilishining tuzilgan tafsiloti (`DomainException.Details`).
+    public static T? DetailsOf<T>(Exception ex)
+    {
+        if (ex is not ApiException { Content: { Length: > 0 } content }) return default;
+        try
+        {
+            using var doc = JsonDocument.Parse(content);
+            if (!doc.RootElement.TryGetProperty("details", out var details)) return default;
+            return details.Deserialize<T>(new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        }
+        catch (JsonException) { return default; }
+    }
 
     public static string Describe(Exception ex)
     {

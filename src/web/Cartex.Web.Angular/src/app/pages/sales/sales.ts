@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -9,17 +9,22 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTableModule } from '@angular/material/table';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
+import { Router } from '@angular/router';
 import { lastValueFrom } from 'rxjs';
 import { SalesApi } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
-import { CxDatePipe, CxMoneyPipe, utcRange } from '../../core/format';
-import { Receipt, Sale, SalesTotals } from '../../core/models';
+import { LayoutService } from '../../core/layout.service';
+import { CxDatePipe, CxMoneyPipe, newUuid, utcRange } from '../../core/format';
+import { Customer, Receipt, Sale, SaleDetail, SalesTotals } from '../../core/models';
 import { NotifyService } from '../../core/notify.service';
+import { RemotePrintService } from '../../core/remote-print.service';
 import { Paged } from '../../core/paging';
 import { EmptyState } from '../../shared/empty-state';
+import { downloadCsv } from '../../core/csv-export';
 import { PageHeader } from '../../shared/page-header';
 import { PagingBar } from '../../shared/paging-bar';
 import { StatCard } from '../../shared/stat-card';
+import { PosCartState } from '../pos/pos-state';
 
 const statusKeys: Record<string, string> = {
   Completed: 'status_completed',
@@ -50,21 +55,40 @@ const statusKeys: Record<string, string> = {
 export class Sales implements OnInit {
   private readonly api = inject(SalesApi);
   private readonly notify = inject(NotifyService);
+  private readonly transloco = inject(TranslocoService);
   private readonly dialog = inject(MatDialog);
   private searchTimer?: ReturnType<typeof setTimeout>;
 
-  readonly canReturn = inject(AuthService).hasPermission('sales.return');
+  readonly canReturn = inject(AuthService).hasPermission('returns.create');
   readonly loading = signal(true);
   readonly busy = signal(false);
   readonly totals = signal<SalesTotals | null>(null);
   readonly paged = signal<Paged<Sale>>({ items: [], meta: { totalCount: 0, page: 1, pageSize: 20, totalPages: 0 } });
+  readonly canExport = inject(AuthService).hasPermission('reports.export');
+
+  exportCsv(): void {
+    if (!this.canExport) return;
+    const t = (key: string): string => this.transloco.translate(key);
+    downloadCsv(t('sales'), this.paged().items, [
+      { header: t('date'), value: (x) => x.saleDate },
+      { header: t('receipt'), value: (x) => x.receiptToken },
+      { header: t('customer'), value: (x) => x.customerName },
+      { header: t('total'), value: (x) => x.totalAmount },
+      { header: t('debt'), value: (x) => x.debtAmount },
+      { header: t('status'), value: (x) => x.status },
+      { header: t('user'), value: (x) => x.userName },
+    ]);
+  }
   readonly search = signal('');
   readonly page = signal(1);
   readonly pageSize = signal(20);
-  readonly columns = [
-    'date', 'customer', 'cashier', 'total', 'paid', 'debt', 'status',
-    ...(this.canReturn ? ['actions'] : []),
-  ];
+  private readonly layout = inject(LayoutService);
+  /// Telefon ekraniga yetti ustun sig'maydi. Ikkinchi darajalilari yashiriladi — satr
+  /// bosilganda chek oynasi baribir hammasini ko'rsatadi.
+  readonly columns = computed(() => this.layout.isPhone()
+    ? ['date', 'customer', 'total', 'status']
+    : ['date', 'customer', 'cashier', 'total', 'paid', 'debt', 'status',
+       ...(this.canReturn ? ['actions'] : [])]);
 
   async ngOnInit(): Promise<void> {
     const { from, to } = utcRange(30);
@@ -82,14 +106,14 @@ export class Sales implements OnInit {
     this.searchTimer = setTimeout(() => {
       this.search.set(value.trim());
       this.page.set(1);
-      this.load();
+      void this.load();
     }, 350);
   }
 
   onPage(e: { page: number; pageSize: number }): void {
     this.page.set(e.page);
     this.pageSize.set(e.pageSize);
-    this.load();
+    void this.load();
   }
 
   statusKey(status: string): string {
@@ -102,10 +126,10 @@ export class Sales implements OnInit {
 
   async openReturn(row: Sale, event: Event): Promise<void> {
     event.stopPropagation();
-    const done = await lastValueFrom(
-      this.dialog.open(ReturnDialog, { data: row, width: '480px', maxWidth: '94vw', autoFocus: false }).afterClosed(),
+    const done: boolean | undefined = await lastValueFrom(
+this.dialog.open<ReturnDialog, unknown, boolean>(ReturnDialog, { data: row, width: '480px', maxWidth: '94vw', autoFocus: 'first-tabbable' }).afterClosed(),
     );
-    if (done) this.load();
+    if (done) void this.load();
   }
 
   async openReceipt(row: Sale): Promise<void> {
@@ -220,10 +244,20 @@ export class Sales implements OnInit {
         </p>
       </mat-dialog-content>
       <mat-dialog-actions align="end">
+        <button matButton [disabled]="printing()" (click)="print()">
+          <mat-icon>print</mat-icon>
+          {{ t('print') }}
+        </button>
         <button matButton (click)="openLink()">
           <mat-icon>open_in_new</mat-icon>
           {{ t('open_receipt') }}
         </button>
+        @if (canCorrect()) {
+          <button matButton [disabled]="correcting()" (click)="correct()">
+            <mat-icon>edit</mat-icon>
+            {{ t('correct_sale') }}
+          </button>
+        }
         <button matButton="filled" [disabled]="resending()" (click)="resend(t('receipt_resent'))">
           <mat-icon>send</mat-icon>
           {{ t('resend_receipt') }}
@@ -279,11 +313,93 @@ export class Sales implements OnInit {
     .footer { margin: 10px 0 0; font-size: 12px; color: var(--cx-text-3); }
   `,
 })
-export class ReceiptDialog {
+export class ReceiptDialog implements OnInit {
   private readonly api = inject(SalesApi);
   private readonly notify = inject(NotifyService);
+  private readonly remotePrint = inject(RemotePrintService);
+  private readonly ref = inject(MatDialogRef<ReceiptDialog>);
+  private readonly router = inject(Router);
+  private readonly pos = inject(PosCartState);
+  private readonly transloco = inject(TranslocoService);
   readonly data = inject<{ receipt: Receipt; saleId: number }>(MAT_DIALOG_DATA);
   readonly resending = signal(false);
+  readonly printing = signal(false);
+  readonly correcting = signal(false);
+  readonly canCorrect = signal(false);
+  private detail: SaleDetail | null = null;
+
+  async ngOnInit(): Promise<void> {
+    try {
+      this.detail = await lastValueFrom(this.api.detail(this.data.saleId));
+      this.canCorrect.set(this.detail.allowedActions.includes('correctSale'));
+    } catch {
+      this.canCorrect.set(false);
+    }
+  }
+
+  // Savdoni tuzatish: eski savdo sababi bilan bekor qilinadi va uning savati POS'ga
+  // qaytariladi - narx, mijoz, to'lov va chegirma bilan birga (desktop bilan bir xil).
+  async correct(): Promise<void> {
+    const sale = this.detail;
+    if (!sale || this.correcting()) return;
+    const t = (k: string): string => this.transloco.translate(k);
+    const reason = window.prompt(t('correct_sale_confirm'), '')?.trim();
+    if (!reason) return;
+    this.correcting.set(true);
+    try {
+      await lastValueFrom(this.api.void(sale.id, reason));
+      this.pos.restoreCorrection({
+        cart: sale.items.map((i) => ({
+          variantId: i.variantId,
+          name: i.productName,
+          unitName: i.unitName,
+          price: i.enteredUnitPrice > 0 ? i.enteredUnitPrice : i.unitPrice,
+          originalPrice: i.unitPrice,
+          qty: i.quantity,
+          available: 0,
+          allowsAmountEntry: false,
+          allowsFractional: i.allowsFractional,
+        })),
+        customer: sale.customerId
+          ? ({ id: sale.customerId, fullName: sale.customerName ?? '' } as Customer)
+          : null,
+        cash: sale.paidCash,
+        card: sale.paidCard,
+        bonus: sale.paidBonus,
+        discount: sale.manualDiscountAmount,
+        note: sale.note ?? '',
+        dueDate: sale.debtDueDate ?? '',
+        payments: sale.payments.map((p) => ({ method: p.method, currency: p.currency, amount: p.amount })),
+      });
+      this.notify.success(t('sale_voided'));
+      this.ref.close(true);
+      void this.router.navigate(['/pos']);
+    } catch (e) {
+      this.notify.error(e);
+    } finally {
+      this.correcting.set(false);
+    }
+  }
+
+  async print(): Promise<void> {
+    this.printing.set(true);
+    try {
+      const queued = await this.remotePrint.send({
+        kind: 'Receipt',
+        permission: 'printing.receipts.reprint',
+        sourceType: 'sale',
+        sourceId: String(this.data.saleId),
+        payload: { receiptToken: this.data.receipt.receiptToken },
+        isReprint: true,
+        reason: 'web_reprint',
+      });
+      if (!queued) this.openLink();
+    } catch (e) {
+      this.notify.error(e);
+    } finally {
+      this.printing.set(false);
+    }
+  }
 
   openLink(): void {
     window.open('/r/' + this.data.receipt.receiptToken, '_blank');
@@ -304,6 +420,7 @@ export class ReceiptDialog {
 
 interface ReturnLine {
   saleItemId: number;
+  variantId: number;
   productName: string;
   remaining: number;
   quantity: number;
@@ -313,15 +430,18 @@ interface ReturnLine {
 
 @Component({
   selector: 'app-return-dialog',
-  imports: [FormsModule, MatButtonModule, MatCheckboxModule, MatDialogModule, MatFormFieldModule, MatIconModule, MatInputModule, TranslocoModule],
+  imports: [FormsModule, MatButtonModule, MatCheckboxModule, MatDialogModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressBarModule, TranslocoModule],
   template: `
     <div class="dlg" *transloco="let t">
       <div class="head">
         <h2>{{ t('return') }}</h2>
         <button matIconButton mat-dialog-close><mat-icon>close</mat-icon></button>
       </div>
+      @if (busy()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
       <mat-dialog-content>
-        @for (line of lines; track line.saleItemId) {
+        @for (line of lines(); track line.saleItemId) {
           <div class="line">
             <div class="top">
               <span class="name">{{ line.productName }}</span>
@@ -330,7 +450,7 @@ interface ReturnLine {
             <div class="ctrl">
               <mat-form-field appearance="outline" subscriptSizing="dynamic" class="qty">
                 <mat-label>{{ t('quantity') }}</mat-label>
-                <input matInput type="number" min="0" [max]="line.remaining" [(ngModel)]="line.quantity" />
+                <input matInput type="number" min="0" [max]="line.remaining" [(ngModel)]="line.quantity" [attr.cdkFocusInitial]="$first ? '' : null" />
               </mat-form-field>
               <mat-checkbox [(ngModel)]="line.restock">{{ t('restock') }}</mat-checkbox>
             </div>
@@ -401,26 +521,51 @@ export class ReturnDialog {
   private readonly ref = inject(MatDialogRef<ReturnDialog>);
   private readonly sale = inject<Sale>(MAT_DIALOG_DATA);
 
-  readonly busy = signal(false);
-  readonly lines: ReturnLine[] = this.sale.items
-    .filter((i) => i.quantity - i.returnedQuantity > 0)
-    .map((i) => ({
-      saleItemId: i.saleItemId,
-      productName: i.productName,
-      remaining: i.quantity - i.returnedQuantity,
-      quantity: i.quantity - i.returnedQuantity,
-      restock: true,
-      reason: '',
-    }));
+  private readonly idempotencyKey = newUuid();
+  private detail: SaleDetail | null = null;
+
+  readonly busy = signal(true);
+  readonly lines = signal<ReturnLine[]>([]);
+
+  constructor() {
+    void this.load();
+  }
+
+  private async load(): Promise<void> {
+    try {
+      this.detail = await lastValueFrom(this.api.detail(this.sale.id));
+      this.lines.set(
+        this.detail.items
+          .filter((i) => i.returnableQuantity > 0)
+          .map((i) => ({
+            saleItemId: i.saleItemId,
+            variantId: i.variantId,
+            productName: i.productName,
+            remaining: i.returnableQuantity,
+            quantity: i.returnableQuantity,
+            restock: true,
+            reason: '',
+          })),
+      );
+    } catch (e) {
+      this.notify.error(e);
+      this.ref.close(false);
+    } finally {
+      this.busy.set(false);
+    }
+  }
 
   async confirm(): Promise<void> {
-    const lines = this.lines
+    if (!this.detail) return;
+    const lines = this.lines()
       .filter((l) => l.quantity > 0)
       .map((l) => ({
+        variantId: l.variantId,
         saleItemId: l.saleItemId,
         quantity: Math.min(l.quantity, l.remaining),
-        restock: l.restock,
         reason: l.reason.trim() || null,
+        condition: 'Sellable',
+        disposition: l.restock ? 'SellableRestock' : 'Quarantine',
       }));
     if (!lines.length) {
       this.notify.error(this.transloco.translate('return_select_qty'));
@@ -428,7 +573,15 @@ export class ReturnDialog {
     }
     this.busy.set(true);
     try {
-      await lastValueFrom(this.api.returnSale(this.sale.id, lines));
+      await lastValueFrom(
+        this.api.createReturn({
+          warehouseId: this.detail.warehouseId,
+          customerId: this.detail.customerId,
+          lines,
+          autoSettle: true,
+          idempotencyKey: this.idempotencyKey,
+        }),
+      );
       this.notify.success(this.transloco.translate('success'));
       this.ref.close(true);
     } catch (e) {

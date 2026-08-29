@@ -1,10 +1,11 @@
-using Cartex.Application.StockTransfers.Commands;
+﻿using Cartex.Application.StockTransfers.Commands;
 using Cartex.Application.StockTransfers.Queries;
 using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
 using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Cartex.Shared.Models.StockTransfers;
 
 namespace Cartex.Api.Controllers;
 
@@ -31,7 +32,7 @@ public class StockTransfersController(ISender sender) : ControllerBase
     }
 
     [HttpPost]
-    [HasPermission(AppPermissions.StockTransfers.Manage)]
+    [HasPermission(AppPermissions.StockTransfers.Create)]
     public async Task<ActionResult<long>> CreateStockTransfer(CreateStockTransferCommand command)
     {
         var id = await sender.Send(command);
@@ -39,7 +40,7 @@ public class StockTransfersController(ISender sender) : ControllerBase
     }
 
     [HttpPut("{id:long}/receive")]
-    [HasPermission(AppPermissions.StockTransfers.View)]
+    [HasPermission(AppPermissions.StockTransfers.Receive)]
     public async Task<IActionResult> ReceiveStockTransfer(long id)
     {
         await sender.Send(new ReceiveStockTransferCommand(id));

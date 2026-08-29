@@ -1,6 +1,12 @@
 <ng-container *transloco="let t">
   <cx-page-header [title]="t('supplies')" [subtitle]="t('supplies_subtitle')">
-    @if (canManage) {
+    @if (canExport) {
+      <button matButton="outlined" (click)="exportCsv()">
+        <mat-icon>download</mat-icon>{{ t('export') }}
+      </button>
+    }
+
+    @if (canCreate) {
       <button matButton="filled" (click)="openCreate()">
         <mat-icon>add</mat-icon>
         {{ t('new_supply') }}
@@ -65,8 +71,8 @@
                 <th mat-header-cell *matHeaderCellDef>{{ t('user') }}</th>
                 <td mat-cell *matCellDef="let s">{{ s.userName }}</td>
               </ng-container>
-              <tr mat-header-row *matHeaderRowDef="cols"></tr>
-              <tr mat-row *matRowDef="let s; columns: cols" class="clickable" (dblclick)="openDetail(s)"></tr>
+              <tr mat-header-row *matHeaderRowDef="cols()"></tr>
+              <tr mat-row *matRowDef="let s; columns: cols()" class="clickable" (dblclick)="openDetail(s)"></tr>
             </table>
           </div>
           <cx-paging-bar [meta]="pg.meta" (changed)="onPage($event)" />

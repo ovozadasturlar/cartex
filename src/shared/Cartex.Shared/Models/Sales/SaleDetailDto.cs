@@ -1,0 +1,83 @@
+namespace Cartex.Shared.Models.Sales;
+
+public sealed record SaleDetailItemDto(
+    long SaleItemId,
+    long VariantId,
+    string ProductName,
+    string? VariantName,
+    string UnitName,
+    decimal Quantity,
+    decimal ReturnedQuantity,
+    decimal ReturnableQuantity,
+    decimal UnitPrice,
+    decimal EnteredUnitPrice,
+    string PriceCurrency,
+    decimal PriceRate,
+    decimal LineTotal,
+    decimal DiscountAmount,
+    decimal NetTotal,
+    decimal CashbackEarned,
+    decimal ReturnedCashback,
+    bool AllowsFractional = false);
+
+public sealed record SaleDetailPaymentDto(
+    string Method,
+    string Currency,
+    decimal Amount,
+    decimal Rate,
+    decimal AmountBase);
+
+public sealed record SaleDetailParticipantDto(
+    long RoleDefinitionId,
+    long PartyId,
+    string RoleLabel,
+    string PartyName,
+    string? PartyPhone,
+    string Source);
+
+public sealed record SaleReturnSummaryDto(
+    long Id,
+    string DocumentNumber,
+    DateOnly BusinessDate,
+    decimal RefundAmount,
+    string Status);
+
+public sealed record ReceiptSmsResultDto(long JobId, string Status);
+public sealed record ReceiptSmsPreviewDto(string Recipient, string Text, string ConfirmationToken);
+public sealed record SendReceiptSmsRequest(string ConfirmationToken);
+
+public sealed record SaleDetailDto(
+    long Id,
+    string DocumentNumber,
+    DateTime SaleDate,
+    string Status,
+    string ReceiptToken,
+    long BranchId,
+    string BranchName,
+    long WarehouseId,
+    string WarehouseName,
+    long UserId,
+    string UserName,
+    long? CustomerId,
+    string? CustomerName,
+    string? CustomerPhone,
+    decimal TotalAmount,
+    decimal DiscountAmount,
+    decimal ManualDiscountAmount,
+    decimal PaidCash,
+    decimal PaidCard,
+    decimal PaidBonus,
+    decimal PaidAdvance,
+    decimal DebtAmount,
+    DateOnly? DebtDueDate,
+    string DebtCurrency,
+    decimal ChangeAmount,
+    decimal CreditAmount,
+    decimal CashbackEarned,
+    IReadOnlyList<SaleDetailItemDto> Items,
+    IReadOnlyList<SaleDetailPaymentDto> Payments,
+    IReadOnlyList<SaleDetailParticipantDto> Participants,
+    IReadOnlyList<SaleReturnSummaryDto> Returns,
+    IReadOnlyList<string> AllowedActions,
+    string? Note = null,
+    string? VoidReason = null);

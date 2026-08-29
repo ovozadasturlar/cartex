@@ -1,0 +1,309 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView
+    x:Class="Cartex.Mobile.Store.Views.TradeView"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Cartex.Mobile.Store.ViewModels"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
+    xmlns:ctl="clr-namespace:Cartex.Mobile.Store.Controls"
+    x:DataType="vm:TradeViewModel">
+    <ContentView.Resources>
+        <Style x:Key="Section" TargetType="Button">
+            <Setter Property="BackgroundColor" Value="Transparent" />
+            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+            <Setter Property="Padding" Value="14,10" />
+            <Setter Property="CornerRadius" Value="10" />
+        </Style>
+        <Style x:Key="QueueChip" TargetType="Button">
+            <Setter Property="HeightRequest" Value="36" />
+            <Setter Property="MinimumHeightRequest" Value="36" />
+            <Setter Property="CornerRadius" Value="18" />
+            <Setter Property="Padding" Value="16,0" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
+            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+        </Style>
+        <Style x:Key="PayMethodBadge" TargetType="Label">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontAttributes" Value="Bold" />
+            <Setter Property="Padding" Value="8,3" />
+            <Setter Property="VerticalOptions" Value="Center" />
+            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}" />
+            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+        </Style>
+    </ContentView.Resources>
+
+    <Grid>
+    <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10" Padding="16,12,16,0">
+        <!-- Section Selector -->
+        <Grid ColumnDefinitions="*,*,*" Padding="4" BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
+            <Button Text="{svc:T queue}" Style="{StaticResource Section}" Command="{Binding ShowQueueCommand}"
+                    IsVisible="{Binding HasQueueAccess}">
+                <Button.Triggers>
+                    <DataTrigger TargetType="Button" Binding="{Binding IsQueue}" Value="True">
+                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
+                        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                        <Setter Property="FontAttributes" Value="Bold" />
+                    </DataTrigger>
+                </Button.Triggers>
+            </Button>
+            <Button Grid.Column="1" Text="{svc:T sales}" Style="{StaticResource Section}" Command="{Binding ShowSalesCommand}">
+                <Button.Triggers>
+                    <DataTrigger TargetType="Button" Binding="{Binding IsSales}" Value="True">
+                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
+                        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                        <Setter Property="FontAttributes" Value="Bold" />
+                    </DataTrigger>
+                </Button.Triggers>
+            </Button>
+            <Button Grid.Column="2" Text="{svc:T z_reports}" Style="{StaticResource Section}" Command="{Binding ShowZReportsCommand}"
+                    IsVisible="{Binding HasZReportAccess}">
+                <Button.Triggers>
+                    <DataTrigger TargetType="Button" Binding="{Binding IsZReports}" Value="True">
+                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
+                        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                        <Setter Property="FontAttributes" Value="Bold" />
+                    </DataTrigger>
+                </Button.Triggers>
+            </Button>
+        </Grid>
+
+        <!-- Sub-filters Header -->
+        <Grid Grid.Row="1">
+            <!-- Queue Status Chips -->
+            <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never" IsVisible="{Binding ShowQueueSection}">
+                <HorizontalStackLayout BindableLayout.ItemsSource="{Binding QueueStatuses}" Spacing="8">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:QueueStatusChip">
+                            <Button Text="{Binding Text}" Style="{StaticResource QueueChip}"
+                                    Command="{Binding SelectQueueStatusCommand, Source={RelativeSource AncestorType={x:Type vm:TradeViewModel}}}"
+                                    CommandParameter="{Binding .}">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button" Binding="{Binding IsSelected}" Value="False">
+                                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
+                                        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+                                        <Setter Property="FontAttributes" Value="None" />
+                                    </DataTrigger>
+                                    <DataTrigger TargetType="Button" Binding="{Binding IsSelected}" Value="True">
+                                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                        <Setter Property="FontAttributes" Value="Bold" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </HorizontalStackLayout>
+            </ScrollView>
+
+            <!-- Sales Period Chips -->
+            <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never" IsVisible="{Binding IsSales}">
+                <HorizontalStackLayout BindableLayout.ItemsSource="{Binding SalesPeriods}" Spacing="8">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:SalesPeriodChip">
+                            <Button Text="{Binding Text}" Style="{StaticResource QueueChip}"
+                                    Command="{Binding SelectSalesPeriodCommand, Source={RelativeSource AncestorType={x:Type vm:TradeViewModel}}}"
+                                    CommandParameter="{Binding .}">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button" Binding="{Binding IsSelected}" Value="False">
+                                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" />
+                                        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+                                        <Setter Property="FontAttributes" Value="None" />
+                                    </DataTrigger>
+                                    <DataTrigger TargetType="Button" Binding="{Binding IsSelected}" Value="True">
+                                        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                                        <Setter Property="TextColor" Value="White" />
+                                        <Setter Property="FontAttributes" Value="Bold" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </HorizontalStackLayout>
+            </ScrollView>
+        </Grid>
+
+        <!-- Main Content Area -->
+        <RefreshView Grid.Row="2" IsRefreshing="{Binding IsRefreshing}" Command="{Binding RefreshCommand}">
+            <Grid>
+                <!-- QUEUE SECTION -->
+                <CollectionView ItemsSource="{Binding Carts}" IsVisible="{Binding ShowQueueSection}">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="vm:TradeQueueRow">
+                            <SwipeView Margin="0,0,0,10">
+                                <SwipeView.RightItems>
+                                    <SwipeItems Mode="Reveal">
+                                        <SwipeItem Text="{svc:T edit}" IsVisible="{Binding CanEdit}"
+                                                   Command="{Binding EditQueueCommand, Source={RelativeSource AncestorType={x:Type vm:TradeViewModel}}}"
+                                                   CommandParameter="{Binding .}" />
+                                    </SwipeItems>
+                                </SwipeView.RightItems>
+                                <Border Style="{StaticResource Card}" Padding="14,12">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding OpenQueueCommand, Source={RelativeSource AncestorType={x:Type vm:TradeViewModel}}}"
+                                                              CommandParameter="{Binding .}" />
+                                    </Border.GestureRecognizers>
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                        <VerticalStackLayout Spacing="3">
+                                            <HorizontalStackLayout Spacing="8">
+                                                <Label Text="{Binding CreatedBy}" FontAttributes="Bold" FontSize="15" LineBreakMode="TailTruncation"
+                                                       TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                                <Label Text="{Binding TimeText}" Style="{StaticResource MutedLabel}" FontSize="12" VerticalOptions="Center" />
+                                            </HorizontalStackLayout>
+                                            <Label Text="{Binding CustomerText}" Style="{StaticResource MutedLabel}" FontSize="13" LineBreakMode="TailTruncation" />
+                                            <Label Text="{Binding SummaryText}" FontSize="13.5" FontAttributes="Bold"
+                                                   TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                                            <Label Text="{Binding NoteText}" FontAttributes="Italic" FontSize="12.5" IsVisible="{Binding HasNote}"
+                                                   TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+                                        </VerticalStackLayout>
+                                        <Button Grid.Column="1" Text="{StaticResource IcClose}" FontFamily="MDI" FontSize="18"
+                                                WidthRequest="38" HeightRequest="38" MinimumHeightRequest="38" CornerRadius="19" Padding="0"
+                                                VerticalOptions="Start" BackgroundColor="Transparent"
+                                                TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}"
+                                                IsVisible="{Binding CanCancel}"
+                                                Command="{Binding CancelQueueCommand, Source={RelativeSource AncestorType={x:Type vm:TradeViewModel}}}"
+                                                CommandParameter="{Binding .}" />
+                                    </Grid>
+                                </Border>
+                            </SwipeView>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                    <CollectionView.Footer>
+                        <Grid HeightRequest="100" />
+                    </CollectionView.Footer>
+                    <CollectionView.EmptyView>
+                        <VerticalStackLayout Spacing="12" Margin="0,60,0,0" HorizontalOptions="Center">
+                            <Label Text="{svc:T queue_empty}" Style="{StaticResource MutedLabel}" HorizontalOptions="Center" />
+                        </VerticalStackLayout>
+                    </CollectionView.EmptyView>
+                </CollectionView>
+
+                <!-- SALES SECTION (Virtualized CollectionView with Search and Stats) -->
+                <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10" IsVisible="{Binding IsSales}">
+                    <!-- Search Input Box -->
+                    <Border Style="{StaticResource Card}" Padding="10,4" Margin="0,0,0,2">
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                            <Label Text="{StaticResource IcMagnify}" FontFamily="MDI" FontSize="18"
+                                   VerticalOptions="Center"
+                                   TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+                            <Entry Grid.Column="1" Text="{Binding SalesSearch}"
+                                   Placeholder="{svc:T search_sales}"
+                                   ReturnCommand="{Binding SearchSalesCommand}"
+                                   ClearButtonVisibility="WhileEditing"
+                                   FontSize="13.5" />
+                            <Button Grid.Column="2" Text="{StaticResource IcMagnify}" FontFamily="MDI" FontSize="16"
+                                    WidthRequest="34" HeightRequest="34" CornerRadius="17" Padding="0"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}"
+                                    TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}"
+                                    Command="{Binding SearchSalesCommand}" />
+                        </Grid>
+                    </Border>
+
+                    <!-- Summary Stats Cards -->
+                    <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <Border Style="{StaticResource Card}" Padding="14,10">
+                            <VerticalStackLayout Spacing="2">
+                                <Label Text="{svc:T total}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                                <Label Text="{Binding TodayTotal}" FontSize="22" FontAttributes="Bold"
+                                       TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                            </VerticalStackLayout>
+                        </Border>
+                        <Border Grid.Column="1" Style="{StaticResource Card}" Padding="14,10">
+                            <VerticalStackLayout Spacing="2">
+                                <Label Text="{svc:T sales}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                                <Label Text="{Binding TodayCount}" FontSize="22" FontAttributes="Bold"
+                                       TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </Grid>
+
+                    <!-- Sales Virtualized CollectionView -->
+                    <CollectionView Grid.Row="2"
+                                    ItemsSource="{Binding Sales}"
+                                    RemainingItemsThreshold="5"
+                                    RemainingItemsThresholdReachedCommand="{Binding LoadMoreSalesCommand}">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="vm:TradeSaleRow">
+                                <Border Style="{StaticResource Card}" Padding="14,12" Margin="0,0,0,8">
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding OpenSaleCommand, Source={RelativeSource AncestorType={x:Type vm:TradeViewModel}}}"
+                                                              CommandParameter="{Binding .}" />
+                                    </Border.GestureRecognizers>
+                                    <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="6">
+                                        <VerticalStackLayout Spacing="3">
+                                            <HorizontalStackLayout Spacing="6">
+                                                <Label Text="{Binding DateText}" Style="{StaticResource MutedLabel}" FontSize="12" VerticalOptions="Center" />
+                                                <Label Text="•" Style="{StaticResource MutedLabel}" FontSize="11" VerticalOptions="Center" />
+                                                <Label Text="{Binding UserName}" Style="{StaticResource MutedLabel}" FontSize="12" FontAttributes="Bold" VerticalOptions="Center" />
+                                            </HorizontalStackLayout>
+                                            <Label Text="{Binding CustomerName}" FontSize="13.5" FontAttributes="Bold" LineBreakMode="TailTruncation"
+                                                   TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                            <Label Text="{Binding ItemsSummary}" Style="{StaticResource MutedLabel}" FontSize="12" LineBreakMode="TailTruncation"
+                                                   IsVisible="{Binding HasItemsSummary}" />
+                                            <HorizontalStackLayout Spacing="6" Margin="0,2,0,0">
+                                                <Label Text="{svc:T pay_cash}" Style="{StaticResource PayMethodBadge}" IsVisible="{Binding HasCash}" />
+                                                <Label Text="{svc:T pay_card}" Style="{StaticResource PayMethodBadge}" IsVisible="{Binding HasCard}" />
+                                                <Label Text="{svc:T debt_label}" Style="{StaticResource PayMethodBadge}" TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" IsVisible="{Binding HasDebt}" />
+                                                <Label Text="{svc:T advance}" Style="{StaticResource PayMethodBadge}" TextColor="{AppThemeBinding Light={StaticResource Success}, Dark={StaticResource SuccessDark}}" IsVisible="{Binding HasAdvance}" />
+                                            </HorizontalStackLayout>
+                                        </VerticalStackLayout>
+                                        <Label Grid.Column="1" Text="{Binding Total}" FontAttributes="Bold" FontSize="15.5" VerticalOptions="Center"
+                                               TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                                        <Button Grid.Column="2" FontFamily="MDI" Text="{StaticResource IcPrinter}" FontSize="18" Padding="0"
+                                                WidthRequest="38" HeightRequest="38" MinimumHeightRequest="38" CornerRadius="19"
+                                                Command="{Binding ReprintSaleCommand, Source={RelativeSource AncestorType={x:Type vm:TradeViewModel}}}"
+                                                CommandParameter="{Binding .}" IsVisible="{Binding CanPrint}" />
+                                        <Button Grid.Column="3" FontFamily="MDI" Text="{StaticResource IcSend}" FontSize="18" Padding="0"
+                                                WidthRequest="38" HeightRequest="38" MinimumHeightRequest="38" CornerRadius="19"
+                                                Command="{Binding ResendSaleCommand, Source={RelativeSource AncestorType={x:Type vm:TradeViewModel}}}"
+                                                CommandParameter="{Binding .}" IsVisible="{Binding CanResend}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                        <CollectionView.Footer>
+                            <VerticalStackLayout Padding="12,12,12,100" HorizontalOptions="Center">
+                                <ActivityIndicator IsRunning="{Binding IsLoadingMoreSales}" WidthRequest="24" HeightRequest="24"
+                                                   IsVisible="{Binding IsLoadingMoreSales}" />
+                            </VerticalStackLayout>
+                        </CollectionView.Footer>
+                        <CollectionView.EmptyView>
+                            <VerticalStackLayout Spacing="12" Margin="0,40,0,0" HorizontalOptions="Center">
+                                <Label Text="{svc:T sales_empty}" Style="{StaticResource MutedLabel}" HorizontalOptions="Center" />
+                            </VerticalStackLayout>
+                        </CollectionView.EmptyView>
+                    </CollectionView>
+                </Grid>
+
+                <!-- Z-REPORTS SECTION -->
+                <ScrollView IsVisible="{Binding IsZReports}">
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Shifts}" Spacing="8" Padding="0,0,0,104">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:TradeShiftRow">
+                                <Border Style="{StaticResource Card}" Padding="14,12">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                        <VerticalStackLayout Spacing="3">
+                                            <Label Text="{Binding UserName}" FontAttributes="Bold" FontSize="15"
+                                                   TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                            <Label Text="{Binding DateText}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                                        </VerticalStackLayout>
+                                        <Button Grid.Column="1" FontFamily="MDI" Text="{StaticResource IcPrinter}" FontSize="18" Padding="0"
+                                                WidthRequest="42" HeightRequest="42" CornerRadius="21"
+                                                Command="{Binding PrintZReportCommand, Source={RelativeSource AncestorType={x:Type vm:TradeViewModel}}}"
+                                                CommandParameter="{Binding .}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </ScrollView>
+
+                <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
+                                   VerticalOptions="Center" HorizontalOptions="Center" />
+                <Label Text="{Binding Error}" Style="{StaticResource TxDanger}" IsVisible="{Binding Error, Converter={StaticResource NotEmpty}}"
+                       VerticalOptions="Center" HorizontalOptions="Center" />
+            </Grid>
+        </RefreshView>
+    </Grid>
+    </Grid>
+</ContentView>

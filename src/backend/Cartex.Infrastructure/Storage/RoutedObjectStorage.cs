@@ -24,9 +24,14 @@ public sealed class RoutedObjectStorage(ISettingsService settings, LocalObjectSt
     {
         var provider = await ResolveAsync(cancellationToken);
         var result = await provider.DownloadAsync(key, cancellationToken);
-        if (result is null && ReferenceEquals(provider, minio))
-            result = await local.DownloadAsync(key, cancellationToken);
-        return result;
+        if (result is not null)
+            return result;
+
+        // Existing installations may have switched providers after files were
+        // uploaded. Reads must therefore check the other configured provider
+        // as well; the public content endpoint is shared by web and mobile.
+        IObjectStorage fallback = ReferenceEquals(provider, minio) ? local : minio;
+        return await fallback.DownloadAsync(key, cancellationToken);
     }
 
     public async Task DeleteAsync(string key, CancellationToken cancellationToken = default)

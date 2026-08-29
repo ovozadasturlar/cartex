@@ -12,6 +12,7 @@ public partial class CurrencyRow(CurrencyDto dto, bool isStale) : ObservableObje
 {
     public string Code { get; } = dto.Code;
     public string Name { get; } = dto.Name;
+    public string Symbol { get; } = dto.Symbol;
     public bool IsSystem { get; } = dto.IsSystem;
     public bool IsBase { get; } = dto.IsBase;
     public bool IsCustom { get; } = !dto.IsSystem && !dto.IsBase;
@@ -36,14 +37,21 @@ public partial class RatesViewModel(IRatesApi api, IBusinessApi businessApi, ISe
     [ObservableProperty] private bool _isAddOpen;
     [ObservableProperty] private string _newCode = "";
     [ObservableProperty] private string _newName = "";
+    [ObservableProperty] private string _newSymbol = "";
+    [ObservableProperty] private string _newSymbolPosition = "Suffix";
+    [ObservableProperty] private int _newDecimalDigits = 2;
     [ObservableProperty] private string? _historyCode;
 
-    public bool CanManageCurrencies => auth.HasPermission("currencies.manage");
-    public bool CanManageRates => auth.HasPermission("rates.manage");
+    public IReadOnlyList<string> SymbolPositions { get; } = ["Prefix", "Suffix"];
+
+    public bool CanCreateCurrency => auth.HasPermission("currencies.create");
+    public bool CanEditCurrency => auth.HasPermission("currencies.edit");
+    public bool CanDeleteCurrency => auth.HasPermission("currencies.delete");
+    public bool CanManageRates => auth.HasPermission("rates.edit");
     public bool HasStale => StaleCount > 0;
 
     private IReadOnlyList<PageShortcut>? _shortcuts;
-    public IReadOnlyList<PageShortcut> Shortcuts => _shortcuts ??= CanManageCurrencies
+    public IReadOnlyList<PageShortcut> Shortcuts => _shortcuts ??= CanCreateCurrency
         ? CrudShortcuts(OpenAddCommand, AddCommand, () => IsAddOpen = false, () => IsAddOpen)
         : [];
 
@@ -82,6 +90,7 @@ public partial class RatesViewModel(IRatesApi api, IBusinessApi businessApi, ISe
     [RelayCommand]
     private async Task SaveRateAsync(CurrencyRow row)
     {
+        if (!CanManageRates) return;
         if (row.NewRate <= 0) { toast.Error(L["error"]); return; }
         try
         {
@@ -98,6 +107,7 @@ public partial class RatesViewModel(IRatesApi api, IBusinessApi businessApi, ISe
     [RelayCommand]
     private async Task ToggleEnabledAsync(CurrencyRow row)
     {
+        if (!CanEditCurrency) return;
         if (row.IsBase) return;
         try
         {
@@ -110,6 +120,7 @@ public partial class RatesViewModel(IRatesApi api, IBusinessApi businessApi, ISe
     [RelayCommand]
     private async Task MakeDefaultAsync(CurrencyRow row)
     {
+        if (!CanEditCurrency) return;
         if (row.IsDefault) return;
         try
         {
@@ -122,6 +133,7 @@ public partial class RatesViewModel(IRatesApi api, IBusinessApi businessApi, ISe
     [RelayCommand]
     private async Task DeleteAsync(CurrencyRow row)
     {
+        if (!CanDeleteCurrency) return;
         if (!await dialog.ConfirmDangerAsync(string.Format(L["currency_delete_confirm"], row.Code), L["delete"])) return;
         try
         {
@@ -135,8 +147,12 @@ public partial class RatesViewModel(IRatesApi api, IBusinessApi businessApi, ISe
     [RelayCommand]
     private void OpenAdd()
     {
+        if (!CanCreateCurrency) return;
         NewCode = "";
         NewName = "";
+        NewSymbol = "";
+        NewSymbolPosition = "Suffix";
+        NewDecimalDigits = 2;
         IsAddOpen = true;
     }
 
@@ -146,12 +162,18 @@ public partial class RatesViewModel(IRatesApi api, IBusinessApi businessApi, ISe
     [RelayCommand]
     private async Task AddAsync()
     {
+        if (!CanCreateCurrency) return;
         var code = NewCode.Trim().ToUpperInvariant();
         if (code.Length < 2 || string.IsNullOrWhiteSpace(NewName)) { toast.Warning(L["required_fields_hint"]); return; }
         try
         {
             using (busy.Begin(L["loading"]))
-                await api.CreateCurrencyAsync(new CreateCurrencyRequest(code, NewName.Trim()));
+                await api.CreateCurrencyAsync(new CreateCurrencyRequest(
+                    code,
+                    NewName.Trim(),
+                    NewSymbol.Trim(),
+                    NewSymbolPosition,
+                    Math.Clamp(NewDecimalDigits, 0, 4)));
             IsAddOpen = false;
             toast.Success(L["success"]);
             await LoadAsync();

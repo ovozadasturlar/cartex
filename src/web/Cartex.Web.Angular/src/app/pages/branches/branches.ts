@@ -11,6 +11,7 @@ import { MatTableModule } from '@angular/material/table';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import { AdminApi, Branch } from '../../core/api/admin.api';
+import { AuthService } from '../../core/auth.service';
 import { NotifyService } from '../../core/notify.service';
 import { EmptyState } from '../../shared/empty-state';
 import { PageHeader } from '../../shared/page-header';
@@ -33,7 +34,10 @@ export class Branches implements OnInit {
   private readonly api = inject(AdminApi);
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
+  private readonly auth = inject(AuthService);
 
+  readonly canCreate = this.auth.hasPermission('branches.create');
+  readonly canEdit = this.auth.hasPermission('branches.edit');
   readonly loading = signal(true);
   readonly branches = signal<Branch[]>([]);
   readonly cols = ['name', 'address', 'phone', 'status'];
@@ -44,10 +48,13 @@ export class Branches implements OnInit {
   }
 
   open(branch: Branch | null): void {
+    if (branch ? !this.canEdit : !this.canCreate) return;
     this.dialog
-      .open(BranchDialog, { data: branch, width: '460px', maxWidth: '94vw', autoFocus: false })
+      .open(BranchDialog, { data: branch, width: '460px', maxWidth: '94vw', autoFocus: 'first-tabbable' })
       .afterClosed()
-      .subscribe((saved) => saved && this.reload());
+      .subscribe((saved) => {
+        if (saved) void this.reload();
+      });
   }
 
   private async reload(): Promise<void> {
@@ -81,7 +88,7 @@ export class Branches implements OnInit {
       <div mat-dialog-content class="dlg-form">
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('name') }}</mat-label>
-          <input matInput [(ngModel)]="name" />
+          <input matInput cdkFocusInitial [(ngModel)]="name" />
         </mat-form-field>
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('address') }}</mat-label>

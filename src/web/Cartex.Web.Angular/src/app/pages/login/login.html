@@ -45,4 +45,26 @@
       </form>
     }
   </div>
+  <div class="login-preferences">
+    <button matIconButton [matMenuTriggerFor]="themeMenu" [attr.aria-label]="t('theme')">
+      <mat-icon>{{ preferences.isDark() ? 'light_mode' : 'dark_mode' }}</mat-icon>
+    </button>
+    <mat-menu #themeMenu="matMenu">
+      <button mat-menu-item (click)="preferences.setTheme('light')">
+        <mat-icon>light_mode</mat-icon>{{ t('light') }}
+      </button>
+      <button mat-menu-item (click)="preferences.setTheme('dark')">
+        <mat-icon>dark_mode</mat-icon>{{ t('dark') }}
+      </button>
+    </mat-menu>
+
+    <button class="login-lang" [matMenuTriggerFor]="languageMenu">{{ preferences.languageShort() }}</button>
+    <mat-menu #languageMenu="matMenu">
+      @for (language of languages; track language.code) {
+        <button mat-menu-item (click)="setLang(language.code)" [disabled]="language.code === preferences.language()">
+          <span class="language-code">{{ language.short }}</span>{{ language.name }}
+        </button>
+      }
+    </mat-menu>
+  </div>
 </div>

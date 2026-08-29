@@ -1,22 +1,12 @@
-using Cartex.Application.Common.Messaging;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
 using Cartex.Domain.Common;
 using Cartex.Domain.Enums;
+using Cartex.Shared.Models.Shifts;
 
 namespace Cartex.Application.Shifts.Queries;
 
 public record GetCurrentShiftQuery : IRequest<CurrentShiftDto?>;
-
-public record CurrentShiftDto(long Id, DateTime OpenedAt, decimal OpeningFloat, decimal CashSales, decimal CashReturns, decimal PayIn, decimal PayOut, decimal DebtPayIn, decimal SupplyPayOut, decimal ExpectedCash)
-{
-    public decimal CardSales { get; init; }
-    public decimal CardReturns { get; init; }
-    public decimal BonusUsed { get; init; }
-    public decimal NewDebtIssued { get; init; }
-    public int SalesCount { get; init; }
-    public List<ZReportCurrencyDto> Currencies { get; init; } = [];
-}
 
 public sealed class GetCurrentShiftQueryHandler(IApplicationDbContext db, ICurrentUser currentUser) : IRequestHandler<GetCurrentShiftQuery, CurrentShiftDto?>
 {
@@ -33,7 +23,7 @@ public sealed class GetCurrentShiftQueryHandler(IApplicationDbContext db, ICurre
             return null;
 
         var report = await ShiftCalculator.ComputeAsync(db, shift, 0, cancellationToken);
-        return new CurrentShiftDto(shift.Id, shift.OpenedAt, shift.OpeningFloat,
+        return new CurrentShiftDto(shift.Id, shift.OpenedAt, report.OpeningFloat,
             report.CashSales, report.CashReturns, report.PayIn, report.PayOut, report.DebtPayIn, report.SupplyPayOut, report.ExpectedCash)
         {
             CardSales = report.CardSales,

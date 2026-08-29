@@ -4,12 +4,17 @@
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
 # User-specific files
+.idea/
+.dotnet_temp/
+-e/
+dotnet-install.sh
 *.rsuser
 *.suo
 *.user
 *.userosscache
 *.sln.docstates
 *.env
+opencode.json
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
@@ -416,3 +421,16 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Installer build outputs
+deploy/installer/output/
+
+# Repograph tool cache
+.repograph/
+
+# Katalog asbobi: maxfiy kalit va yig'ilgan paketlar hech qachon repoga tushmaydi
+*.pem
+catalog.csv
+issues.csv
+catalog-*.db
+catalog-*.json

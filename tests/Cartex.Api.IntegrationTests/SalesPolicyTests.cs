@@ -7,7 +7,7 @@ namespace Cartex.Api.IntegrationTests;
 [Collection("api")]
 public class SalesPolicyTests(CartexApiFactory factory)
 {
-    private sealed record IdName(long Id, string Name);
+    private sealed record IdName(long Id, string Name, bool IsOnline, long? AssignedUserId);
     private sealed record UserRow(long Id, string Username);
     private sealed record Product(long Id, long DefaultVariantId, string Name);
 
@@ -64,18 +64,20 @@ public class SalesPolicyTests(CartexApiFactory factory)
         var admin = await AuthHelper.LoginAsync(factory, "admin", "admin123");
         await AuthHelper.EnsureNoOpenShiftAsync(admin);
         var (warehouseId, variantId) = await LookupAsync(admin);
-        var warehouses = await admin.GetFromJsonAsync<List<IdName>>("/api/warehouses");
-        var users = await admin.GetFromJsonAsync<List<UserRow>>("/api/users");
-        var adminId = users!.First(u => u.Username == "admin").Id;
+        var warehouses = await admin.GetFromJsonAsync<List<IdName>>("/api/warehouses")
+            ?? throw new InvalidOperationException("Warehouses response is empty.");
+        var users = await admin.GetFromJsonAsync<List<UserRow>>("/api/users")
+            ?? throw new InvalidOperationException("Users response is empty.");
+        var adminId = users.First(u => u.Username == "admin").Id;
         try
         {
             (await admin.PutAsJsonAsync($"/api/warehouses/{warehouseId}",
-                new { name = warehouses![0].Name, isOnline = false, assignedUserId = 0 })).EnsureSuccessStatusCode();
+                new { name = warehouses[0].Name, isOnline = false, assignedUserId = 0 })).EnsureSuccessStatusCode();
             var blocked = await SellAsync(admin, warehouseId, variantId, 400_000m);
             Assert.Equal(HttpStatusCode.BadRequest, blocked.StatusCode);
 
             (await admin.PutAsJsonAsync($"/api/warehouses/{warehouseId}",
-                new { name = warehouses![0].Name, isOnline = false, assignedUserId = adminId })).EnsureSuccessStatusCode();
+                new { name = warehouses[0].Name, isOnline = false, assignedUserId = adminId })).EnsureSuccessStatusCode();
 
             var response = await SellAsync(admin, warehouseId, variantId, 400_000m);
             response.EnsureSuccessStatusCode();
@@ -83,7 +85,7 @@ public class SalesPolicyTests(CartexApiFactory factory)
         finally
         {
             (await admin.PutAsJsonAsync($"/api/warehouses/{warehouseId}",
-                new { name = warehouses![0].Name, isOnline = false, assignedUserId = 0 })).EnsureSuccessStatusCode();
+                new { name = warehouses[0].Name, isOnline = false, assignedUserId = 0 })).EnsureSuccessStatusCode();
         }
     }
 
@@ -96,6 +98,10 @@ public class SalesPolicyTests(CartexApiFactory factory)
         var warehouseId = warehouses![0].Id;
         var users = await admin.GetFromJsonAsync<List<UserRow>>("/api/users");
         var adminId = users!.First(u => u.Username == "admin").Id;
+
+        foreach (var assigned in warehouses.Where(x => x.AssignedUserId == adminId))
+            (await admin.PutAsJsonAsync($"/api/warehouses/{assigned.Id}",
+                new { assigned.Name, assigned.IsOnline, assignedUserId = 0 })).EnsureSuccessStatusCode();
 
         var create = await admin.PostAsJsonAsync("/api/customers", new
         {

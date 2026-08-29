@@ -16,4 +16,12 @@ public interface IUsersApi
 
     [Put("/api/users/{id}")]
     Task UpdateAsync(long id, [Body] UpdateUserRequest request);
+
+    [Delete("/api/users/{id}")]
+    Task DeleteAsync(long id);
+
+    [Patch("/api/users/{id}/username")]
+    Task ChangeUsernameAsync(long id, [Body] ChangeUsernameRequest request);
 }
+
+public record ChangeUsernameRequest(string NewUsername);

@@ -1,4 +1,4 @@
-using Cartex.Application.Products.Commands;
+﻿using Cartex.Application.Products.Commands;
 using Cartex.Application.Sales.Commands;
 using Cartex.Application.Suppliers.Commands;
 using Cartex.Application.Supplies.Commands;
@@ -11,6 +11,7 @@ using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Cartex.Shared.Models.Supplies;
 
 namespace Cartex.Application.Tests;
 
@@ -25,8 +26,8 @@ public class UpdateSupplyTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         using (var scope = Fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            branchId = (await db.Branches.FirstAsync(b => b.Name == "Filial 1")).Id;
-            warehouseId = (await db.Warehouses.FirstAsync(w => w.Name == "Filial 1 ombori")).Id;
+            branchId = (await db.Branches.FirstAsync(b => b.Name == "Asosiy filial")).Id;
+            warehouseId = (await db.Warehouses.FirstAsync(w => w.Name == "Asosiy ombor")).Id;
             businessId = (await db.Businesses.FirstAsync()).Id;
             adminId = (await db.Users.FirstAsync(u => u.Username == "admin")).Id;
         }

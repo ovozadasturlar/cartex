@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView
+    x:Class="Cartex.Mobile.Store.Views.HomeView"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Cartex.Mobile.Store.ViewModels"
+    xmlns:ctl="clr-namespace:Cartex.Mobile.Store.Controls"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
+    x:DataType="vm:HomeViewModel">
+
+    <ContentView.Resources>
+        <LinearGradientBrush x:Key="HeroBrush" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#2F7A4C" Offset="0" />
+            <GradientStop Color="#1B4C2F" Offset="1" />
+        </LinearGradientBrush>
+        <LinearGradientBrush x:Key="HeroShine" StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="#40FFFFFF" Offset="0" />
+            <GradientStop Color="#00FFFFFF" Offset="1" />
+        </LinearGradientBrush>
+        <Style x:Key="HeroChip" TargetType="Border">
+            <Setter Property="BackgroundColor" Value="#26FFFFFF" />
+            <Setter Property="StrokeThickness" Value="1" />
+            <Setter Property="Stroke" Value="#33FFFFFF" />
+            <Setter Property="StrokeShape" Value="RoundRectangle 14" />
+            <Setter Property="Padding" Value="12,6" />
+        </Style>
+        <Style x:Key="ActionIcon" TargetType="Border">
+            <Setter Property="WidthRequest" Value="54" />
+            <Setter Property="HeightRequest" Value="54" />
+            <Setter Property="StrokeShape" Value="RoundRectangle 20" />
+            <Setter Property="StrokeThickness" Value="1" />
+            <Setter Property="Stroke" Value="{StaticResource GlassEdge}" />
+            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource GlassSurface}, Dark={StaticResource GlassSurfaceDark}}" />
+            <Setter Property="HorizontalOptions" Value="Center" />
+        </Style>
+        <Style x:Key="ActionLabel" TargetType="Label">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontFamily" Value="OpenSansSemibold" />
+            <Setter Property="HorizontalTextAlignment" Value="Center" />
+            <Setter Property="LineBreakMode" Value="TailTruncation" />
+            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource InkSoft}, Dark={StaticResource InkSoftDark}}" />
+        </Style>
+    </ContentView.Resources>
+
+    <Grid>
+        <VerticalStackLayout IsVisible="{Binding HasAccess, Converter={StaticResource Invert}}"
+                             VerticalOptions="Center" Padding="40,0" Spacing="16">
+            <Border StrokeThickness="0" StrokeShape="RoundRectangle 18" WidthRequest="64" HeightRequest="64" HorizontalOptions="Center"
+                    BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoft}, Dark={StaticResource BrandSoftDark}}">
+                <Label Text="{StaticResource IcLock}" Style="{StaticResource Icon}" FontSize="30" />
+            </Border>
+            <Label Text="{svc:T no_access_msg}" Style="{StaticResource MutedLabel}" HorizontalTextAlignment="Center" />
+            <Button Text="{svc:T logout}" Style="{StaticResource BtnOutline}" Command="{Binding LogoutCommand}" />
+        </VerticalStackLayout>
+
+        <RefreshView IsVisible="{Binding HasAccess}" IsRefreshing="{Binding IsRefreshing}" Command="{Binding RefreshCommand}"
+                     RefreshColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}">
+            <ScrollView>
+                <VerticalStackLayout Padding="20,16,20,116" Spacing="16">
+
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <VerticalStackLayout Spacing="3" VerticalOptions="Center">
+                            <Label Text="{Binding Greeting}" FontSize="22" FontAttributes="Bold"
+                                   TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                            <Label Text="{Binding WarehouseName}" Style="{StaticResource MutedLabel}" FontSize="12.5" LineBreakMode="TailTruncation" />
+                        </VerticalStackLayout>
+                        <Border Grid.Column="1" WidthRequest="46" HeightRequest="46" StrokeThickness="1"
+                                StrokeShape="RoundRectangle 23" Stroke="{StaticResource GlassEdge}"
+                                Background="{StaticResource HeroBrush}">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding OpenProfileCommand}" />
+                            </Border.GestureRecognizers>
+                            <Label Text="{Binding Initials}" FontSize="16" FontAttributes="Bold" TextColor="White"
+                                   HorizontalOptions="Center" VerticalOptions="Center" />
+                        </Border>
+                    </Grid>
+
+                    <Border BackgroundColor="{AppThemeBinding Light={StaticResource DangerBg}, Dark={StaticResource DangerBgDark}}"
+                            StrokeThickness="0" StrokeShape="RoundRectangle 12" Padding="12,10"
+                            IsVisible="{Binding Error, Converter={StaticResource NotEmpty}}">
+                        <Label Text="{Binding Error}" FontSize="13"
+                               TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+                    </Border>
+
+                    <Border StrokeThickness="1" Stroke="#4DFFFFFF" StrokeShape="RoundRectangle 24" Padding="0"
+                            Background="{StaticResource HeroBrush}" IsVisible="{Binding ShowStats}">
+                        <Border.Shadow>
+                            <Shadow Brush="#255D3A" Opacity="0.35" Radius="22" Offset="0,10" />
+                        </Border.Shadow>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding OpenSalesCommand}" />
+                        </Border.GestureRecognizers>
+                        <Grid>
+                            <Border StrokeThickness="0" StrokeShape="RoundRectangle 24" HeightRequest="70"
+                                    VerticalOptions="Start" Background="{StaticResource HeroShine}" InputTransparent="True" />
+                            <VerticalStackLayout Padding="20,18,20,16" Spacing="12">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <Label Text="{svc:T today_total}" FontSize="13" TextColor="#C9FFFFFF" VerticalOptions="Center" />
+                                    <Label Grid.Column="1" Text="{StaticResource IcChevron}" FontFamily="MDI" FontSize="16" TextColor="#99FFFFFF" VerticalOptions="Center" />
+                                </Grid>
+                                <VerticalStackLayout Spacing="2">
+                                    <Label Text="{Binding TodayTotal}" FontSize="38" FontFamily="OpenSansSemibold" TextColor="White" LineBreakMode="TailTruncation" />
+                                    <Label Text="{Binding TodayTotalFull}" FontSize="13" TextColor="#A6FFFFFF"
+                                           IsVisible="{Binding ShowTodayTotalFull}" />
+                                </VerticalStackLayout>
+                                <HorizontalStackLayout Spacing="8">
+                                    <Border Style="{StaticResource HeroChip}">
+                                        <Label Text="{Binding TodayCountText}" FontSize="12" FontFamily="OpenSansSemibold" TextColor="White" />
+                                    </Border>
+                                    <Border Style="{StaticResource HeroChip}">
+                                        <HorizontalStackLayout Spacing="5">
+                                            <Label Text="{svc:T avg_check}" FontSize="12" TextColor="#C9FFFFFF" />
+                                            <Label Text="{Binding AvgCheck}" FontSize="12" FontFamily="OpenSansSemibold" TextColor="White" />
+                                        </HorizontalStackLayout>
+                                    </Border>
+                                </HorizontalStackLayout>
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Border>
+
+                    <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
+                        <VerticalStackLayout Spacing="7" IsVisible="{Binding CanSell}">
+                            <VerticalStackLayout.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding NewCartCommand}" />
+                            </VerticalStackLayout.GestureRecognizers>
+                            <Border Style="{StaticResource ActionIcon}" Background="{StaticResource HeroBrush}" Stroke="#4DFFFFFF">
+                                <Label Text="{StaticResource IcScan}" FontFamily="MDI" FontSize="24" TextColor="White"
+                                       HorizontalOptions="Center" VerticalOptions="Center" />
+                            </Border>
+                            <Label Text="{svc:T new_sale}" Style="{StaticResource ActionLabel}" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Grid.Column="2" Spacing="7" IsVisible="{Binding ShowQueue}">
+                            <VerticalStackLayout.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding OpenQueueCommand}" />
+                            </VerticalStackLayout.GestureRecognizers>
+                            <Grid HorizontalOptions="Center">
+                                <Border Style="{StaticResource ActionIcon}">
+                                    <Label Text="{StaticResource IcBox}" Style="{StaticResource Icon}" FontSize="24" />
+                                </Border>
+                                <Border BackgroundColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
+                                        StrokeThickness="0" StrokeShape="RoundRectangle 9" Padding="5,1"
+                                        HorizontalOptions="End" VerticalOptions="Start" Margin="0,-4,-4,0" InputTransparent="True"
+                                        IsVisible="{Binding OpenCarts, Converter={StaticResource Positive}}">
+                                    <Label Text="{Binding OpenCarts}" FontSize="10" FontAttributes="Bold" TextColor="White" />
+                                </Border>
+                            </Grid>
+                            <Label Text="{svc:T queue}" Style="{StaticResource ActionLabel}" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Grid.Column="1" Spacing="7" IsVisible="{Binding CanUseCart}">
+                            <VerticalStackLayout.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding OpenCartCommand}" />
+                            </VerticalStackLayout.GestureRecognizers>
+                            <Grid HorizontalOptions="Center">
+                                <Border Style="{StaticResource ActionIcon}">
+                                    <Label Text="{StaticResource IcCart}" Style="{StaticResource Icon}" FontSize="24" />
+                                </Border>
+                                <Border BackgroundColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}"
+                                        StrokeThickness="0" StrokeShape="RoundRectangle 9" Padding="5,1"
+                                        HorizontalOptions="End" VerticalOptions="Start" Margin="0,-4,-4,0" InputTransparent="True"
+                                        IsVisible="{Binding CartCount, Converter={StaticResource Positive}}">
+                                    <Label Text="{Binding CartCount}" FontSize="10" FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light={StaticResource OnBrand}, Dark={StaticResource OnBrandDark}}" />
+                                </Border>
+                            </Grid>
+                            <Label Text="{svc:T cart_title}" Style="{StaticResource ActionLabel}" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Grid.Column="3" Spacing="7" IsVisible="{Binding CanReceiveStock}">
+                            <VerticalStackLayout.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding OpenSupplyCartCommand}" />
+                            </VerticalStackLayout.GestureRecognizers>
+                            <Grid HorizontalOptions="Center">
+                                <Border Style="{StaticResource ActionIcon}">
+                                    <Label Text="{StaticResource IcTruck}" Style="{StaticResource Icon}" FontSize="24" />
+                                </Border>
+                                <Border BackgroundColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}"
+                                        StrokeThickness="0" StrokeShape="RoundRectangle 9" Padding="5,1"
+                                        HorizontalOptions="End" VerticalOptions="Start" Margin="0,-4,-4,0" InputTransparent="True"
+                                        IsVisible="{Binding SupplyCount, Converter={StaticResource Positive}}">
+                                    <Label Text="{Binding SupplyCount}" FontSize="10" FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light={StaticResource OnBrand}, Dark={StaticResource OnBrandDark}}" />
+                                </Border>
+                            </Grid>
+                            <Label Text="{svc:T receive_stock}" Style="{StaticResource ActionLabel}" />
+                        </VerticalStackLayout>
+                    </Grid>
+
+                    <Border Style="{StaticResource Card}" Padding="12,10" IsVisible="{Binding HasCart}">
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding OpenCartCommand}" />
+                        </Border.GestureRecognizers>
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                            <Label Text="{StaticResource IcCart}" Style="{StaticResource Icon}" FontSize="18" VerticalOptions="Center" />
+                            <Label Grid.Column="1" Text="{Binding CartSummary}" FontSize="13" VerticalOptions="Center"
+                                   LineBreakMode="TailTruncation"
+                                   TextColor="{AppThemeBinding Light={StaticResource InkSoft}, Dark={StaticResource InkSoftDark}}" />
+                            <Label Grid.Column="2" Text="{svc:T cart_resume}" FontSize="12.5" FontFamily="OpenSansSemibold" VerticalOptions="Center"
+                                   TextColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}" />
+                        </Grid>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}" Padding="16,14" IsVisible="{Binding ShowStats}">
+                        <VerticalStackLayout Spacing="10">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <VerticalStackLayout Spacing="2">
+                                    <Label Text="{svc:T week_chart}" FontSize="15" FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                    <Label Text="{Binding WeekTotal}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                                </VerticalStackLayout>
+                                <Border Grid.Column="1" WidthRequest="36" HeightRequest="36" StrokeThickness="0" StrokeShape="RoundRectangle 11"
+                                        VerticalOptions="Start"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource BrandSoft}, Dark={StaticResource BrandSoftDark}}">
+                                    <Label Text="{StaticResource IcCash}" Style="{StaticResource Icon}" FontSize="18" />
+                                </Border>
+                            </Grid>
+                            <ctl:LineChartView HeightRequest="120" Values="{Binding WeekValues}" IsVisible="{Binding HasChart}" />
+                            <Label Text="{svc:T week_chart_empty}" Style="{StaticResource MutedLabel}" FontSize="12.5"
+                                   HorizontalOptions="Center" Margin="0,24"
+                                   IsVisible="{Binding HasChart, Converter={StaticResource Invert}}" />
+                            <Grid ColumnDefinitions="*,*,*,*,*,*,*" IsVisible="{Binding HasChart}">
+                                <Label Text="{Binding WeekDays[0]}" Style="{StaticResource MutedLabel}" FontSize="10.5" HorizontalTextAlignment="Center" />
+                                <Label Grid.Column="1" Text="{Binding WeekDays[1]}" Style="{StaticResource MutedLabel}" FontSize="10.5" HorizontalTextAlignment="Center" />
+                                <Label Grid.Column="2" Text="{Binding WeekDays[2]}" Style="{StaticResource MutedLabel}" FontSize="10.5" HorizontalTextAlignment="Center" />
+                                <Label Grid.Column="3" Text="{Binding WeekDays[3]}" Style="{StaticResource MutedLabel}" FontSize="10.5" HorizontalTextAlignment="Center" />
+                                <Label Grid.Column="4" Text="{Binding WeekDays[4]}" Style="{StaticResource MutedLabel}" FontSize="10.5" HorizontalTextAlignment="Center" />
+                                <Label Grid.Column="5" Text="{Binding WeekDays[5]}" Style="{StaticResource MutedLabel}" FontSize="10.5" HorizontalTextAlignment="Center" />
+                                <Label Grid.Column="6" Text="{Binding WeekDays[6]}" Style="{StaticResource MutedLabel}" FontSize="10.5" FontAttributes="Bold" HorizontalTextAlignment="Center" />
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Border>
+                </VerticalStackLayout>
+            </ScrollView>
+        </RefreshView>
+    </Grid>
+</ContentView>

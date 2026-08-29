@@ -6,16 +6,23 @@ public partial class App : Application
 {
 	public App()
 	{
-		Loc.Instance.InitAsync().GetAwaiter().GetResult();
+		MauiProgram.LocInit.GetAwaiter().GetResult();
 		InitializeComponent();
 		ViewModels.ProfileViewModel.ApplyTheme();
 	}
 
 	private DateTime? _sleptAt;
 
+	protected override async void OnStart()
+	{
+		base.OnStart();
+		await IPlatformApplication.Current!.Services.GetRequiredService<Services.StartupService>().RunAsync();
+	}
+
 	protected override Window CreateWindow(IActivationState? activationState)
 	{
-		var window = new Window(new AppShell());
+		var shell = new AppShell();
+		var window = new Window(shell);
 		var services = IPlatformApplication.Current!.Services;
 		services.GetRequiredService<MobileAuthService>().SessionInvalidated += OnSessionInvalidated;
 		window.Deactivated += (_, _) => _sleptAt = DateTime.UtcNow;
@@ -26,6 +33,7 @@ public partial class App : Application
 			_sleptAt = null;
 			if (Shell.Current is not { } shell || shell.CurrentState.Location.OriginalString.Contains("login")) return;
 			_ = services.GetRequiredService<MobileAuthService>().ValidateSessionAsync();
+			_ = services.GetRequiredService<AccessState>().RefreshAsync();
 			if (AppLock.PinEnabled && slept.TotalSeconds >= AppLock.LockAfterSeconds
 				&& !shell.Navigation.ModalStack.OfType<Views.PinPage>().Any())
 				await shell.GoToAsync("pin");
@@ -33,16 +41,31 @@ public partial class App : Application
 		return window;
 	}
 
-	private static void OnSessionInvalidated() => MainThread.BeginInvokeOnMainThread(async () =>
+	private static void OnSessionInvalidated() => MainThread.BeginInvokeOnMainThread(() => _ = HandleSessionEndAsync());
+
+	private static async Task HandleSessionEndAsync()
 	{
-		if (Shell.Current is not { } shell || shell.CurrentState.Location.OriginalString.Contains("login")) return;
-		AppLock.Disable();
-		await shell.GoToAsync("//login");
 		try
 		{
+			if (Shell.Current is not { } shell || shell.CurrentState.Location.OriginalString.Contains("login")) return;
+			AppLock.Disable();
+			var services = IPlatformApplication.Current!.Services;
+			services.GetRequiredService<AccessState>().Clear();
+			// Savat va kirim savati Preferences'da saqlanadi va konstruktordan tiklanadi —
+			// shu yerda tozalanmasa keyingi operator oldingisining savatini meros qilib olardi.
+			services.GetRequiredService<Services.CartStore>().Clear();
+			services.GetRequiredService<Services.SupplyCartStore>().Clear();
+			await services.GetRequiredService<Services.OrderingHubService>().StopAsync();
+			await services.GetRequiredService<Services.SmsGatewayHostService>().StopAsync();
+			await services.GetRequiredService<Services.MobileHubHostService>().ApplyAsync();
+			await shell.GoToAsync("//login");
 			if (shell.CurrentPage is { } page)
-				await page.DisplayAlert(Loc.Instance["session_ended_title"], Loc.Instance["session_ended_msg"], Loc.Instance["ok"]);
+				await page.DisplayAlertAsync(Loc.Instance["session_ended_title"], Loc.Instance["session_ended_msg"], Loc.Instance["ok"]);
 		}
-		catch { }
-	});
+		catch
+		{
+			// Best-effort: login ekraniga o'tishning o'zi asosiy natija; dialog yoki
+			// navigatsiya yiqilsa foydalanuvchi baribir login sahifasida qoladi.
+		}
+	}
 }

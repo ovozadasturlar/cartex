@@ -1,5 +1,6 @@
-using Cartex.Application.Common.Interfaces;
+﻿using Cartex.Application.Common.Interfaces;
 using Cartex.Persistence;
+using Cartex.Shared.Models.Products;
 
 namespace Cartex.Application.Products.Import;
 
@@ -11,6 +12,7 @@ public sealed class PreviewProductImportQueryHandler(IApplicationDbContext db, I
     public async Task<ProductImportPreviewDto> Handle(PreviewProductImportQuery request, CancellationToken cancellationToken)
     {
         var table = spreadsheet.Read(request.Content);
+        Console.WriteLine($"[Debug] Imported rows (including header): {table.Count}");
         if (table.Count < 2)
             throw new BusinessRuleException("Faylda ma'lumot yo'q.");
 
@@ -30,7 +32,7 @@ public sealed class PreviewProductImportQueryHandler(IApplicationDbContext db, I
 
         var rows = await ProductImportMatcher.ResolveAsync(
             db,
-            [.. body.Select(x => Read(x.Number, x.Cells, mapping))],
+            [.. body.Select(x => ImportColumns.ReadRow(x.Number, x.Cells, mapping))],
             cancellationToken);
 
         return new ProductImportPreviewDto(
@@ -42,55 +44,4 @@ public sealed class PreviewProductImportQueryHandler(IApplicationDbContext db, I
             rows.Count(r => r.Errors.Count > 0));
     }
 
-    private static ImportRowDto Read(int number, IReadOnlyList<string> cells, Dictionary<int, ImportField> mapping)
-    {
-        var values = new Dictionary<ImportField, string>();
-        foreach (var (index, field) in mapping)
-            if (index >= 0 && index < cells.Count && !string.IsNullOrWhiteSpace(cells[index]))
-                values[field] = cells[index].Trim();
-
-        var warnings = new List<string>();
-
-        string? Text(ImportField field) => values.GetValueOrDefault(field);
-
-        decimal? Number(ImportField field)
-        {
-            if (Text(field) is not { } raw)
-                return null;
-            var value = ImportColumns.Number(raw);
-            if (value is null)
-                warnings.Add($"Son o'qilmadi: {raw}");
-            return value;
-        }
-
-        DateOnly? Date(ImportField field)
-        {
-            if (Text(field) is not { } raw)
-                return null;
-            var value = ImportColumns.Date(raw);
-            if (value is null)
-                warnings.Add($"Sana o'qilmadi: {raw}");
-            return value;
-        }
-
-        return new ImportRowDto(
-            number,
-            Text(ImportField.Name),
-            Text(ImportField.Barcode),
-            Number(ImportField.PackQty),
-            Text(ImportField.Sku),
-            Text(ImportField.Category),
-            Text(ImportField.Unit),
-            Number(ImportField.SellingPrice),
-            Number(ImportField.PurchasePrice),
-            Number(ImportField.Quantity),
-            Date(ImportField.ExpiredAt),
-            Number(ImportField.MinStock),
-            Text(ImportField.Ikpu),
-            Number(ImportField.Vat),
-            null,
-            ImportRowAction.Create,
-            [],
-            warnings);
-    }
 }

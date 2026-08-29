@@ -21,4 +21,14 @@ public record ProductDto(
     string? ImageUrl = null,
     string? PriceCurrency = null,
     string? Dimension = null,
-    long? ManufacturerId = null);
+    long? ManufacturerId = null,
+    bool IsEnabled = true,
+    long? CategoryId = null,
+    long UnitId = 0,
+    bool AllowsAmountEntry = false,
+    string? PriceSymbol = null,
+    string? PriceSymbolPosition = null,
+    int? PriceDecimalDigits = null,
+    bool AllowsFractional = false,
+    bool? FractionalOverride = null,
+    bool? AmountEntryEnabled = null);

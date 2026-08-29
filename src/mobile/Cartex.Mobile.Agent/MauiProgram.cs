@@ -4,13 +4,14 @@ using Cartex.Mobile.Agent.Services;
 using Cartex.Mobile.Agent.ViewModels;
 using Cartex.Mobile.Agent.Views;
 using BarcodeScanning;
-using Microsoft.Extensions.DependencyInjection;
 using Cartex.Mobile.Core;
 
 namespace Cartex.Mobile.Agent;
 
 public static class MauiProgram
 {
+    private static int _handlingUnauthorized;
+
     public static MauiApp CreateMauiApp()
     {
         var builder = MauiApp.CreateBuilder();
@@ -36,12 +37,31 @@ public static class MauiProgram
             () => session.ServerUrl,
             () => session.AccessToken,
             ct => Resolve<MobileAuthService>().EnsureFreshTokenAsync(ct),
+            ct => Resolve<MobileAuthService>().ForceRefreshAsync(ct),
             OnUnauthorized,
-            "mobile");
+            "mobile",
+            deviceIdProvider: () => MobileDeviceIdentity.DeviceId,
+            deviceNameProvider: () => MobileDeviceIdentity.DeviceName);
 
         builder.Services.AddSingleton<MobileAuthService>();
         builder.Services.AddSingleton<AgentDb>();
         builder.Services.AddSingleton<SyncService>();
+        builder.Services.AddSingleton<MobilePermissions>();
+        builder.Services.AddSingleton<MobileFeaturesCache>();
+        builder.Services.AddSingleton<SalesPolicyCache>();
+        builder.Services.AddSingleton<MobileAccessStateLoader>();
+        builder.Services.AddSingleton<IAccessStateLoader>(services => services.GetRequiredService<MobileAccessStateLoader>());
+        builder.Services.AddSingleton<AccessState>();
+        builder.Services.AddSingleton<ImageUrlBuilder>();
+        builder.Services.AddSingleton<CartService>();
+        builder.Services.AddTransient<CatalogViewModel>();
+        builder.Services.AddTransient<CartViewModel>();
+        builder.Services.AddTransient<ProductViewModel>();
+        builder.Services.AddTransient<ProductEditViewModel>();
+        builder.Services.AddTransient<CatalogPage>();
+        builder.Services.AddTransient<CartPage>();
+        builder.Services.AddTransient<ProductPage>();
+        builder.Services.AddTransient<ProductEditPage>();
         builder.Services.AddTransient<LoginViewModel>();
         builder.Services.AddTransient<HomeViewModel>();
         builder.Services.AddTransient<CustomersViewModel>();
@@ -63,6 +83,7 @@ public static class MauiProgram
         builder.Services.AddTransient<DaySummaryViewModel>();
         builder.Services.AddSingleton<IBiometricAuth, BiometricAuth>();
         builder.Services.AddTransient<LoginPage>();
+        builder.Services.AddTransient<ServerScanPage>();
         builder.Services.AddTransient<HomePage>();
         builder.Services.AddTransient<CustomersPage>();
         builder.Services.AddTransient<CustomerPage>();
@@ -86,6 +107,8 @@ public static class MauiProgram
         builder.Services.AddTransient<OrderPage>();
 
         var app = builder.Build();
+        app.Services.GetRequiredService<MobileAccessStateLoader>().StartConnectivityWatch();
+        Cartex.Mobile.Core.Controls.Thumb.UrlBuilder = app.Services.GetRequiredService<ImageUrlBuilder>();
         var syncService = app.Services.GetRequiredService<SyncService>();
         syncService.StartConnectivityWatch();
         syncService.StartAutoSync();
@@ -97,7 +120,32 @@ public static class MauiProgram
 
     private static void OnUnauthorized()
     {
+        if (Interlocked.Exchange(ref _handlingUnauthorized, 1) != 0) return;
+        if (!SessionStore.HasSession)
+        {
+            Volatile.Write(ref _handlingUnauthorized, 0);
+            return;
+        }
         Resolve<SessionStore>().Clear();
-        MainThread.BeginInvokeOnMainThread(() => _ = Shell.Current.GoToAsync("//login"));
+        Resolve<AccessState>().Clear();
+        MainThread.BeginInvokeOnMainThread(() => _ = NavigateToLoginAsync());
+    }
+
+    private static async Task NavigateToLoginAsync()
+    {
+        try
+        {
+            if (Shell.Current is { } shell
+                && !shell.CurrentState.Location.OriginalString.Contains("login", StringComparison.Ordinal))
+                await shell.GoToAsync("//login");
+        }
+        catch (Exception exception)
+        {
+            System.Diagnostics.Debug.WriteLine(exception);
+        }
+        finally
+        {
+            Volatile.Write(ref _handlingUnauthorized, 0);
+        }
     }
 }

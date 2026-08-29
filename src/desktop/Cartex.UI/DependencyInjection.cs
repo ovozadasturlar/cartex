@@ -15,14 +15,31 @@ public static class DependencyInjection
             () => SettingsService.Instance.ApiBaseUrl,
             () => ServiceLocator.Resolve<AuthService>().Token,
             ct => ServiceLocator.Resolve<AuthService>().EnsureFreshTokenAsync(ct),
-            OnUnauthorized);
+            ct => ServiceLocator.Resolve<AuthService>().ForceRefreshAsync(ct),
+            OnUnauthorized,
+            deviceIdProvider: () => SettingsService.Instance.DeviceId,
+            deviceNameProvider: () => Environment.MachineName);
 
         services.AddSingleton<NavigationService>();
         services.AddSingleton<BranchContextService>();
         services.AddSingleton<ConnectivityService>();
         services.AddSingleton<QueueHubService>();
+        services.AddSingleton<PrintHostJournal>();
+        services.AddSingleton<OfflinePrintJournal>();
+        services.AddSingleton<PrintHostCredentialStore>();
+        services.AddSingleton<PrintLogoCache>();
+        services.AddSingleton<PrintPolicyCache>();
+        services.AddSingleton<PrintHostService>();
+        services.AddSingleton<PrintStatusHubService>();
+        services.AddSingleton<PrintDispatchService>();
+        services.AddSingleton<ReceiptDialogService>();
         services.AddSingleton<OfflineStore>();
+        services.AddSingleton<OfflineLeaseCredentialStore>();
+        services.AddSingleton<HubIdentityService>();
+        services.AddSingleton<HubCredentialStore>();
+        services.AddSingleton<HubClientService>();
         services.AddSingleton<OfflineSyncService>();
+        services.AddSingleton<HubHostService>();
         services.AddSingleton(LocalizationManager.Instance);
 
         services.AddSingleton<ToastService>();
@@ -36,7 +53,7 @@ public static class DependencyInjection
         services.AddSingleton<IHeldSaleStore, HeldSaleStore>();
         services.AddSingleton<IPrinterService, PrinterService>();
         services.AddSingleton<IBarcodeLabelService, BarcodeLabelService>();
-        services.AddSingleton<IScannedCodeParser, ScannedCodeParser>();
+        services.AddSingleton<IScanFeedbackService, ScanFeedbackService>();
         services.AddSingleton<ShortcutService>();
         services.AddSingleton<ReferenceCache>(sp =>
         {
@@ -74,23 +91,32 @@ public static class DependencyInjection
         services.AddTransient<SuppliersViewModel>();
         services.AddTransient<RatesViewModel>();
         services.AddTransient<RemindersViewModel>();
+        services.AddTransient<NotificationJournalViewModel>();
         services.AddSingleton<OrdersViewModel>();
+        services.AddSingleton<ReturnsViewModel>();
         services.AddSingleton<PosHandoffService>();
         services.AddTransient<AccountsViewModel>();
         services.AddTransient<TransactionsViewModel>();
         services.AddTransient<LoyaltyViewModel>();
         services.AddSingleton<SuppliesViewModel>();
         services.AddSingleton<TransfersViewModel>();
+        services.AddSingleton<StockWriteOffsViewModel>();
         services.AddTransient<PermissionsMatrixViewModel>();
         services.AddTransient<AuditViewModel>();
         services.AddTransient<TariffFeaturesViewModel>();
         services.AddTransient<IntegrationsViewModel>();
         services.AddTransient<PrintingViewModel>();
         services.AddTransient<BusinessSettingsViewModel>();
+        services.AddTransient<SalesPolicyViewModel>();
+        services.AddTransient<CatalogSettingsViewModel>();
+        services.AddTransient<SmsGatewayViewModel>();
+        services.AddTransient<ModulesViewModel>();
         services.AddTransient<BarcodePrintViewModel>();
         services.AddTransient<HardwareKeysViewModel>();
         services.AddTransient<DevicesViewModel>();
         services.AddTransient<OnboardingViewModel>();
+        services.AddTransient<CustomerPickerViewModel>();
+        services.AddTransient<AdjustStockDialogViewModel>();
     }
 
     private static void OnUnauthorized() =>

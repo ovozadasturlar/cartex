@@ -44,6 +44,8 @@ public partial class ShiftViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private UserDto? _selectedCashier;
     [ObservableProperty] private string? _baseCurrency;
     [ObservableProperty] private string? _reportMeta;
+    private static readonly CurrentShiftDto EmptyCurrent = new(0, DateTime.MinValue, 0, 0, 0, 0, 0, 0, 0, 0);
+    private static readonly ZReportDto EmptyReport = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
     public ObservableCollection<ShiftHistoryDto> History { get; } = [];
     public ObservableCollection<ExpenseCategoryDto> ExpenseCategories { get; } = [];
@@ -52,6 +54,7 @@ public partial class ShiftViewModel : ViewModelBase, ILoadable
 
     public bool HasShift => Current is not null;
     public bool NoShift => Current is null;
+    public CurrentShiftDto CurrentDisplay => Current ?? EmptyCurrent;
     public decimal BaseDifference => CountedCash - (Current?.ExpectedCash ?? 0);
 
     public string? ShiftDuration
@@ -67,21 +70,26 @@ public partial class ShiftViewModel : ViewModelBase, ILoadable
         }
     }
     public bool HasReport => LastReport is not null;
+    public ZReportDto LastReportDisplay => LastReport ?? EmptyReport;
     public bool CanViewHistory => _auth.HasPermission("shifts.view");
     public bool CanViewAll => _auth.HasPermission("shifts.viewAll");
-    public bool CanManageAll => _auth.HasPermission("shifts.manageAll");
+    public bool CanOpen => _auth.HasPermission("shifts.open");
+    public bool CanClose => _auth.HasPermission("shifts.close");
+    public bool CanManageAll => _auth.HasPermission("shifts.closeAll");
 
     [ObservableProperty] private bool _isMulticurrency;
     public ObservableCollection<CurrencyCashRow> CurrencyRows { get; } = [];
     private readonly IBusinessApi _businessApi;
     private readonly IRatesApi _ratesApi;
     private readonly ReferenceCache _cache;
+    private readonly PrintDispatchService _printDispatch;
 
-    public ShiftViewModel(IShiftsApi api, IExpenseCategoriesApi expenseApi, IUsersApi usersApi, IToastService toast, IBusyService busy, IDialogService dialog, AuthService auth, IBusinessApi businessApi, IRatesApi ratesApi, ReferenceCache cache)
+    public ShiftViewModel(IShiftsApi api, IExpenseCategoriesApi expenseApi, IUsersApi usersApi, IToastService toast, IBusyService busy, IDialogService dialog, AuthService auth, IBusinessApi businessApi, IRatesApi ratesApi, ReferenceCache cache, PrintDispatchService printDispatch)
     {
         _businessApi = businessApi;
         _ratesApi = ratesApi;
         _cache = cache;
+        _printDispatch = printDispatch;
         _api = api;
         _expenseApi = expenseApi;
         _usersApi = usersApi;
@@ -105,8 +113,7 @@ public partial class ShiftViewModel : ViewModelBase, ILoadable
         History.Clear();
         ExpenseCategories.Clear();
         Cashiers.Clear();
-        _selectedCashier = null;
-        OnPropertyChanged(nameof(SelectedCashier));
+        SelectedCashier = null;
         CurrencyRows.Clear();
         IsMulticurrency = false;
         OpeningFloat = 0;
@@ -116,10 +123,14 @@ public partial class ShiftViewModel : ViewModelBase, ILoadable
         CountedCash = 0;
     }
 
+    public override void OnNavigatedFrom() => IsReportOpen = false;
+
     private void RaisePermissions()
     {
         OnPropertyChanged(nameof(CanViewHistory));
         OnPropertyChanged(nameof(CanViewAll));
+        OnPropertyChanged(nameof(CanOpen));
+        OnPropertyChanged(nameof(CanClose));
         OnPropertyChanged(nameof(CanManageAll));
     }
 
@@ -147,7 +158,7 @@ public partial class ShiftViewModel : ViewModelBase, ILoadable
         {
             var business = await _cache.GetAsync(CacheKeys.Business, _businessApi.GetAsync);
             BaseCurrency = business.Currency;
-            IsMulticurrency = business.Multicurrency;
+            IsMulticurrency = business.SalesMulticurrency;
             CurrencyRows.Clear();
             if (!IsMulticurrency) return;
 
@@ -245,6 +256,7 @@ public partial class ShiftViewModel : ViewModelBase, ILoadable
 
     partial void OnCurrentChanged(CurrentShiftDto? value)
     {
+        OnPropertyChanged(nameof(CurrentDisplay));
         OnPropertyChanged(nameof(HasShift));
         OnPropertyChanged(nameof(NoShift));
         OnPropertyChanged(nameof(BaseDifference));
@@ -255,11 +267,16 @@ public partial class ShiftViewModel : ViewModelBase, ILoadable
 
     partial void OnCountedCashChanged(decimal value) => OnPropertyChanged(nameof(BaseDifference));
 
-    partial void OnLastReportChanged(ZReportDto? value) => OnPropertyChanged(nameof(HasReport));
+    partial void OnLastReportChanged(ZReportDto? value)
+    {
+        OnPropertyChanged(nameof(HasReport));
+        OnPropertyChanged(nameof(LastReportDisplay));
+    }
 
     [RelayCommand]
     private async Task OpenShiftAsync()
     {
+        if (!CanOpen) return;
         try
         {
             using (_busy.Begin(L["loading"]))
@@ -299,6 +316,7 @@ public partial class ShiftViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task CloseShiftAsync()
     {
+        if (!CanClose) return;
         if (Current is null) return;
         var diff = CountedCash - Current.ExpectedCash;
         if (diff != 0 && !await _dialog.ConfirmAsync(string.Format(L["close_shift_diff_confirm"], (diff > 0 ? "+" : "") + diff.ToString("N0")), L["close_shift"])) return;
@@ -319,18 +337,20 @@ public partial class ShiftViewModel : ViewModelBase, ILoadable
 
         var printer = ServiceLocator.Resolve<IPrinterService>();
         if (!printer.GetSettings().AutoPrintZReport || LastReport is null) return;
-        try { printer.PrintZReport(LastReport); }
+        try
+        {
+            await _printDispatch.PrintZReportAsync(LastReport, false);
+        }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
     [RelayCommand]
-    private void PrintReport()
+    private async Task PrintReport()
     {
-        if (LastReport is null) return;
+        if (LastReport is null || !_auth.HasPermission("printing.z_reports.print")) return;
         try
         {
-            ServiceLocator.Resolve<IPrinterService>().PrintZReport(LastReport);
-            _toast.Info(L["success"]);
+            await _printDispatch.PrintZReportAsync(LastReport, true);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }

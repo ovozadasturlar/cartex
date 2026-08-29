@@ -1,4 +1,3 @@
-using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
 using Cartex.Domain.Measurement;

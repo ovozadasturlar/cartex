@@ -12,6 +12,10 @@ public class FilterBar : ContentControl
     public static readonly StyledProperty<string?> WatermarkProperty =
         AvaloniaProperty.Register<FilterBar, string?>(nameof(Watermark));
 
+    public static readonly StyledProperty<double> SearchWidthProperty =
+        AvaloniaProperty.Register<FilterBar, double>(nameof(SearchWidth), 380);
+
     public string? SearchText { get => GetValue(SearchTextProperty); set => SetValue(SearchTextProperty, value); }
     public string? Watermark { get => GetValue(WatermarkProperty); set => SetValue(WatermarkProperty, value); }
+    public double SearchWidth { get => GetValue(SearchWidthProperty); set => SetValue(SearchWidthProperty, value); }
 }

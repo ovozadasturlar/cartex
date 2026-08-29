@@ -1,11 +1,23 @@
 <mat-sidenav-container class="shell" autosize *transloco="let t">
-  <mat-sidenav [mode]="isWide() ? 'side' : 'over'" [opened]="isWide()" #nav class="sidenav"
-               [class.collapsed]="collapsed() && isWide()">
+  <mat-sidenav [mode]="isPhone() ? 'over' : 'side'" [opened]="!isPhone()" #nav class="sidenav"
+               [class.collapsed]="compactNav()">
     <div class="side-brand">
-      <cx-logo [size]="collapsed() && isWide() ? 28 : 34" [wordmark]="!(collapsed() && isWide())" />
+      <cx-logo [size]="compactNav() ? 28 : 34" [wordmark]="!compactNav()" />
     </div>
+    @if (isPhone() && canPickWarehouse && wh.warehouses().length > 1) {
+      <!-- Telefonda yuqori panel tor: ombor tanlagich u yerda mavzu va til tugmalarini
+           siqib chiqarardi, shuning uchun u menyuga ko'chirildi. -->
+      <label class="side-warehouse">
+        <mat-icon>home_storage</mat-icon>
+        <select (change)="onWarehouse($event)">
+          @for (w of wh.warehouses(); track w.id) {
+            <option [value]="w.id" [selected]="w.id === wh.selectedWarehouseId()">{{ w.name }}</option>
+          }
+        </select>
+      </label>
+    }
     <div class="side-nav">
-      @for (section of navSections; track section.labelKey) {
+      @for (section of navSections(); track section.labelKey) {
         @if (section.labelKey) {
           <div class="side-section">{{ t(section.labelKey) }}</div>
         }
@@ -16,8 +28,8 @@
             routerLinkActive="active"
             [matTooltip]="t(item.labelKey)"
             matTooltipPosition="right"
-            [matTooltipDisabled]="!collapsed()"
-            (click)="!isWide() && nav.close()"
+            [matTooltipDisabled]="!compactNav()"
+            (click)="isPhone() && nav.close()"
           >
             <mat-icon>{{ item.icon }}</mat-icon>
             <span>{{ t(item.labelKey) }}</span>
@@ -25,11 +37,11 @@
         }
       }
     </div>
-    @if (canOpenSettings) {
+    @if (canOpenSettings()) {
       <div class="side-bottom">
         <a class="nav-item" routerLink="/settings" routerLinkActive="active"
-           [matTooltip]="t('settings')" matTooltipPosition="right" [matTooltipDisabled]="!collapsed()"
-           (click)="!isWide() && nav.close()">
+           [matTooltip]="t('settings')" matTooltipPosition="right" [matTooltipDisabled]="!compactNav()"
+           (click)="isPhone() && nav.close()">
           <mat-icon>settings</mat-icon>
           <span>{{ t('settings') }}</span>
         </a>
@@ -39,8 +51,27 @@
   <mat-sidenav-content>
     <div class="topbar">
       <button matIconButton (click)="toggleSidebar(nav)"><mat-icon>menu</mat-icon></button>
+      @if (isPhone()) {
+        <cx-logo class="mobile-logo" [size]="27" [wordmark]="true" />
+      }
+      <div class="global-search">
+        <mat-icon>search</mat-icon>
+        <input #globalSearch [placeholder]="t('search')" [value]="searchQuery()"
+               (input)="searchQuery.set($any($event.target).value)" />
+        <kbd>Ctrl K</kbd>
+        @if (searchResults().length) {
+          <div class="search-results">
+            @for (item of searchResults(); track item.route) {
+              <button type="button" (click)="openSearchItem(item)">
+                <mat-icon>{{ item.icon }}</mat-icon>
+                <span>{{ t(item.labelKey) }}</span>
+              </button>
+            }
+          </div>
+        }
+      </div>
       <span class="spacer"></span>
-      @if (canPickWarehouse && wh.warehouses().length) {
+      @if (canPickWarehouse && wh.warehouses().length > 1) {
         <select class="wh-select" (change)="onWarehouse($event)">
           @for (w of wh.warehouses(); track w.id) {
             <option [value]="w.id" [selected]="w.id === wh.selectedWarehouseId()">{{ w.name }}</option>
@@ -48,9 +79,9 @@
         </select>
       }
       <button matIconButton (click)="toggleTheme()">
-        <mat-icon>{{ isDark() ? 'light_mode' : 'dark_mode' }}</mat-icon>
+        <mat-icon>{{ preferences.isDark() ? 'light_mode' : 'dark_mode' }}</mat-icon>
       </button>
-      <button matIconButton [matMenuTriggerFor]="langMenu"><mat-icon>language</mat-icon></button>
+      <button class="lang-btn" [matMenuTriggerFor]="langMenu">{{ preferences.languageShort() }}</button>
       <mat-menu #langMenu="matMenu">
         @for (lang of languages; track lang.code) {
           <button mat-menu-item (click)="setLang(lang.code)" [disabled]="lang.code === activeLang">
@@ -60,7 +91,7 @@
       </mat-menu>
       <button class="user-btn" [matMenuTriggerFor]="userMenu">
         <span class="user-avatar">{{ user()?.fullName?.charAt(0) }}</span>
-        <span>{{ user()?.fullName }}</span>
+        <span class="user-name">{{ user()?.fullName }}</span>
       </button>
       <mat-menu #userMenu="matMenu">
         <button mat-menu-item (click)="logout()">
@@ -72,5 +103,19 @@
     <main class="content">
       <router-outlet />
     </main>
+    @if (isPhone()) {
+      <nav class="mobile-bottom-nav">
+        @for (item of mobileNav(); track item.route) {
+          <a [routerLink]="item.route" routerLinkActive="active">
+            <mat-icon>{{ item.icon }}</mat-icon>
+            <span>{{ t(item.labelKey) }}</span>
+          </a>
+        }
+        <button type="button" (click)="nav.open()">
+          <mat-icon>apps</mat-icon>
+          <span>{{ t('menu') }}</span>
+        </button>
+      </nav>
+    }
   </mat-sidenav-content>
 </mat-sidenav-container>

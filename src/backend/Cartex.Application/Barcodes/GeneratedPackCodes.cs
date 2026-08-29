@@ -5,7 +5,8 @@ namespace Cartex.Application.Barcodes;
 
 public static partial class GeneratedPackCodes
 {
-    [GeneratedRegex(@"-P(\d+(?:\.\d+)?)-")]
+    // A scanned barcode is untrusted input: a runaway match must give up, not hang the till.
+    [GeneratedRegex(@"-P(\d+(?:\.\d+)?)-", RegexOptions.None, matchTimeoutMilliseconds: 200)]
     private static partial Regex Marker();
 
     public static decimal? EmbeddedQty(string code)

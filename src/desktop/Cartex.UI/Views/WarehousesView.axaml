@@ -10,7 +10,7 @@
     <Panel>
         <DockPanel Margin="24" Classes.blurred="{Binding IsEditOpen}">
             <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[warehouse]}" Margin="0,0,0,16">
-                <Button Classes="brand" Command="{Binding OpenCreateCommand}">
+                <Button Classes="brand" Command="{Binding OpenCreateCommand}" IsVisible="{Binding CanCreate}">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <mi:MaterialIcon Kind="Plus" Width="18" Height="18" />
                         <TextBlock Text="{Binding L[add]}" VerticalAlignment="Center" />
@@ -33,6 +33,7 @@
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Button Classes="icon" Margin="6,0"
+                                                IsVisible="{Binding $parent[DataGrid].DataContext.CanEdit}"
                                                 Command="{Binding $parent[DataGrid].DataContext.OpenEditCommand}"
                                                 CommandParameter="{Binding}" ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[edit]}">
                                             <mi:MaterialIcon Kind="Pencil" Width="16" Height="16"

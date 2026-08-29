@@ -32,17 +32,33 @@
           }
         </div>
       </div>
-      @if (canManage) {
+      @if (canEdit || canDelete || canRepay || canPayOut) {
         <div class="actions">
-          <button matButton="filled" (click)="repay()">
-            <mat-icon>payments</mat-icon>{{ t('repay_debt') }}
+          @if (canRepay) {
+            <button matButton="filled" (click)="repay()">
+              <mat-icon>payments</mat-icon>{{ t('repay_debt') }}
+            </button>
+          }
+          @if (canPayOut) {
+            <button matButton="outlined" (click)="payOut()">
+              <mat-icon>output</mat-icon>{{ t('pay_out') }}
+            </button>
+          }
+          @if (canMessage) {
+          <button matButton (click)="message()">
+            <mat-icon>send</mat-icon>{{ t('customer_message') }}
           </button>
-          <button matButton="outlined" (click)="edit()">
-            <mat-icon>edit</mat-icon>{{ t('edit') }}
-          </button>
-          <button matIconButton class="del" [title]="t('delete')" (click)="remove()">
-            <mat-icon>delete</mat-icon>
-          </button>
+        }
+        @if (canEdit) {
+            <button matButton="outlined" (click)="edit()">
+              <mat-icon>edit</mat-icon>{{ t('edit') }}
+            </button>
+          }
+          @if (canDelete) {
+            <button matIconButton class="del" [title]="t('delete')" (click)="remove()">
+              <mat-icon>delete</mat-icon>
+            </button>
+          }
         </div>
       }
     </div>
@@ -50,8 +66,37 @@
     <div class="cx-grid stats">
       <cx-stat-card [label]="t('debt')" [value]="debtText()" icon="money_off" [tone]="c.debtBalance > 0 ? 'danger' : 'default'" />
       <cx-stat-card [label]="t('bonus')" [value]="c.cashbackBalance | cxMoney" icon="redeem" tone="success" />
-      <cx-stat-card [label]="t('credit_limit')" [value]="c.creditLimit | cxMoney" icon="credit_score" />
+      <cx-stat-card [label]="t('credit_limit')" [value]="c.creditLimit === null ? t('unlimited') : (c.creditLimit | cxMoney)" icon="credit_score" />
     </div>
+
+    @if (showPartner()) {
+      <div class="cx-card partner">
+        <mat-icon>handshake</mat-icon>
+        <span class="label">{{ t('partner') }}</span>
+        @if (isPartner() && canPublishPartner) {
+          <button matButton="outlined" (click)="publicity()">{{ t('public_page') }}</button>
+        }
+        <mat-slide-toggle
+          [checked]="isPartner()"
+          [disabled]="!canEditPartner || partnerBusy()"
+          (change)="togglePartnership($event.checked, t('success'))"
+        />
+      </div>
+    }
+
+    <section class="cx-card message-history">
+      <h3>{{ t('sms_gateway_customer_history') }}</h3>
+      @for (message of messages(); track message.id) {
+        <div class="message-row">
+          <span>{{ message.createdAt | cxDate }}</span>
+          <strong>{{ message.purpose }}</strong>
+          <span>{{ message.deviceLabel || message.provider }}</span>
+          <span class="cx-chip">{{ message.status }}</span>
+        </div>
+      } @empty {
+        <cx-empty-state icon="sms" [message]="t('no_data')" />
+      }
+    </section>
 
     @if (canViewSales) {
       <div class="cx-seg tabs">
@@ -61,9 +106,90 @@
         <button type="button" [class.active]="tab() === 'sales'" (click)="setTab('sales')">
           {{ t('sales') }}
         </button>
+        @if (canViewStatement) {
+          <button type="button" [class.active]="tab() === 'statement'" (click)="setTab('statement')">
+            {{ t('statement') }}
+          </button>
+        }
       </div>
     } @else {
       <h3>{{ t('ledger_history') }}</h3>
+    }
+
+    @if (tab() === 'statement') {
+      <section class="cx-card statement-bar">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('date_from') }}</mat-label>
+          <input matInput type="date" [(ngModel)]="statementFrom" (change)="loadStatement()" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('date_to') }}</mat-label>
+          <input matInput type="date" [(ngModel)]="statementTo" (change)="loadStatement()" />
+        </mat-form-field>
+        <span class="spacer"></span>
+        @if (canBuildAct) {
+          <button matButton (click)="openAct()">
+            <mat-icon>fact_check</mat-icon>{{ t('consolidated_act') }}
+          </button>
+        }
+        @if (canExportStatement) {
+          <button matButton (click)="exportStatement('pdf')">
+            <mat-icon>picture_as_pdf</mat-icon>PDF
+          </button>
+          <button matButton (click)="exportStatement('xlsx')">
+            <mat-icon>table_view</mat-icon>Excel
+          </button>
+        }
+      </section>
+
+      <div class="cx-table-card">
+        @if (statementLoading()) {
+          <mat-progress-bar mode="indeterminate" />
+        }
+        @if (statement(); as st) {
+          <div class="statement-summary">
+            <span>{{ t('sales') }}: <strong>{{ st.summary.saleAmount | cxMoney }}</strong></span>
+            <span>{{ t('payment') }}: <strong>{{ st.summary.paymentAmount | cxMoney }}</strong></span>
+            <span>{{ t('returns') }}: <strong>{{ st.summary.returnAmount | cxMoney }}</strong></span>
+          </div>
+          @if (st.timeline.length) {
+            <table mat-table [dataSource]="st.timeline">
+              <ng-container matColumnDef="date">
+                <th mat-header-cell *matHeaderCellDef>{{ t('time') }}</th>
+                <td mat-cell *matCellDef="let e">{{ e.occurredAt | cxDate }}</td>
+              </ng-container>
+              <ng-container matColumnDef="doc">
+                <th mat-header-cell *matHeaderCellDef>{{ t('ret_document') }}</th>
+                <td mat-cell *matCellDef="let e">{{ e.documentNumber }}</td>
+              </ng-container>
+              <ng-container matColumnDef="summary">
+                <th mat-header-cell *matHeaderCellDef>{{ t('operation_type') }}</th>
+                <td mat-cell *matCellDef="let e">{{ e.summary }}</td>
+              </ng-container>
+              <ng-container matColumnDef="debit">
+                <th mat-header-cell *matHeaderCellDef class="num">{{ t('debit') }}</th>
+                <td mat-cell *matCellDef="let e" class="num cx-money">
+                  {{ e.debit ? (e.debit | cxMoney) : '—' }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="credit">
+                <th mat-header-cell *matHeaderCellDef class="num">{{ t('credit') }}</th>
+                <td mat-cell *matCellDef="let e" class="num cx-money">
+                  {{ e.credit ? (e.credit | cxMoney) : '—' }}
+                </td>
+              </ng-container>
+              <ng-container matColumnDef="balance">
+                <th mat-header-cell *matHeaderCellDef class="num">{{ t('balance') }}</th>
+                <td mat-cell *matCellDef="let e" class="num cx-money">{{ e.runningBalance | cxMoney }}</td>
+              </ng-container>
+              <tr mat-header-row *matHeaderRowDef="statementCols"></tr>
+              <tr mat-row *matRowDef="let e; columns: statementCols"></tr>
+            </table>
+          } @else if (!statementLoading()) {
+            <cx-empty-state icon="receipt_long" [message]="t('no_ledger')" />
+          }
+        }
+      </div>
     }
 
     @if (tab() === 'sales') {
@@ -130,11 +256,11 @@
               </ng-container>
               <ng-container matColumnDef="op">
                 <th mat-header-cell *matHeaderCellDef>{{ t('operation') }}</th>
-                <td mat-cell *matCellDef="let e">{{ e.operationType }}</td>
+                <td mat-cell *matCellDef="let e">{{ e.operationType | cxEnum: 'op' }}</td>
               </ng-container>
               <ng-container matColumnDef="account">
                 <th mat-header-cell *matHeaderCellDef>{{ t('account') }}</th>
-                <td mat-cell *matCellDef="let e"><span class="cx-chip">{{ e.accountType }}</span></td>
+                <td mat-cell *matCellDef="let e"><span class="cx-chip">{{ e.accountType | cxEnum: 'acct' }}</span></td>
               </ng-container>
               <ng-container matColumnDef="change">
                 <th mat-header-cell *matHeaderCellDef class="num">{{ t('change') }}</th>
@@ -145,6 +271,26 @@
               <ng-container matColumnDef="after">
                 <th mat-header-cell *matHeaderCellDef class="num">{{ t('balance_after') }}</th>
                 <td mat-cell *matCellDef="let e" class="num cx-money">{{ e.balanceAfter | cxMoney }}{{ e.currency ? ' ' + e.currency : '' }}</td>
+              </ng-container>
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef class="num"></th>
+                <td mat-cell *matCellDef="let e" class="num">
+                  @if (e.saleId) {
+                    <button matIconButton [title]="t('open_receipt')" (click)="openLedgerSale(e)">
+                      <mat-icon>receipt_long</mat-icon>
+                    </button>
+                  }
+                  @if (e.paymentDocumentId) {
+                    <button matIconButton [title]="t('print')" (click)="printLedgerPayment(e)">
+                      <mat-icon>print</mat-icon>
+                    </button>
+                  }
+                  @if (e.paymentDocumentId && canVoidPayment) {
+                    <button matIconButton [title]="t('void_payment')" (click)="voidLedgerPayment(e)">
+                      <mat-icon>undo</mat-icon>
+                    </button>
+                  }
+                </td>
               </ng-container>
               <tr mat-header-row *matHeaderRowDef="cols"></tr>
               <tr mat-row *matRowDef="let e; columns: cols"></tr>

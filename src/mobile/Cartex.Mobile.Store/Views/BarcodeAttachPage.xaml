@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Cartex.Mobile.Store.Views.BarcodeAttachPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Cartex.Mobile.Store.ViewModels"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
+    xmlns:ctl="clr-namespace:Cartex.Mobile.Core.Controls;assembly=Cartex.Mobile.Core"
+    x:DataType="vm:BarcodeAttachViewModel"
+    Title="{svc:T attach_existing}">
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- Search bar + Add new FAB -->
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="10" Padding="14,12,14,8">
+            <Border Style="{StaticResource InputWrap}">
+                <Entry x:Name="SearchBox" Placeholder="{svc:T search_product}"
+                       Text="{Binding SearchText}" />
+            </Border>
+            <!-- FAB: Yangi mahsulot qo'shish -->
+            <Button Grid.Column="1"
+                    FontFamily="MDI" Text="{StaticResource IcPlus}" FontSize="22" Padding="0"
+                    WidthRequest="52" HeightRequest="52" CornerRadius="26"
+                    Command="{Binding AddNewCommand}"
+                    ToolTipProperties.Text="{svc:T add_new}" />
+        </Grid>
+
+        <!-- Error label -->
+        <Label Grid.Row="0" Margin="14,60,14,0" Text="{Binding Error}"
+               TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
+               IsVisible="{Binding Error, Converter={StaticResource NotEmpty}}" />
+
+        <!-- Results list -->
+        <CollectionView Grid.Row="1" ItemsSource="{Binding Results}"
+                        RemainingItemsThreshold="5"
+                        RemainingItemsThresholdReachedCommand="{Binding LoadMoreCommand}"
+                        IsVisible="{Binding IsSearching, Converter={StaticResource Invert}}">
+            <CollectionView.EmptyView>
+                <Label Margin="24" Text="{svc:T search_product}"
+                       HorizontalOptions="Center" VerticalOptions="Center"
+                       Style="{StaticResource MutedLabel}" FontSize="14" />
+            </CollectionView.EmptyView>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="vm:AttachRow">
+                    <Border Style="{StaticResource Card}" Margin="12,4,12,4">
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnRowTapped" />
+                            </Grid.GestureRecognizers>
+                            <!-- Thumbnail -->
+                            <ctl:Thumb Source="{Binding ImageUrl}" Size="52" Radius="10" />
+                            <!-- Info -->
+                            <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="3">
+                                <Label Text="{Binding Name}" FontAttributes="Bold"
+                                       LineBreakMode="WordWrap" MaxLines="3"
+                                       TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                <Label Text="{Binding AttributesText}" Style="{StaticResource MutedLabel}" FontSize="12"
+                                       LineBreakMode="WordWrap" MaxLines="2"
+                                       IsVisible="{Binding AttributesText, Converter={StaticResource NotEmpty}}" />
+                                <Label Text="{Binding Code}" Style="{StaticResource MutedLabel}" FontSize="12"
+                                       IsVisible="{Binding Code, Converter={StaticResource NotEmpty}}" />
+                                <Label Text="{Binding CategoryName}" Style="{StaticResource MutedLabel}"
+                                       IsVisible="{Binding CategoryName, Converter={StaticResource NotEmpty}}" />
+                                <Label Text="{Binding StockText}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                            </VerticalStackLayout>
+                            <!-- Price + arrow -->
+                            <VerticalStackLayout Grid.Column="2" VerticalOptions="Center" HorizontalOptions="End" Spacing="4">
+                                <Label Text="{Binding PriceText}" FontAttributes="Bold"
+                                       TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                                <Label FontFamily="MDI" Text="{StaticResource IcChevron}"
+                                       Style="{StaticResource MutedLabel}"
+                                       HorizontalOptions="End" />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+            <CollectionView.Footer>
+                <ActivityIndicator Margin="0,12" IsRunning="{Binding IsLoadingMore}"
+                                   IsVisible="{Binding IsLoadingMore}"
+                                   HorizontalOptions="Center" />
+            </CollectionView.Footer>
+        </CollectionView>
+
+        <ActivityIndicator Grid.Row="1" IsRunning="{Binding IsSearching}" IsVisible="{Binding IsSearching}"
+                           VerticalOptions="Center" HorizontalOptions="Center" />
+
+        <!-- Long-press details modal -->
+        <Grid Grid.RowSpan="2" ZIndex="2" BackgroundColor="#CC000000" IsVisible="{Binding IsDetailsOpen}">
+            <Grid.GestureRecognizers>
+                <TapGestureRecognizer Command="{Binding CloseDetailsCommand}" />
+            </Grid.GestureRecognizers>
+            <Border Style="{StaticResource Card}" Margin="20" Padding="20" VerticalOptions="Center" MaximumHeightRequest="680">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer />
+                </Border.GestureRecognizers>
+                <ScrollView>
+                    <VerticalStackLayout Spacing="12">
+                        <Grid HeightRequest="150" BackgroundColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource SurfaceDark}}">
+                            <ctl:Thumb Source="{Binding SelectedRow.FullImageUrl}" Size="150" Stretch="True" Radius="0" />
+                            <Button FontFamily="MDI" Text="{StaticResource IcClose}" FontSize="18" Padding="0"
+                                    WidthRequest="40" HeightRequest="40" CornerRadius="20"
+                                    VerticalOptions="Start" HorizontalOptions="Start" Margin="10,10,0,0"
+                                    BackgroundColor="#CC000000" TextColor="White"
+                                    Command="{Binding CloseDetailsCommand}" />
+                            <Button FontFamily="MDI" Text="{StaticResource IcPencil}" FontSize="18" Padding="0"
+                                    WidthRequest="40" HeightRequest="40" CornerRadius="20"
+                                    VerticalOptions="Start" HorizontalOptions="End" Margin="0,10,10,0"
+                                    BackgroundColor="#CC000000" TextColor="White"
+                                    Command="{Binding OpenEditCommand}"
+                                    IsVisible="{Binding CanEditProduct}" />
+                        </Grid>
+
+                        <Label Text="{Binding SelectedRow.Name}" FontAttributes="Bold" FontSize="20"
+                               LineBreakMode="WordWrap"
+                               TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
+                            <VerticalStackLayout Spacing="2">
+                                <Label Text="{svc:T price}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                                <Label Text="{Binding SelectedRow.PriceText}" FontAttributes="Bold"
+                                       TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                <Label Text="{svc:T stock_label}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                                <Label Text="{Binding SelectedRow.StockText}" FontAttributes="Bold"
+                                       TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
+                            <VerticalStackLayout Spacing="2" IsVisible="{Binding SelectedRow.CategoryName, Converter={StaticResource NotEmpty}}">
+                                <Label Text="{svc:T category}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                                <Label Text="{Binding SelectedRow.CategoryName}" LineBreakMode="WordWrap" />
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Grid.Column="1" Spacing="2" IsVisible="{Binding SelectedRow.Code, Converter={StaticResource NotEmpty}}">
+                                <Label Text="{svc:T code}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                                <Label Text="{Binding SelectedRow.Code}" LineBreakMode="WordWrap" />
+                            </VerticalStackLayout>
+                        </Grid>
+                        <VerticalStackLayout Spacing="2" IsVisible="{Binding SelectedRow.AttributesText, Converter={StaticResource NotEmpty}}">
+                            <Label Text="{svc:T attributes}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                            <Label Text="{Binding SelectedRow.AttributesText}" LineBreakMode="WordWrap" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Spacing="2" IsVisible="{Binding SelectedRow.HasBarcodes}">
+                            <Label Text="{svc:T barcodes}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                            <Label Text="{Binding SelectedRow.BarcodesText}" LineBreakMode="WordWrap" />
+                        </VerticalStackLayout>
+
+                        <Button Text="{svc:T attach_existing}" Style="{StaticResource BtnPrimary}"
+                                Command="{Binding AttachCommand}"
+                                CommandParameter="{Binding SelectedRow}" />
+                    </VerticalStackLayout>
+                </ScrollView>
+            </Border>
+        </Grid>
+
+        <ActivityIndicator Grid.Row="1" IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
+                           VerticalOptions="Center" HorizontalOptions="Center" ZIndex="3" />
+    </Grid>
+</ContentPage>

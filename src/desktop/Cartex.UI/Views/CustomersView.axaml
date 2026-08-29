@@ -52,7 +52,7 @@
             <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[customers]}" Margin="0,0,0,16">
                 <StackPanel Orientation="Horizontal" Spacing="10">
                     <c:ExportButton Command="{Binding ExportCommand}" Text="{Binding L[export]}" IsVisible="{Binding CanExport}" />
-                    <Button Classes="brand" Command="{Binding OpenCreateCommand}" IsVisible="{Binding CanManage}">
+                    <Button Classes="brand" Command="{Binding OpenCreateCommand}" IsVisible="{Binding CanCreate}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <mi:MaterialIcon Kind="Plus" Width="18" Height="18" />
                             <TextBlock Text="{Binding L[add]}" VerticalAlignment="Center" />
@@ -141,13 +141,13 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Width="*" Binding="{Binding CreditLimit, StringFormat='{}{0:N0}'}"
+                            <DataGridTextColumn Width="*" Binding="{Binding CreditLimit, Converter={x:Static conv:CreditLimitConverter.Instance}}"
                                                 Header="{Binding [credit_limit], Source={x:Static svc:LocalizationManager.Instance}}" />
                             <DataGridTemplateColumn Width="Auto">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Button Classes="icon" Margin="6,0"
-                                                IsVisible="{Binding $parent[DataGrid].DataContext.CanManage}"
+                                                IsVisible="{Binding $parent[DataGrid].DataContext.CanEdit}"
                                                 Command="{Binding $parent[DataGrid].DataContext.OpenEditCommand}"
                                                 CommandParameter="{Binding}" ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[edit]}">
                                             <mi:MaterialIcon Kind="Pencil" Width="16" Height="16"
@@ -178,29 +178,29 @@
                     </Border>
                     <StackPanel Grid.Column="4" Spacing="8" VerticalAlignment="Center">
                         <StackPanel Orientation="Horizontal" Spacing="7">
-                            <TextBlock Text="{Binding SelectedCustomer.FullName}" FontSize="20" FontWeight="Bold"
+                            <TextBlock Text="{Binding SelectedCustomerDisplay.FullName}" FontSize="20" FontWeight="Bold"
                                        Foreground="{DynamicResource TextPrimary}" />
-                            <TextBlock Text="{Binding SelectedCustomer.LastName}" FontSize="20" FontWeight="Bold"
+                            <TextBlock Text="{Binding SelectedCustomerDisplay.LastName}" FontSize="20" FontWeight="Bold"
                                        VerticalAlignment="Center" Foreground="{DynamicResource TextSecondary}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="20">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <mi:MaterialIcon Kind="PhoneOutline" Width="15" Height="15" Foreground="{DynamicResource TextSecondary}" />
-                                <TextBlock Text="{Binding SelectedCustomer.Phone}" Foreground="{DynamicResource TextSecondary}" />
+                                <TextBlock Text="{Binding SelectedCustomerDisplay.Phone}" Foreground="{DynamicResource TextSecondary}" />
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Spacing="6"
-                                        IsVisible="{Binding SelectedCustomer.Address, Converter={x:Static conv:StringNotEmptyConverter.Instance}}">
+                                        IsVisible="{Binding SelectedCustomerDisplay.Address, Converter={x:Static conv:StringNotEmptyConverter.Instance}}">
                                 <mi:MaterialIcon Kind="MapMarkerOutline" Width="15" Height="15" Foreground="{DynamicResource TextSecondary}" />
-                                <TextBlock Text="{Binding SelectedCustomer.Address}" Foreground="{DynamicResource TextSecondary}" />
+                                <TextBlock Text="{Binding SelectedCustomerDisplay.Address}" Foreground="{DynamicResource TextSecondary}" />
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Spacing="6"
-                                        IsVisible="{Binding SelectedCustomer.CardBarcode, Converter={x:Static conv:StringNotEmptyConverter.Instance}}">
+                                        IsVisible="{Binding SelectedCustomerDisplay.CardBarcode, Converter={x:Static conv:StringNotEmptyConverter.Instance}}">
                                 <mi:MaterialIcon Kind="CardAccountDetailsOutline" Width="15" Height="15" Foreground="{DynamicResource TextSecondary}" />
-                                <TextBlock Text="{Binding SelectedCustomer.CardBarcode}" Foreground="{DynamicResource TextSecondary}" />
+                                <TextBlock Text="{Binding SelectedCustomerDisplay.CardBarcode}" Foreground="{DynamicResource TextSecondary}" />
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <mi:MaterialIcon Kind="SaleOutline" Width="15" Height="15" Foreground="{DynamicResource TextSecondary}" />
-                                <TextBlock Text="{Binding SelectedCustomer.DiscountPct, StringFormat='{}{0}%'}" Foreground="{DynamicResource TextSecondary}" />
+                                <TextBlock Text="{Binding SelectedCustomerDisplay.DiscountPct, StringFormat='{}{0}%'}" Foreground="{DynamicResource TextSecondary}" />
                             </StackPanel>
                         </StackPanel>
                     </StackPanel>
@@ -211,11 +211,24 @@
                                 <TextBlock Text="{Binding L[repay_debt]}" VerticalAlignment="Center" />
                             </StackPanel>
                         </Button>
+                        <Button Classes="outline" Command="{Binding OpenPayOutCommand}" IsVisible="{Binding CanPayOut}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <mi:MaterialIcon Kind="CashMinus" Width="17" Height="17" />
+                                <TextBlock Text="{Binding L[pay_out]}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
                         <Button Classes="outline" Command="{Binding OpenEditCommand}" CommandParameter="{Binding SelectedCustomer}"
-                                IsVisible="{Binding CanManage}">
+                                IsVisible="{Binding CanEdit}">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <mi:MaterialIcon Kind="Pencil" Width="16" Height="16" />
                                 <TextBlock Text="{Binding L[edit]}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="outline" Command="{Binding DeleteCommand}" CommandParameter="{Binding SelectedCustomer}"
+                                IsVisible="{Binding CanDelete}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <mi:MaterialIcon Kind="TrashCanOutline" Width="16" Height="16" />
+                                <TextBlock Text="{Binding L[delete]}" VerticalAlignment="Center" />
                             </StackPanel>
                         </Button>
                         <Button Classes="outline" Command="{Binding OpenMessageCommand}" IsVisible="{Binding CanMessage}">
@@ -246,7 +259,7 @@
                 <Border Grid.Column="1" Background="{DynamicResource SuccessBg}" CornerRadius="12" Padding="18">
                     <StackPanel Spacing="4">
                         <TextBlock Text="{Binding L[bonus]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                        <TextBlock Text="{Binding SelectedCustomer.CashbackBalance, StringFormat='{}{0:N0}'}"
+                        <TextBlock Text="{Binding SelectedCustomerDisplay.CashbackBalance, StringFormat='{}{0:N0}'}"
                                    FontSize="22" FontWeight="Bold" Foreground="{DynamicResource SuccessBrush}" />
                     </StackPanel>
                 </Border>
@@ -254,33 +267,76 @@
                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                     <StackPanel Spacing="4">
                         <TextBlock Text="{Binding L[credit_limit]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                        <TextBlock Text="{Binding SelectedCustomer.CreditLimit, StringFormat='{}{0:N0}'}"
+                        <TextBlock Text="{Binding SelectedCustomerDisplay.CreditLimit, Converter={x:Static conv:CreditLimitConverter.Instance}}"
                                    FontSize="22" FontWeight="Bold" Foreground="{DynamicResource TextPrimary}" />
                     </StackPanel>
                 </Border>
             </Grid>
 
+            <Border DockPanel.Dock="Top" Background="{DynamicResource CardBg}" CornerRadius="12" Padding="18,14"
+                    Margin="0,0,0,16" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    IsVisible="{Binding ShowPartner}">
+                <Grid ColumnDefinitions="Auto,10,Auto,*,Auto">
+                    <mi:MaterialIcon Kind="HandshakeOutline" Width="18" Height="18" VerticalAlignment="Center"
+                                     Foreground="{DynamicResource TextSecondary}" />
+                    <TextBlock Grid.Column="2" Text="{Binding L[partner]}" VerticalAlignment="Center"
+                               FontSize="13.5" FontWeight="SemiBold" />
+                    <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                        <Button Classes="outline" Command="{Binding OpenPublicityCommand}"
+                                IsVisible="{Binding CanOpenPublicity}" Content="{Binding L[public_page]}" />
+                        <ToggleSwitch IsChecked="{Binding IsPartner, Mode=OneWay}" IsEnabled="{Binding CanEditPartner}"
+                                      Command="{Binding TogglePartnershipCommand}" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
             <Panel DockPanel.Dock="Top" Margin="0,0,0,10">
                 <TextBlock Text="{Binding L[recent_transactions]}" FontWeight="SemiBold" FontSize="15"
                            Foreground="{DynamicResource TextPrimary}" IsVisible="{Binding !CanViewSales}" />
-                <Border Classes="segwrap" IsVisible="{Binding CanViewSales}">
-                    <StackPanel Orientation="Horizontal" Spacing="2">
-                        <Button Classes="seg" Classes.active="{Binding !IsSalesTab}" Content="{Binding L[recent_transactions]}"
-                                Command="{Binding SetTabCommand}" CommandParameter="ledger" />
-                        <Button Classes="seg" Classes.active="{Binding IsSalesTab}" Content="{Binding L[sales]}"
-                                Command="{Binding SetTabCommand}" CommandParameter="sales" />
+                <Grid ColumnDefinitions="Auto,*" IsVisible="{Binding CanViewSales}">
+                    <Border Classes="segwrap">
+                        <StackPanel Orientation="Horizontal" Spacing="2">
+                            <Button Classes="seg" Classes.active="{Binding IsLedgerTab}" Content="{Binding L[recent_transactions]}"
+                                    Command="{Binding SetTabCommand}" CommandParameter="ledger" />
+                            <Button Classes="seg" Classes.active="{Binding IsSalesTab}" Content="{Binding L[sales]}"
+                                    Command="{Binding SetTabCommand}" CommandParameter="sales" />
+                            <Button Classes="seg" Classes.active="{Binding IsStatementTab}" Content="{Binding L[statement]}"
+                                    Command="{Binding SetTabCommand}" CommandParameter="statement"
+                                    IsVisible="{Binding CanViewStatement}" />
+                        </StackPanel>
+                    </Border>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right"
+                                IsVisible="{Binding IsStatementTab}">
+                        <TextBlock Text="{Binding L[date_from]}" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextSecondary}" FontSize="12" />
+                        <DatePicker SelectedDate="{Binding StatementFrom, Mode=TwoWay}" MinWidth="140" MinHeight="34" />
+                        <TextBlock Text="{Binding L[date_to]}" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextSecondary}" FontSize="12" />
+                        <DatePicker SelectedDate="{Binding StatementTo, Mode=TwoWay}" MinWidth="140" MinHeight="34" />
+                        <Button Classes="outline" MinHeight="34" Padding="12,0"
+                                Command="{Binding OpenConsolidatedActCommand}"
+                                IsVisible="{Binding CanBuildAct}"
+                                ToolTip.Tip="{Binding L[consolidated_act_hint]}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <mi:MaterialIcon Kind="FileDocumentMultipleOutline" Width="15" Height="15" />
+                                <TextBlock Text="{Binding L[consolidated_act]}" FontSize="12.5" />
+                            </StackPanel>
+                        </Button>
+                        <c:ExportButton Command="{Binding ExportStatementCommand}" Text="{Binding L[export]}"
+                                        IsVisible="{Binding CanExportStatement}" />
                     </StackPanel>
-                </Border>
+                </Grid>
             </Panel>
-            <c:Pager DockPanel.Dock="Bottom" State="{Binding LedgerPaging}" Margin="0,10,0,0" IsVisible="{Binding !IsSalesTab}" />
+            <c:Pager DockPanel.Dock="Bottom" State="{Binding LedgerPaging}" Margin="0,10,0,0" IsVisible="{Binding IsLedgerTab}" />
             <c:Pager DockPanel.Dock="Bottom" State="{Binding SalesPaging}" Margin="0,10,0,0" IsVisible="{Binding IsSalesTab}" />
             <Panel>
                 <Border Background="{DynamicResource CardBg}" CornerRadius="12" ClipToBounds="True"
                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                        IsVisible="{Binding !IsSalesTab}">
+                        IsVisible="{Binding IsLedgerTab}">
                     <Panel>
                         <DataGrid ItemsSource="{Binding Ledger}" AutoGenerateColumns="False" IsReadOnly="True"
-                                  GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+                                  GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                                  c:GridDoubleClick.Command="{Binding OpenLedgerEntryCommand}">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Width="*" Binding="{Binding Date, Mode=OneWay, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
                                                     Header="{Binding [time], Source={x:Static svc:LocalizationManager.Instance}}" />
@@ -314,7 +370,7 @@
                                 </DataGridTemplateColumn>
                             </DataGrid.Columns>
                         </DataGrid>
-                        <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLedgerLoading}" Height="3" VerticalAlignment="Top" />
+                        <ProgressBar IsIndeterminate="{Binding IsLedgerLoading}" IsVisible="{Binding IsLedgerLoading}" Height="3" VerticalAlignment="Top" />
                     </Panel>
                 </Border>
                 <Border Background="{DynamicResource CardBg}" CornerRadius="12" ClipToBounds="True"
@@ -322,7 +378,8 @@
                         IsVisible="{Binding IsSalesTab}">
                     <Panel>
                         <DataGrid ItemsSource="{Binding Sales}" AutoGenerateColumns="False" IsReadOnly="True"
-                                  GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+                                  GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                                  c:GridDoubleClick.Command="{Binding OpenReceiptCommand}">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Width="*" Binding="{Binding SaleDate, Mode=OneWay, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
                                                     Header="{Binding [time], Source={x:Static svc:LocalizationManager.Instance}}" />
@@ -336,24 +393,54 @@
                                                     Header="{Binding [status], Source={x:Static svc:LocalizationManager.Instance}}" />
                             </DataGrid.Columns>
                         </DataGrid>
-                        <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsSalesLoading}" Height="3" VerticalAlignment="Top" />
+                        <ProgressBar IsIndeterminate="{Binding IsSalesLoading}" IsVisible="{Binding IsSalesLoading}" Height="3" VerticalAlignment="Top" />
+                    </Panel>
+                </Border>
+                <Border Background="{DynamicResource CardBg}" CornerRadius="12" ClipToBounds="True"
+                        BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                        IsVisible="{Binding IsStatementTab}">
+                    <Panel>
+                        <DockPanel Margin="14">
+                            <Grid DockPanel.Dock="Top" ColumnDefinitions="*,*,*,*" ColumnSpacing="10" Margin="0,0,0,12">
+                                <c:StatCard Icon="CashRegister" Title="{Binding L[statement_sales]}"
+                                            Value="{Binding Statement.Summary.SaleAmount, StringFormat='{}{0:N0}'}" />
+                                <c:StatCard Grid.Column="1" Icon="CashCheck" Title="{Binding L[statement_payments]}"
+                                            Value="{Binding Statement.Summary.PaymentAmount, StringFormat='{}{0:N0}'}" />
+                                <c:StatCard Grid.Column="2" Icon="KeyboardReturn" Title="{Binding L[statement_returns]}"
+                                            Value="{Binding Statement.Summary.ReturnAmount, StringFormat='{}{0:N0}'}" />
+                                <c:StatCard Grid.Column="3" Icon="CashRefund" Title="{Binding L[statement_refunds]}"
+                                            Value="{Binding Statement.Summary.RefundAmount, StringFormat='{}{0:N0}'}" />
+                            </Grid>
+                            <DataGrid ItemsSource="{Binding Statement.Timeline}" AutoGenerateColumns="False" IsReadOnly="True"
+                                      GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                                  c:GridDoubleClick.Command="{Binding OpenStatementEntryCommand}">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Width="*" Binding="{Binding OccurredAt, Mode=OneWay, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
+                                                        Header="{Binding [time], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                    <DataGridTextColumn Width="*" Binding="{Binding DocumentNumber}"
+                                                        Header="{Binding [ret_document], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                    <DataGridTextColumn Width="1.4*" Binding="{Binding Summary}"
+                                                        Header="{Binding [operation_type], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                    <DataGridTextColumn Width="*" Binding="{Binding Debit, StringFormat='{}{0:N0}'}"
+                                                        Header="{Binding [debit], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                    <DataGridTextColumn Width="*" Binding="{Binding Credit, StringFormat='{}{0:N0}'}"
+                                                        Header="{Binding [credit], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                    <DataGridTextColumn Width="*" Binding="{Binding RunningBalance, StringFormat='{}{0:N0}'}"
+                                                        Header="{Binding [balance], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </DockPanel>
+                        <ProgressBar IsIndeterminate="{Binding IsStatementLoading}" IsVisible="{Binding IsStatementLoading}" Height="3" VerticalAlignment="Top" />
                     </Panel>
                 </Border>
             </Panel>
         </DockPanel>
 
-        <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" Height="3" VerticalAlignment="Top" />
+        <ProgressBar IsIndeterminate="{Binding IsLoading}" IsVisible="{Binding IsLoading}" Height="3" VerticalAlignment="Top" />
 
-        <Border IsVisible="{Binding IsEditOpen}" Background="#30000000"
-                c:OverlayBehaviors.DismissCommand="{Binding CancelEditCommand}">
-            <Border Classes="form" Background="{DynamicResource CardBg}" CornerRadius="14" Width="460"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    HorizontalAlignment="Center" VerticalAlignment="Center"
-                    c:FormBehaviors.AutoFocus="True"
-                    c:FormBehaviors.EnterSubmits="{Binding SaveCommand}">
-                <StackPanel Margin="24" Spacing="14">
-                    <TextBlock Text="{Binding L[customers]}" FontSize="18" FontWeight="Bold"
-                               Foreground="{DynamicResource TextPrimary}" />
+        <c:ModalCard IsOpen="{Binding IsEditOpen}" Title="{Binding EditTitle}" CardWidth="560"
+                     CancelCommand="{Binding CancelEditCommand}" SaveCommand="{Binding SaveCommand}">
+                <StackPanel Classes="form" Spacing="14">
                     <Grid ColumnDefinitions="*,12,*">
                         <StackPanel Grid.Column="0" Spacing="5">
                             <c:FieldLabel Text="{Binding L[first_name]}" Required="True" />
@@ -391,7 +478,7 @@
                         </StackPanel>
                         <StackPanel Grid.Column="2" Spacing="5">
                             <TextBlock Text="{Binding L[credit_limit]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                            <NumericUpDown Value="{Binding EditCreditLimit, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="100000" FormatString="N0" />
+                            <NumericUpDown Value="{Binding EditCreditLimit}" Minimum="0" Increment="100000" FormatString="N0" PlaceholderText="{Binding L[unlimited]}" />
                         </StackPanel>
                     </Grid>
                     <StackPanel Spacing="5">
@@ -399,8 +486,14 @@
                         <ComboBox ItemsSource="{Binding CustomerLanguages}" SelectedItem="{Binding EditLanguage}"
                                   MinWidth="160" MinHeight="36" HorizontalAlignment="Left" />
                     </StackPanel>
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[description]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <TextBox Text="{Binding EditNote}" AcceptsReturn="True" TextWrapping="Wrap"
+                                 MinHeight="70" MaxHeight="140" />
+                    </StackPanel>
                     <CheckBox IsChecked="{Binding EditNotificationsOptOut}" Content="{Binding L[notifications_opt_out]}" />
-                    <StackPanel Spacing="5" IsVisible="{Binding IsNew}">
+                    <CheckBox IsChecked="{Binding EditAllowMarketingSms}" Content="{Binding L[allow_marketing_sms]}" />
+                    <StackPanel Spacing="5" IsVisible="{Binding CanEnterOpeningBalance}">
                         <TextBlock Text="{Binding L[opening_balance]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
                         <Grid ColumnDefinitions="*,8,Auto,Auto">
                             <NumericUpDown Value="{Binding EditOpeningBalance, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="10000" FormatString="N0" />
@@ -411,47 +504,114 @@
                         </Grid>
                         <TextBlock Text="{Binding L[opening_balance_hint]}" Foreground="{DynamicResource TextMuted}" FontSize="11.5" TextWrapping="Wrap" />
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,6,0,0">
-                        <Button Classes="outline" Command="{Binding CancelEditCommand}" Content="{Binding L[cancel]}" />
-                        <Button Classes="brand" Command="{Binding SaveCommand}" Content="{Binding L[save]}" />
-                    </StackPanel>
                 </StackPanel>
-            </Border>
-        </Border>
+        </c:ModalCard>
 
-        <Border IsVisible="{Binding IsMessageOpen}" Background="#30000000"
-                c:OverlayBehaviors.DismissCommand="{Binding CancelMessageCommand}">
-            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="440"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    HorizontalAlignment="Center" VerticalAlignment="Center">
-                <StackPanel Margin="24" Spacing="14">
-                    <TextBlock Text="{Binding L[customer_message]}" FontSize="18" FontWeight="Bold"
-                               Foreground="{DynamicResource TextPrimary}" />
+        <c:ModalCard IsOpen="{Binding IsMessageOpen}" Title="{Binding L[customer_message]}" CardWidth="560"
+                     CancelCommand="{Binding CancelMessageCommand}" SaveCommand="{Binding SendMessageCommand}"
+                     SaveText="{Binding L[send]}">
+                <StackPanel Spacing="14">
                     <StackPanel Spacing="5">
                         <TextBlock Text="{Binding L[channel]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                        <ComboBox ItemsSource="{Binding MessageChannels}" SelectedItem="{Binding MessageChannel}"
+                        <ComboBox ItemsSource="{Binding MessageChannels}" SelectedValue="{Binding MessageChannel}"
+                                  SelectedValueBinding="{Binding Code}" DisplayMemberBinding="{Binding Label}"
                                   HorizontalAlignment="Stretch" MinHeight="38" />
                     </StackPanel>
                     <StackPanel Spacing="5">
                         <TextBlock Text="{Binding L[message_text]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
                         <TextBox Text="{Binding MessageText}" MinHeight="90" AcceptsReturn="True" TextWrapping="Wrap" MaxLength="1000" />
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,6,0,0">
-                        <Button Classes="outline" Command="{Binding CancelMessageCommand}" Content="{Binding L[cancel]}" />
-                        <Button Classes="brand" Command="{Binding SendMessageCommand}" Content="{Binding L[send]}" />
+                </StackPanel>
+        </c:ModalCard>
+
+        <c:ModalCard IsOpen="{Binding IsPublicityOpen}" Title="{Binding L[public_page]}" CardWidth="520"
+                     Subtitle="{Binding SelectedCustomerDisplay.FullName}"
+                     CancelCommand="{Binding CancelPublicityCommand}" SaveCommand="{Binding SavePublicityCommand}">
+                <StackPanel Spacing="14">
+                    <TextBlock Text="{Binding L[public_consent_hint]}" Foreground="{DynamicResource TextMuted}"
+                               FontSize="11.5" TextWrapping="Wrap" />
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[consent]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <ComboBox ItemsSource="{Binding ConsentOptions}" SelectedIndex="{Binding ConsentIndex}"
+                                  HorizontalAlignment="Stretch" MinHeight="38" />
+                    </StackPanel>
+                    <StackPanel Spacing="14" IsVisible="{Binding ConsentGranted}">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding L[show_on_public_page]}" VerticalAlignment="Center" FontSize="12.5" />
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding PublicVisible}" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding L[show_phone_publicly]}" VerticalAlignment="Center" FontSize="12.5" />
+                            <ToggleSwitch Grid.Column="1" IsChecked="{Binding PublicPhoneVisible}" />
+                        </Grid>
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="{Binding L[public_display_name]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                            <TextBox Text="{Binding PublicDisplayName}" MinHeight="38" />
+                        </StackPanel>
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="{Binding L[public_about]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                            <TextBox Text="{Binding PublicAbout}" MinHeight="80" AcceptsReturn="True"
+                                     TextWrapping="Wrap" MaxLength="600" />
+                        </StackPanel>
                     </StackPanel>
                 </StackPanel>
-            </Border>
-        </Border>
+        </c:ModalCard>
 
-        <Border IsVisible="{Binding IsRepayOpen}" Background="#30000000"
-                c:OverlayBehaviors.DismissCommand="{Binding CancelRepayCommand}">
-            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="420"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    HorizontalAlignment="Center" VerticalAlignment="Center">
-                <StackPanel Margin="24" Spacing="14">
-                    <TextBlock Text="{Binding L[repay_debt]}" FontSize="18" FontWeight="Bold"
-                               Foreground="{DynamicResource TextPrimary}" />
+        <c:ModalCard IsOpen="{Binding IsPayOutOpen}" Title="{Binding L[pay_out]}" CardWidth="520"
+                     Subtitle="{Binding SelectedCustomerDisplay.FullName}"
+                     CancelCommand="{Binding CancelPayOutCommand}" SaveCommand="{Binding PayOutCommand}">
+                <StackPanel Spacing="14">
+                    <Border Classes="debtcard" CornerRadius="12" Padding="16,12">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding L[advance]}" FontSize="12.5" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextSecondary}" />
+                            <TextBlock Grid.Column="1" Text="{Binding PayOutAdvance, StringFormat='{}{0:N0}'}"
+                                       FontSize="20" FontWeight="Bold" />
+                        </Grid>
+                    </Border>
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[amount]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <NumericUpDown Value="{Binding PayOutAmount, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
+                                       Minimum="0" Increment="1000" FormatString="N0" ShowButtonSpinner="False"
+                                       FontSize="18" MinHeight="44" />
+                    </StackPanel>
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[payment_method]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <ToggleSwitch IsChecked="{Binding PayOutViaCard}"
+                                      OffContent="{Binding L[cash]}" OnContent="{Binding L[card]}" />
+                    </StackPanel>
+                    <TextBox Text="{Binding PayOutNote}" PlaceholderText="{Binding L[note]}" MinHeight="38" />
+                    <Border IsVisible="{Binding PayOutCreatesLoan}" Background="{DynamicResource WarningBg}"
+                            CornerRadius="10" Padding="12,9">
+                        <TextBlock FontSize="12.5" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimary}">
+                            <Run Text="{Binding L[pay_out_becomes_loan]}" />
+                            <Run Text="{Binding PayOutAsLoan, StringFormat='{}{0:N0}'}" FontWeight="Bold" />
+                        </TextBlock>
+                    </Border>
+                </StackPanel>
+        </c:ModalCard>
+
+        <c:ModalCard IsOpen="{Binding IsRepayOpen}" Title="{Binding L[repay_debt]}" CardWidth="560"
+                     Subtitle="{Binding SelectedCustomerDisplay.FullName}"
+                     CancelCommand="{Binding CancelRepayCommand}" SaveCommand="{Binding RepayCommand}">
+                <StackPanel Spacing="14">
+                    <Border Classes="debtcard" CornerRadius="12" Padding="16,12">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="{Binding L[debt]}" FontSize="12.5"
+                                           Foreground="{DynamicResource TextSecondary}" />
+                                <TextBlock Classes="debtamount" FontSize="20" FontWeight="Bold"
+                                           Text="{Binding RepayDebtTotal, StringFormat='{}{0:N0}'}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="2">
+                                <TextBlock Text="{Binding L[remaining]}" FontSize="12.5" HorizontalAlignment="Right"
+                                           Foreground="{DynamicResource TextSecondary}" />
+                                <TextBlock Text="{Binding RepayRemaining, StringFormat='{}{0:N0}'}"
+                                           FontSize="20" FontWeight="Bold" HorizontalAlignment="Right"
+                                           Foreground="{DynamicResource TextPrimary}" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
                     <Grid ColumnDefinitions="*,8,*" IsVisible="{Binding IsMulticurrency}">
                         <StackPanel Spacing="5">
                             <TextBlock Text="{Binding L[debt_currency]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
@@ -471,20 +631,44 @@
                                     ToolTip.Tip="{Binding L[repay_full_debt]}" VerticalAlignment="Stretch">
                                 <mi:MaterialIcon Kind="Sigma" Width="18" Height="18" />
                             </Button>
-                            <NumericUpDown Grid.Column="2" Value="{Binding RepayAmount, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="1000" FormatString="N0" ShowButtonSpinner="False" />
+                            <NumericUpDown Grid.Column="2" Value="{Binding RepayAmount, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="1000" FormatString="N0" ShowButtonSpinner="False" FontSize="18" MinHeight="44" />
                         </Grid>
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" Spacing="10">
-                        <ToggleSwitch IsChecked="{Binding RepayViaCard}" />
-                        <TextBlock Text="{Binding L[via_card]}" VerticalAlignment="Center"
+                    <StackPanel Spacing="5">
+                        <TextBlock Text="{Binding L[payment_method]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <ToggleSwitch IsChecked="{Binding RepayViaCard}"
+                                      OffContent="{Binding L[cash]}" OnContent="{Binding L[card]}" />
+                    </StackPanel>
+                    <StackPanel Spacing="5" IsVisible="{Binding CanWriteOff}">
+                        <TextBlock Text="{Binding L[write_off]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                        <Grid ColumnDefinitions="Auto,6,*">
+                            <Button Classes="icon" Command="{Binding ForgiveRestCommand}"
+                                    ToolTip.Tip="{Binding L[write_off_rest]}" VerticalAlignment="Stretch">
+                                <mi:MaterialIcon Kind="Eraser" Width="18" Height="18" />
+                            </Button>
+                            <NumericUpDown Grid.Column="2" Value="{Binding RepayWriteOff, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="1000" FormatString="N0" ShowButtonSpinner="False" FontSize="18" MinHeight="44" />
+                        </Grid>
+                        <TextBox Text="{Binding RepayWriteOffReason}" PlaceholderText="{Binding L[write_off_reason]}" MinHeight="38" />
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding L[debt_left]}" FontSize="12.5" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextSecondary}" />
+                            <TextBlock Grid.Column="1" Text="{Binding RepayDebtLeft, StringFormat='{}{0:N0}'}"
+                                       FontWeight="Bold" Foreground="{DynamicResource TextPrimary}" />
+                        </Grid>
+                    </StackPanel>
+                    <Border IsVisible="{Binding RepayShowsAdvance}" Background="{DynamicResource SuccessBg}"
+                            CornerRadius="10" Padding="12,9">
+                        <TextBlock FontSize="12.5" TextWrapping="Wrap" Foreground="{DynamicResource TextPrimary}">
+                            <Run Text="{Binding L[advance], Mode=OneWay}" />
+                            <Run Text="{Binding RepayOverpayAmount, StringFormat='{}{0:N0}', Mode=OneWay}" />
+                        </TextBlock>
+                    </Border>
+                    <Border IsVisible="{Binding RepayOverpayBlocked}" Background="{DynamicResource WarningBg}"
+                            CornerRadius="10" Padding="12,9">
+                        <TextBlock Text="{Binding L[repay_overpay_blocked]}" FontSize="12.5" TextWrapping="Wrap"
                                    Foreground="{DynamicResource TextPrimary}" />
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10" Margin="0,6,0,0">
-                        <Button Classes="outline" Command="{Binding CancelRepayCommand}" Content="{Binding L[cancel]}" />
-                        <Button Classes="brand" Command="{Binding RepayCommand}" Content="{Binding L[save]}" />
-                    </StackPanel>
+                    </Border>
                 </StackPanel>
-            </Border>
-        </Border>
+        </c:ModalCard>
     </Panel>
 </UserControl>

@@ -1,6 +1,7 @@
+using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Threading;
+using Cartex.ApiClient;
 using Cartex.ApiClient.Api;
 using Cartex.Shared.Models.Auth;
 
@@ -15,8 +16,10 @@ public sealed class AuthService
     private string? _token;
     private string? _refreshToken;
     private bool _persist;
+    private long _lastRefreshTimestamp;
 
     public string DeviceName { get; } = Environment.MachineName;
+    public string DeviceId => SettingsService.Instance.DeviceId;
 
     public AuthService(IAuthApi authApi, ITokenStore tokenStore)
     {
@@ -43,14 +46,14 @@ public sealed class AuthService
 
     public async Task<LoginResponse> LoginAsync(string username, string password, bool rememberMe)
     {
-        var response = await _authApi.LoginAsync(new LoginRequest(username, password, DeviceName));
+        var response = await _authApi.LoginAsync(new LoginRequest(username, password, DeviceName, DeviceId));
         Apply(response, rememberMe);
         return response;
     }
 
     public async Task<LoginResponse> LoginWithKeyAsync(string keyContent, string serial)
     {
-        var response = await _authApi.LoginWithKeyAsync(new LoginWithKeyRequest(keyContent, serial, $"{DeviceName} · USB kalit"));
+        var response = await _authApi.LoginWithKeyAsync(new LoginWithKeyRequest(keyContent, serial, $"{DeviceName} · USB kalit", DeviceId));
         Apply(response, true);
         return response;
     }
@@ -65,7 +68,7 @@ public sealed class AuthService
 
     public async Task<LoginResponse?> TryQrPollAsync(string code, CancellationToken cancellationToken)
     {
-        var response = await _authApi.PollQrAsync(new PollQrLoginRequest(code, $"{DeviceName} · QR"), cancellationToken);
+        var response = await _authApi.PollQrAsync(new PollQrLoginRequest(code, $"{DeviceName} · QR", DeviceId), cancellationToken);
         if (response.Content is null) return null;
         Apply(response.Content, true);
         return response.Content;
@@ -73,6 +76,7 @@ public sealed class AuthService
 
     private void Apply(LoginResponse response, bool persist)
     {
+        var wasAuthenticated = IsAuthenticated;
         Token = response.Token;
         _refreshToken = response.RefreshToken;
         _persist = persist;
@@ -80,6 +84,8 @@ public sealed class AuthService
             _tokenStore.Save(new TokenBundle(response.Token, response.RefreshToken));
         else
             _tokenStore.Clear();
+        if (!wasAuthenticated && IsAuthenticated)
+            LoggedIn?.Invoke();
     }
 
     public bool TryRestore()
@@ -97,27 +103,44 @@ public sealed class AuthService
         return UserInfo is not null;
     }
 
-    public async Task<string?> EnsureFreshTokenAsync(CancellationToken cancellationToken)
+    public Task<string?> EnsureFreshTokenAsync(CancellationToken cancellationToken) =>
+        RefreshAsync(false, cancellationToken);
+
+    public Task<string?> ForceRefreshAsync(CancellationToken cancellationToken) =>
+        RefreshAsync(true, cancellationToken);
+
+    private async Task<string?> RefreshAsync(bool force, CancellationToken cancellationToken)
     {
         var token = _token;
         if (token is null) return null;
-        if (!IsExpiringSoon(token)) return token;
+        if (!force && !IsExpiringSoon(token)) return token;
         if (string.IsNullOrEmpty(_refreshToken)) return token;
 
         await _refreshLock.WaitAsync(cancellationToken);
         try
         {
-            if (_token is not null && !IsExpiringSoon(_token)) return _token;
+            if (force && WasRefreshedRecently()) return _token;
+            if (!force && _token is not null && !IsExpiringSoon(_token)) return _token;
             var refresh = _refreshToken;
             if (string.IsNullOrEmpty(refresh)) return _token;
-            var response = await _authApi.RefreshAsync(new RefreshRequest(refresh, DeviceName));
+            var response = await _authApi.RefreshAsync(
+                new RefreshRequest(refresh, DeviceName, DeviceId), cancellationToken);
             Apply(response, _persist);
+            _lastRefreshTimestamp = Stopwatch.GetTimestamp();
             return _token;
         }
         catch (Refit.ApiException ex) when ((int)ex.StatusCode == 401)
         {
+            Token = null;
+            _refreshToken = null;
+            _persist = false;
+            _tokenStore.Clear();
             SessionInvalidated?.Invoke();
-            return _token;
+            return null;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch
         {
@@ -129,31 +152,15 @@ public sealed class AuthService
         }
     }
 
+    private bool WasRefreshedRecently() =>
+        _lastRefreshTimestamp != 0
+        && Stopwatch.GetElapsedTime(_lastRefreshTimestamp) < TimeSpan.FromSeconds(5);
+
+    public event Action? LoggedIn;
     public event Action? LoggedOut;
     public event Action? SessionInvalidated;
 
-    public async Task ValidateSessionAsync()
-    {
-        var refresh = _refreshToken;
-        if (string.IsNullOrEmpty(refresh)) return;
-        await _refreshLock.WaitAsync();
-        try
-        {
-            var response = await _authApi.RefreshAsync(new RefreshRequest(refresh, DeviceName));
-            Apply(response, _persist);
-        }
-        catch (Refit.ApiException ex) when ((int)ex.StatusCode == 401)
-        {
-            SessionInvalidated?.Invoke();
-        }
-        catch
-        {
-        }
-        finally
-        {
-            _refreshLock.Release();
-        }
-    }
+    public Task ValidateSessionAsync() => ForceRefreshAsync(CancellationToken.None);
 
     public void Logout()
     {
@@ -176,7 +183,7 @@ public sealed class AuthService
     {
         try
         {
-            return new JwtSecurityTokenHandler().ReadJwtToken(token).ValidTo <= DateTime.UtcNow.AddSeconds(60);
+            return ServerClock.IsExpiringSoon(new JwtSecurityTokenHandler().ReadJwtToken(token).ValidTo);
         }
         catch
         {
@@ -185,7 +192,9 @@ public sealed class AuthService
     }
 
     public bool HasPermission(string permission) =>
-        _permissionSet is not null && (_permissionSet.Contains("*") || _permissionSet.Contains(permission));
+        _permissionSet is not null
+        && (_permissionSet.Contains("*")
+            || permission.Split('|', StringSplitOptions.RemoveEmptyEntries).Any(_permissionSet.Contains));
 
     public IReadOnlyList<string> Roles => UserInfo?.Roles ?? [];
 

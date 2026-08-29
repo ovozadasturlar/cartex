@@ -19,8 +19,8 @@ public class SupplierDebtTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     {
         using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var branch1 = (await db.Branches.FirstAsync(b => b.Name == "Filial 1")).Id;
-        var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Filial 1 ombori")).Id;
+        var branch1 = (await db.Branches.FirstAsync(b => b.Name == "Asosiy filial")).Id;
+        var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Asosiy ombor")).Id;
         var businessId = (await db.Businesses.FirstAsync()).Id;
         var adminId = (await db.Users.FirstAsync(u => u.Username == "admin")).Id;
         var productId = (await db.Products.FirstAsync(p => p.Name == "Smesitel oshxona Zegor")).Id;
@@ -52,6 +52,12 @@ public class SupplierDebtTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         var shiftId = await TestShift.OpenAsync(Fixture);
         var supplierId = await CreateSupplierAsync();
 
+        using (var scope = Fixture.CreateScope())
+        {
+            var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+            await sender.Send(new AddCashMovementCommand(30_000m, IsPayOut: false));
+        }
+
         decimal cashBefore;
         using (var scope = Fixture.CreateScope())
         {
@@ -74,7 +80,7 @@ public class SupplierDebtTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         var sender2 = check.ServiceProvider.GetRequiredService<ISender>();
         var report = await sender2.Send(new CloseShiftCommand(shiftId, 0));
         Assert.Equal(30_000m, report.SupplyPayOut);
-        Assert.Equal(-30_000m, report.ExpectedCash);
+        Assert.Equal(0m, report.ExpectedCash);
     }
 
     [Fact]
@@ -102,6 +108,12 @@ public class SupplierDebtTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+            await sender.Send(new AddCashMovementCommand(40_000m, IsPayOut: false));
+        }
+
+        using (var scope = Fixture.CreateScope())
+        {
+            var sender = scope.ServiceProvider.GetRequiredService<ISender>();
             await sender.Send(new PaySupplierDebtCommand(supplierId, 40_000m));
         }
 
@@ -121,6 +133,12 @@ public class SupplierDebtTests(DatabaseFixture fixture) : DatabaseTest(fixture)
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
             await sender.Send(new CreateSupplyCommand(supplierId, warehouse1, DateOnly.FromDateTime(DateTime.Today),
                 [new CreateSupplyItemDto(variantId, 5, 8000m, null)]));
+        }
+
+        using (var scope = Fixture.CreateScope())
+        {
+            var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+            await sender.Send(new AddCashMovementCommand(50_000m, IsPayOut: false));
         }
 
         using var scope2 = Fixture.CreateScope();
@@ -163,5 +181,39 @@ public class SupplierDebtTests(DatabaseFixture fixture) : DatabaseTest(fixture)
 
         Assert.Equal(-40_000m, balance);
         Assert.Equal(0m, await db.Accounts.Where(a => a.BranchId == branch1 && a.Type == AccountType.Cash).Select(a => a.Balance).SingleAsync());
+    }
+
+    // SMENA-08
+    [Fact]
+    public async Task Paying_supplier_debt_cash_from_insufficient_till_is_rejected()
+    {
+        var (branch1, warehouse1, businessId, adminId, variantId) = await SetupAsync();
+        Fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
+        await TestShift.OpenAsync(Fixture, 100_000m);
+        var supplierId = await CreateSupplierAsync();
+
+        using (var scope = Fixture.CreateScope())
+        {
+            var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+            await sender.Send(new CreateSupplyCommand(supplierId, warehouse1, DateOnly.FromDateTime(DateTime.Today),
+                [new CreateSupplyItemDto(variantId, 5, 8000m, null)]));
+        }
+
+        using (var scope = Fixture.CreateScope())
+        {
+            var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+            var error = await Assert.ThrowsAsync<BusinessRuleException>(() =>
+                sender.Send(new PaySupplierDebtCommand(supplierId, 10_000m)));
+            Assert.Equal("cash_balance_insufficient", error.Code);
+        }
+
+        Assert.Equal(40_000m, await PayableAsync(supplierId));
+
+        using var check = Fixture.CreateScope();
+        var db = check.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        Assert.Equal(0m, await db.Accounts.Where(a => a.BranchId == branch1 && a.Type == AccountType.Cash)
+            .Select(a => (decimal?)a.Balance).FirstOrDefaultAsync() ?? 0m);
+        Assert.False(await db.Transactions.AnyAsync(t =>
+            t.OperationType == OperationType.SupplyPay || t.OperationType == OperationType.DebtPay));
     }
 }

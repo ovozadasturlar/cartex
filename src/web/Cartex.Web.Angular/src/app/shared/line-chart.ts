@@ -25,6 +25,7 @@ export interface ChartSeries {
     }
     <div class="plot">
       <svg [attr.viewBox]="'0 0 ' + W + ' ' + H" preserveAspectRatio="none" class="chart"
+           [style.height.px]="height()"
            (mousemove)="onMove($event)" (mouseleave)="hover.set(null)">
         <defs>
           @for (s of allSeries(); track $index) {
@@ -48,6 +49,9 @@ export interface ChartSeries {
                 vector-effect="non-scaling-stroke" />
         }
       </svg>
+      @for (m of markers(); track $index) {
+        <i class="dot" [style.left.%]="(m.x / W) * 100" [style.top.%]="(m.y / H) * 100" [style.background]="m.color"></i>
+      }
       @if (hover(); as h) {
         @for (p of h.points; track $index) {
           <i class="dot" [style.left.%]="(h.x / W) * 100" [style.top.%]="(p.y / H) * 100" [style.background]="p.color"></i>
@@ -77,7 +81,7 @@ export interface ChartSeries {
   styles: `
     :host { display: block; }
     .plot { position: relative; }
-    .chart { width: 100%; height: 200px; display: block; }
+    .chart { width: 100%; display: block; }
     .grid { stroke: var(--cx-border); stroke-width: 1; }
     .cursor { stroke: var(--cx-text-3); stroke-width: 1; stroke-dasharray: 4 3; }
     .dot {
@@ -107,6 +111,8 @@ export interface ChartSeries {
   `,
 })
 export class LineChart {
+  /// Chizma balandligi: kartaning qolgan qismiga qarab sahifa o'zi tanlaydi.
+  readonly height = input(200);
   readonly points = input<ChartPoint[]>([]);
   readonly series = input<ChartSeries[]>([]);
   readonly labels = input<string[]>([]);
@@ -139,7 +145,9 @@ export class LineChart {
     return {
       count,
       span,
-      x: (i: number) => this.PAD + (i / span) * (this.W - this.PAD * 2),
+      // Bitta kunlik oraliqda nuqta chetga emas, o'rtaga qo'yiladi — chunki u yerda chiziq emas,
+      // yolg'iz belgi ko'rsatiladi.
+      x: (i: number) => (count === 1 ? this.W / 2 : this.PAD + (i / span) * (this.W - this.PAD * 2)),
       y: (v: number) => this.H - 14 - (v / max) * (this.H - 44),
     };
   });
@@ -157,6 +165,14 @@ export class LineChart {
         : '';
       return { line, area, color: s.color };
     });
+  });
+
+  // Bitta nuqtadan chiziq chizib bo'lmaydi, shuning uchun u belgi sifatida ko'rsatiladi —
+  // aks holda "Bugun" tanlanganda panel bo'sh qolib, buzuqdek ko'rinardi.
+  readonly markers = computed(() => {
+    const geo = this.geometry();
+    if (!geo || geo.count !== 1) return [];
+    return this.allSeries().map((s) => ({ x: geo.x(0), y: geo.y(s.values[0] ?? 0), color: s.color }));
   });
 
   readonly edgeLabels = computed(() => {

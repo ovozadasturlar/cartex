@@ -6,10 +6,11 @@ public class LocalCustomer
 {
     [PrimaryKey] public long Id { get; set; }
     public string FullName { get; set; } = "";
+    [Indexed] public string? SearchFold { get; set; }
     public string? Phone { get; set; }
     public string? Address { get; set; }
     public decimal DebtBalance { get; set; }
-    public decimal CreditLimit { get; set; }
+    public decimal? CreditLimit { get; set; }
     public string DebtBalancesJson { get; set; } = "[]";
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
@@ -19,10 +20,17 @@ public class LocalVanStock
 {
     [PrimaryKey] public long VariantId { get; set; }
     public string ProductName { get; set; } = "";
+    [Indexed] public string? SearchFold { get; set; }
+    public long? CategoryId { get; set; }
     public string? CategoryName { get; set; }
     public string UnitName { get; set; } = "";
+    public string Dimension { get; set; } = "";
     public decimal Quantity { get; set; }
     public decimal SellingPrice { get; set; }
+    public string? ImageUrl { get; set; }
+    public decimal? DiscountPct { get; set; }
+    public string? Code { get; set; }
+    public string Barcodes { get; set; } = "";
 }
 
 public class OutboxItem

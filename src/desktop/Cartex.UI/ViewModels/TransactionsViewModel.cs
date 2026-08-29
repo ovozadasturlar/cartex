@@ -20,7 +20,7 @@ public partial class TransactionsViewModel : ViewModelBase, ILoadable
 
     public ObservableCollection<TransactionDto> Transactions { get; } = [];
     public PaginationState Paging { get; } = new();
-    [ObservableProperty] private TransactionsTotalsDto? _totals;
+    [ObservableProperty] private TransactionsTotalsDto _totals = new(0, 0);
 
     [ObservableProperty] private DateTimeOffset _dateFrom = DateTimeOffset.Now.AddDays(-30);
     [ObservableProperty] private DateTimeOffset _dateTo = DateTimeOffset.Now;

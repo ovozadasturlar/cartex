@@ -1,19 +1,18 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using Cartex.Application.Common.Finance;
-using Cartex.Application.Common.Messaging;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Application.Common.Measurement;
+using Cartex.Shared.Models.Prepacks;
 
 namespace Cartex.Application.Prepacks.Commands;
 
-public record PrepackLabelDto(long Id, string LabelCode, string ProductName, string UnitName, decimal Quantity, decimal Price);
-
 public record CreatePrepacksCommand(long WarehouseId, long VariantId, decimal Quantity, int Count = 1, int? ExpiresHours = null) : ICommand<List<PrepackLabelDto>>;
 
-public sealed class CreatePrepacksCommandHandler(IApplicationDbContext db, ICurrencyService currency) : IRequestHandler<CreatePrepacksCommand, List<PrepackLabelDto>>
+public sealed class CreatePrepacksCommandHandler(IApplicationDbContext db, ICurrencyService currency, IQuantityPolicyService quantityPolicy) : IRequestHandler<CreatePrepacksCommand, List<PrepackLabelDto>>
 {
     public async Task<List<PrepackLabelDto>> Handle(CreatePrepacksCommand request, CancellationToken cancellationToken)
     {
@@ -25,6 +24,8 @@ public sealed class CreatePrepacksCommandHandler(IApplicationDbContext db, ICurr
             .Select(v => new { v.Id, v.Product.Name, UnitName = v.Product.Unit.ShortName })
             .FirstOrDefaultAsync(cancellationToken)
             ?? throw new NotFoundException("Mahsulot topilmadi.");
+
+        await quantityPolicy.ValidateAsync([(request.VariantId, request.Quantity)], cancellationToken);
 
         var baseCode = await currency.BaseAsync(cancellationToken);
         var price = await db.ProductPrices
@@ -38,10 +39,9 @@ public sealed class CreatePrepacksCommandHandler(IApplicationDbContext db, ICurr
         var now = DateTime.UtcNow;
         var expiresAt = request.ExpiresHours is { } hours ? now.AddHours(hours) : (DateTime?)null;
 
-        var result = new List<PrepackLabelDto>();
+        var prepacks = new List<Prepack>();
         for (var i = 0; i < request.Count; i++)
-        {
-            var prepack = new Prepack
+            prepacks.Add(new Prepack
             {
                 BranchId = warehouse.BranchId,
                 WarehouseId = warehouse.Id,
@@ -51,14 +51,16 @@ public sealed class CreatePrepacksCommandHandler(IApplicationDbContext db, ICurr
                 LabelCode = $"PP{RandomNumberGenerator.GetInt32(0, 1_000_000_000):D9}{RandomNumberGenerator.GetInt32(0, 10)}",
                 Status = PrepackStatus.Active,
                 ExpiresAt = expiresAt
-            };
-            db.Prepacks.Add(prepack);
-            result.Add(new PrepackLabelDto(0, prepack.LabelCode, variant.Name, variant.UnitName, prepack.Quantity,
-                Math.Round(prepack.UnitPrice * prepack.Quantity, 2)));
-        }
+            });
 
+        db.Prepacks.AddRange(prepacks);
+        // HUJJ-07: identifikator saqlangandan keyin o'qiladi — aks holda klientga 0 ketardi.
         await db.SaveChangesAsync(cancellationToken);
-        return result;
+
+        return prepacks
+            .Select(p => new PrepackLabelDto(p.Id, p.LabelCode, variant.Name, variant.UnitName, p.Quantity,
+                Math.Round(p.UnitPrice * p.Quantity, 2)))
+            .ToList();
     }
 }
 

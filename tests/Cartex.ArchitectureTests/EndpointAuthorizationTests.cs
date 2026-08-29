@@ -20,22 +20,26 @@ public class EndpointAuthorizationTests
         "StorageController.GetContent",
         "ReceiptController.GetReceipt",
         "ReceiptController.GetReceiptPdf",
+        "ReceiptController.GetReceiptPrintPages",
         "StoreAuthController.RequestOtp",
         "StoreAuthController.Verify",
         "StoreAuthController.Telegram",
         "StoreAuthController.Refresh",
         "StoreAuthController.Logout",
+        "NotificationsController.PlayMobileStatus",
     ];
 
     private static readonly HashSet<string> AuthenticatedOnlyWhitelist =
     [
         "AuthController.ApproveQrLogin",
         "AuthController.ChangePassword",
+        "AuthController.Context",
         "BusinessController.Get",
         "RatesController.GetCurrencies",
         "ExpenseCategoriesController.GetExpenseCategories",
         "FeaturesController.GetEnabled",
         "SettingsController.GetReceipt",
+        "SettingsController.GetProforma",
         "SettingsController.GetSalesPolicy",
         "StoreController.Me",
         "StoreController.SetLanguage",

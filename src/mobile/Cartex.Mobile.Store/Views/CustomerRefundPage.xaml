@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Cartex.Mobile.Store.Views.CustomerRefundPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Cartex.Mobile.Store.ViewModels"
+    xmlns:rates="clr-namespace:Cartex.Shared.Models.Rates;assembly=Cartex.Shared"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
+    x:DataType="vm:CustomerRefundViewModel"
+    Title="{svc:T refund_customer_credit}">
+    <Grid RowDefinitions="*,Auto">
+        <ScrollView>
+            <VerticalStackLayout Padding="16" Spacing="12" IsVisible="{Binding IsLoaded}">
+                <Border Style="{StaticResource Card}" Padding="14"><VerticalStackLayout Spacing="3"><Label Text="{Binding CustomerName}" FontSize="18" FontAttributes="Bold" /><Label Text="{svc:T refund_credit_hint}" Style="{StaticResource MutedLabel}" FontSize="12" /></VerticalStackLayout></Border>
+                <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never"><HorizontalStackLayout BindableLayout.ItemsSource="{Binding Credits}" Spacing="8"><BindableLayout.ItemTemplate><DataTemplate x:DataType="vm:CurrencyBalanceRow"><Border Style="{StaticResource Card}" Padding="12"><Label Text="{Binding Amount}" FontSize="16" FontAttributes="Bold" /></Border></DataTemplate></BindableLayout.ItemTemplate></HorizontalStackLayout></ScrollView>
+                <Grid ColumnDefinitions="*,Auto"><VerticalStackLayout Spacing="2"><Label Text="{svc:T refund_methods}" FontSize="15" FontAttributes="Bold" /><Label Text="{svc:T refund_methods_hint}" Style="{StaticResource MutedLabel}" FontSize="11" /></VerticalStackLayout><Button Grid.Column="1" Text="{StaticResource IcPlus}" FontFamily="MDI" WidthRequest="42" HeightRequest="42" Padding="0" Command="{Binding AddTenderCommand}" IsEnabled="{Binding CanAdd}" /></Grid>
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Tenders}" Spacing="10">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:CheckoutPaymentRow">
+                            <Border Style="{StaticResource Card}" Padding="12">
+                                <VerticalStackLayout Spacing="8">
+                                    <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="6"><Picker ItemsSource="{Binding Methods}" ItemDisplayBinding="{Binding Label, x:DataType=vm:CheckoutPaymentMethod}" SelectedItem="{Binding SelectedMethod}" /><Picker Grid.Column="1" ItemsSource="{Binding CurrencyOptions}" ItemDisplayBinding="{Binding Code, x:DataType=rates:CurrencyDto}" SelectedItem="{Binding SelectedCurrency}" /><Button Grid.Column="2" Text="{StaticResource IcClose}" FontFamily="MDI" WidthRequest="38" HeightRequest="38" Padding="0" BackgroundColor="Transparent" Command="{Binding RemoveTenderCommand, Source={RelativeSource AncestorType={x:Type vm:CustomerRefundViewModel}}}" CommandParameter="{Binding .}" /></Grid>
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><Border Style="{StaticResource InputWrap}"><Entry Text="{Binding AmountText}" Placeholder="{svc:T payment_amount}" Keyboard="Numeric" /></Border><Button Grid.Column="1" Text="{svc:T exact_amount}" Style="{StaticResource BtnOutline}" Command="{Binding ExactTenderCommand, Source={RelativeSource AncestorType={x:Type vm:CustomerRefundViewModel}}}" CommandParameter="{Binding .}" /></Grid>
+                                    <Label Text="{Binding BaseAmountText}" Style="{StaticResource MutedLabel}" FontSize="11" HorizontalTextAlignment="End" />
+                                </VerticalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+                <Border Style="{StaticResource InputWrap}"><Editor Text="{Binding Note}" Placeholder="{svc:T note_placeholder}" AutoSize="TextChanges" /></Border>
+                <Border Padding="12" StrokeThickness="0" StrokeShape="RoundRectangle 12" BackgroundColor="{AppThemeBinding Light={StaticResource DangerBg}, Dark={StaticResource DangerBgDark}}" IsVisible="{Binding HasError}"><Label Text="{Binding Error}" Style="{StaticResource TxDanger}" /></Border>
+            </VerticalStackLayout>
+        </ScrollView>
+        <Border Grid.Row="1" StrokeThickness="1" Padding="16,12" BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}" Stroke="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}"><Grid ColumnDefinitions="*,Auto"><VerticalStackLayout Spacing="1"><Label Text="{svc:T total}" Style="{StaticResource MutedLabel}" FontSize="11" /><Label Text="{Binding TotalText}" FontSize="19" FontAttributes="Bold" /></VerticalStackLayout><Button Grid.Column="1" Text="{svc:T refund}" Style="{StaticResource BtnPrimary}" WidthRequest="140" Command="{Binding SaveCommand}" IsEnabled="{Binding IsBusy, Converter={StaticResource Invert}}" /></Grid></Border>
+        <ActivityIndicator Grid.RowSpan="2" IsRunning="{Binding IsLoading}" IsVisible="{Binding IsLoading}" VerticalOptions="Center" HorizontalOptions="Center" />
+    </Grid>
+</ContentPage>

@@ -1,30 +1,29 @@
-using Cartex.Application.Common.Extensions;
+﻿using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Models;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
-using Cartex.Application.Common.Messaging;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Customers;
 
 namespace Cartex.Application.Customers.Queries;
 
 public record GetCustomerTotalsQuery : FilteringRequest, IRequest<CustomerTotalsDto>;
-
-public record CustomerTotalsDto(int Count, decimal TotalDebt, decimal TotalBonus, decimal TotalCredit = 0);
 
 public sealed class GetCustomerTotalsQueryHandler(IApplicationDbContext db, ICurrentUser currentUser) : IRequestHandler<GetCustomerTotalsQuery, CustomerTotalsDto>
 {
     public async Task<CustomerTotalsDto> Handle(GetCustomerTotalsQuery request, CancellationToken cancellationToken)
     {
         var baseCode = await db.Businesses.Select(b => b.Currency).FirstAsync(cancellationToken);
-        var query = db.Customers.AsFilterable(request);
+        var customers = db.Customers.AsQueryable();
         if (!currentUser.HasPermission(AppPermissions.Customers.ViewAll))
-            query = query.Where(c => c.AgentId == currentUser.UserId);
+            customers = customers.Where(c => c.AssignedUserId == currentUser.UserId);
+        var query = customers.AsRows().AsFilterable(request);
         var count = await query.CountAsync(cancellationToken);
         var sums = await query
-            .SelectMany(c => c.Accounts)
-            .Where(a => a.Type == AccountType.Debt || a.Type == AccountType.Bonus)
+            .SelectMany(c => db.Accounts.Where(a => a.CustomerId == c.Id))
+            .Where(a => a.Type == AccountType.Debt || a.Type == AccountType.Bonus || a.Type == AccountType.CustomerAdvance)
             .GroupBy(a => new { a.Type, a.Currency })
             .Select(g => new
             {
@@ -32,7 +31,7 @@ public sealed class GetCustomerTotalsQueryHandler(IApplicationDbContext db, ICur
                 g.Key.Currency,
                 Sum = g.Sum(a => a.Balance),
                 Owed = g.Sum(a => a.Balance > 0 ? a.Balance : 0m),
-                Credit = g.Sum(a => a.Balance < 0 ? -a.Balance : 0m)
+                Credit = g.Sum(a => a.Balance)
             })
             .ToListAsync(cancellationToken);
         var rates = (await db.ExchangeRates
@@ -45,6 +44,6 @@ public sealed class GetCustomerTotalsQueryHandler(IApplicationDbContext db, ICur
             count,
             sums.Where(s => s.Type == AccountType.Debt).Sum(s => ToBase(s.Currency, s.Owed)),
             sums.Where(s => s.Type == AccountType.Bonus).Sum(s => s.Sum),
-            sums.Where(s => s.Type == AccountType.Debt).Sum(s => ToBase(s.Currency, s.Credit)));
+            sums.Where(s => s.Type == AccountType.CustomerAdvance).Sum(s => ToBase(s.Currency, s.Credit)));
     }
 }

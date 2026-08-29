@@ -1,45 +1,62 @@
-using System.IO;
-using System.Runtime.InteropServices;
-using Avalonia;
-using Avalonia.Media.Imaging;
-using Avalonia.Platform;
 using QuestPDF.Fluent;
-using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
-using ZXing;
-using ZXing.Common;
 
 namespace Cartex.UI.Services;
 
 public interface IBarcodeLabelService
 {
-    byte[] RenderPng(string code);
-    void PrintLabels(string code, string name, int quantity, string? printerName);
+    byte[] RenderLabelPreview(string code, string name, string? priceText, string? sku = null);
+    LabelPreviewResult RenderLabelPreview(
+        string code,
+        string name,
+        string? priceText,
+        LabelOptions options,
+        string? sku = null);
+    void PrintLabels(string code, string name, int quantity, string? printerName, string? priceText = null, string? sku = null, LabelOptions? options = null);
 }
+
+public record LabelPreviewResult(byte[] Image, bool MayClip);
 
 public sealed class BarcodeLabelService(IPrinterService printer) : IBarcodeLabelService
 {
     static BarcodeLabelService() => QuestPDF.Settings.License = LicenseType.Community;
 
-    public byte[] RenderPng(string code) =>
-        string.IsNullOrWhiteSpace(code) ? [] : RenderCode128(code);
+    public byte[] RenderLabelPreview(string code, string name, string? priceText, string? sku = null)
+    {
+        if (string.IsNullOrWhiteSpace(code)) return [];
+        return TsplLabel.RenderPng(code, name, priceText, LabelSize.Resolve(printer.GetSettings()), sku);
+    }
 
-    public void PrintLabels(string code, string name, int quantity, string? printerName)
+    public LabelPreviewResult RenderLabelPreview(
+        string code,
+        string name,
+        string? priceText,
+        LabelOptions options,
+        string? sku = null)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+            return new LabelPreviewResult([], false);
+
+        var result = TsplLabel.RenderPreview(code, name, priceText, options, sku);
+        return new LabelPreviewResult(result.Image, result.MayClip);
+    }
+
+    public void PrintLabels(string code, string name, int quantity, string? printerName, string? priceText = null, string? sku = null, LabelOptions? options = null)
     {
         if (string.IsNullOrWhiteSpace(code) || quantity < 1) return;
 
         var settings = printer.GetSettings();
-        var options = LabelSize.Resolve(settings);
-        var (width, height) = (options.WidthMm, options.HeightMm);
+        var effectiveOptions = options ?? LabelSize.Resolve(settings);
+        var (width, height) = (effectiveOptions.WidthMm, effectiveOptions.HeightMm);
         var target = printerName ?? printer.BarcodePrinter;
 
         if (!string.Equals(settings.LabelMode, "pdf", StringComparison.OrdinalIgnoreCase))
         {
-            printer.PrintRawBytes(target, TsplLabel.Build(code, name, quantity, options));
+            printer.PrintRawBytes(target, TsplLabel.Build(code, name, quantity, effectiveOptions, priceText, sku));
             return;
         }
 
-        var image = RenderCode128(code);
+        var image = TsplLabel.RenderPrintPng(code, name, priceText, effectiveOptions, sku);
         var document = Document.Create(container =>
         {
             for (var i = 0; i < quantity; i++)
@@ -47,14 +64,8 @@ public sealed class BarcodeLabelService(IPrinterService printer) : IBarcodeLabel
                 container.Page(page =>
                 {
                     page.Size((float)width, (float)height, Unit.Millimetre);
-                    page.Margin(height < 40 ? 2 : 3, Unit.Millimetre);
-                    page.Content().Column(col =>
-                    {
-                        col.Spacing(1);
-                        col.Item().AlignCenter().Text(name).FontSize(width < 50 ? 7 : 8).SemiBold();
-                        col.Item().Image(image).FitWidth();
-                        col.Item().AlignCenter().Text(code).FontSize(9).FontFamily("Consolas").LetterSpacing(0.05f);
-                    });
+                    page.Margin(0);
+                    page.Content().Image(image).FitArea();
                 });
             }
         });
@@ -62,24 +73,5 @@ public sealed class BarcodeLabelService(IPrinterService printer) : IBarcodeLabel
         var path = Path.Combine(Path.GetTempPath(), $"cartex-label-{Guid.NewGuid():N}.pdf");
         document.GeneratePdf(path);
         printer.PrintDocument(path, target);
-    }
-
-    private static byte[] RenderCode128(string code)
-    {
-        var writer = new BarcodeWriterPixelData
-        {
-            Format = BarcodeFormat.CODE_128,
-            Options = new EncodingOptions { Width = 360, Height = 120, Margin = 4, PureBarcode = true }
-        };
-        var pixelData = writer.Write(code);
-
-        var bitmap = new WriteableBitmap(new PixelSize(pixelData.Width, pixelData.Height),
-            new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul);
-        using (var buffer = bitmap.Lock())
-            Marshal.Copy(pixelData.Pixels, 0, buffer.Address, pixelData.Pixels.Length);
-
-        using var stream = new MemoryStream();
-        bitmap.Save(stream);
-        return stream.ToArray();
     }
 }

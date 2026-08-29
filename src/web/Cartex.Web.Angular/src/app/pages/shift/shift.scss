@@ -169,6 +169,12 @@
   table {
     width: 100%;
     min-width: 760px;
+
+    /* Telefonda ustunlar kamaytirilgan — eng kengi ham ekranga sig'adi, ko'ndalang
+       surish shart emas. */
+    @media (width <= 767px) {
+      min-width: 0;
+    }
   }
 }
 

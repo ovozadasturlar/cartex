@@ -184,29 +184,6 @@
                             </StackPanel>
                             <Button Classes="brand" Command="{Binding SaveSmsCommand}" Content="{Binding L[save]}" HorizontalAlignment="Left" />
 
-                            <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="0,12,0,0">
-                                <StackPanel Spacing="10">
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Text="{Binding L[sms_journal]}" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
-                                        <Button Grid.Column="1" Classes="outline" Command="{Binding RefreshSmsJournalCommand}" Content="{Binding L[refresh]}" />
-                                    </Grid>
-                                    <TextBlock Text="{Binding SmsStatsText}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                                    <ItemsControl ItemsSource="{Binding SmsJournal}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1" Padding="0,6">
-                                                    <Grid ColumnDefinitions="Auto,10,*,10,Auto,10,Auto">
-                                                        <TextBlock Text="{Binding Phone}" Foreground="{DynamicResource TextPrimary}" FontSize="12.5" />
-                                                        <TextBlock Grid.Column="2" Text="{Binding Text}" Foreground="{DynamicResource TextMuted}" FontSize="12" TextTrimming="CharacterEllipsis" />
-                                                        <TextBlock Grid.Column="4" Text="{Binding CreatedAt, StringFormat='{}{0:dd.MM HH:mm}'}" Foreground="{DynamicResource TextMuted}" FontSize="12" />
-                                                        <TextBlock Grid.Column="6" Text="{Binding Status}" Foreground="{DynamicResource TextSecondary}" FontSize="12" FontWeight="SemiBold" />
-                                                    </Grid>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
-                            </Border>
                         </StackPanel>
                     </Border>
 

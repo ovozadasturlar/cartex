@@ -1,3 +1,4 @@
+using Cartex.Application.CustomerReturns.Commands;
 using Cartex.Application.Sales.Commands;
 using Cartex.Application.Tests.Common;
 using Cartex.Domain.Common.Exceptions;
@@ -17,8 +18,8 @@ public class ReturnSaleTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     {
         using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var branch1 = (await db.Branches.FirstAsync(b => b.Name == "Filial 1")).Id;
-        var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Filial 1 ombori")).Id;
+        var branch1 = (await db.Branches.FirstAsync(b => b.Name == "Asosiy filial")).Id;
+        var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Asosiy ombor")).Id;
         var businessId = (await db.Businesses.FirstAsync()).Id;
         var adminId = (await db.Users.FirstAsync(u => u.Username == "admin")).Id;
         var productId = (await db.Products.FirstAsync(p => p.Name == "Smesitel oshxona Zegor")).Id;
@@ -48,10 +49,8 @@ public class ReturnSaleTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         using (var scope = Fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            var lines = await db.SaleItems.Where(i => i.SaleId == saleId)
-                .Select(i => new ReturnLineDto(i.Id, i.Quantity, true, null)).ToListAsync();
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            await sender.Send(new ReturnSaleCommand(saleId, lines));
+            await sender.Send(await TestReturns.ForSaleAsync(db, saleId));
         }
 
         using (var scope = Fixture.CreateScope())
@@ -75,21 +74,20 @@ public class ReturnSaleTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         await TestShift.OpenAsync(Fixture);
 
         long saleId;
-        List<ReturnLineDto> lines;
+        CreateCustomerReturnCommand command;
         using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
             saleId = (await sender.Send(new CreateSaleCommand(warehouse1, null, 385000, 0, 0, [new CreateSaleItemDto(variantId, 1)]))).SaleId;
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            lines = await db.SaleItems.Where(i => i.SaleId == saleId)
-                .Select(i => new ReturnLineDto(i.Id, i.Quantity, true, null)).ToListAsync();
-            await sender.Send(new ReturnSaleCommand(saleId, lines));
+            command = await TestReturns.ForSaleAsync(db, saleId);
+            await sender.Send(command);
         }
 
         using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            await Assert.ThrowsAsync<BusinessRuleException>(() => sender.Send(new ReturnSaleCommand(saleId, lines)));
+            await Assert.ThrowsAsync<BusinessRuleException>(() => sender.Send(command));
         }
     }
 }

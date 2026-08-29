@@ -32,6 +32,9 @@ public interface ICustomersApi
     [Post("/api/customers/{id}/repay-debt")]
     Task RepayDebtAsync(long id, [Body] RepayDebtRequest request);
 
+    [Post("/api/customers/{id}/consolidated-act")]
+    Task<ConsolidatedActDto> GetConsolidatedActAsync(long id, [Body] ConsolidatedActRequest request);
+
     [Post("/api/customers/{id}/bonus")]
     Task GiveCustomerBonusAsync(long id, [Body] GiveCustomerBonusRequest request);
 
@@ -40,4 +43,22 @@ public interface ICustomersApi
 
     [Post("/api/customers/{id}/message")]
     Task SendMessageAsync(long id, [Body] SendCustomerMessageRequest request);
+
+    [Get("/api/customers/{id}/statement")]
+    Task<CustomerStatementDto> GetStatementAsync(
+        long id,
+        [Query] DateTime? from = null,
+        [Query] DateTime? to = null,
+        [Query] long? branchId = null,
+        [Query] string? documentTypes = null);
+
+    [Get("/api/customers/{id}/statement/export")]
+    Task<HttpContent> ExportStatementAsync(
+        long id,
+        [Query] string format = "pdf",
+        [Query] string mode = "both",
+        [Query] DateTime? from = null,
+        [Query] DateTime? to = null,
+        [Query] long? branchId = null,
+        [Query] string? documentTypes = null);
 }

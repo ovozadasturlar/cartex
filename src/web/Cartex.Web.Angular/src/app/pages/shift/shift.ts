@@ -17,10 +17,12 @@ import { CurrentShift, PosApi, ShiftHistory, ZReport } from '../../core/api/pos.
 import { AuthService } from '../../core/auth.service';
 import { CxDatePipe, CxMoneyPipe } from '../../core/format';
 import { NotifyService } from '../../core/notify.service';
+import { RemotePrintService } from '../../core/remote-print.service';
 import { Paged } from '../../core/paging';
 import { EmptyState } from '../../shared/empty-state';
 import { PageHeader } from '../../shared/page-header';
 import { PagingBar } from '../../shared/paging-bar';
+import { LayoutService } from '../../core/layout.service';
 
 const money = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 });
 const date = new CxDatePipe();
@@ -93,12 +95,16 @@ export class Shift implements OnInit {
   readonly baseCurrency = signal<string | null>(null);
   readonly multicurrency = signal(false);
   readonly currencies = signal<string[]>([]);
-  readonly canManage = this.auth.hasPermission('shifts.manage');
+  readonly canOpen = this.auth.hasPermission('shifts.open');
+  readonly canClose = this.auth.hasPermission('shifts.close');
   readonly canViewHistory = this.auth.hasPermission('shifts.view');
   readonly canViewAll = this.auth.hasPermission('shifts.viewAll');
-  readonly canManageAll = this.auth.hasPermission('shifts.manageAll');
+  readonly canManageAll = this.auth.hasPermission('shifts.closeAll');
   readonly canCashOut = this.auth.hasPermission('sales.cashout');
-  readonly cols = ['cashier', 'opened', 'closed', 'float', 'counted', 'status', 'actions'];
+  private readonly layout = inject(LayoutService);
+  readonly cols = computed(() => this.layout.isPhone()
+    ? ['cashier', 'opened', 'status', 'actions']
+    : ['cashier', 'opened', 'closed', 'float', 'counted', 'status', 'actions']);
 
   private readonly now = signal(Date.now());
   readonly duration = computed(() => {
@@ -134,20 +140,23 @@ export class Shift implements OnInit {
   onPage(e: { page: number; pageSize: number }): void {
     this.page = e.page;
     this.pageSize = e.pageSize;
-    this.reloadHistory();
+    void this.reloadHistory();
   }
 
   onFilter(): void {
     this.page = 1;
-    this.reloadHistory();
+    void this.reloadHistory();
   }
 
   async open(): Promise<void> {
-    const opened = await lastValueFrom(this.dialog.open(OpenShiftDialog, { width: '400px', maxWidth: '88vw' }).afterClosed());
-    if (opened) this.load();
+    if (!this.canOpen) return;
+    const opened: boolean | undefined = await lastValueFrom(
+this.dialog.open<OpenShiftDialog, unknown, boolean>(OpenShiftDialog, { width: '400px', maxWidth: '88vw' }).afterClosed());
+    if (opened) void this.load();
   }
 
   async close(): Promise<void> {
+    if (!this.canClose) return;
     const shift = this.shift();
     if (!shift) return;
     const data: CloseShiftData = {
@@ -157,11 +166,11 @@ export class Shift implements OnInit {
       currencies: this.currencies(),
     };
     const report: ZReport | undefined = await lastValueFrom(
-      this.dialog.open(CloseShiftDialog, { data, width: '440px', maxWidth: '94vw' }).afterClosed(),
+this.dialog.open<CloseShiftDialog, unknown, ZReport>(CloseShiftDialog, { data, width: '440px', maxWidth: '94vw' }).afterClosed(),
     );
     if (report) {
       this.showReport(report, `${this.auth.currentUser()?.fullName ?? ''} · ${date.transform(shift.openedAt)}`);
-      this.load();
+      void this.load();
     }
   }
 
@@ -215,7 +224,7 @@ export class Shift implements OnInit {
         }),
       );
       this.showReport(closed, `${r.userName} · ${date.transform(r.openedAt)}`);
-      this.load();
+      void this.load();
     } catch (e) {
       this.notify.error(e);
     }
@@ -233,7 +242,7 @@ export class Shift implements OnInit {
   }
 
   private async loadCurrent(): Promise<void> {
-    if (!this.canManage) return;
+    if (!this.canOpen && !this.canClose) return;
     try {
       this.shift.set(await lastValueFrom(this.api.currentShift()));
     } catch (e) {
@@ -260,21 +269,27 @@ export class Shift implements OnInit {
     try {
       const business = await lastValueFrom(this.businessApi.get());
       this.baseCurrency.set(business.currency);
-      this.multicurrency.set(business.multicurrency);
-      if (business.multicurrency) {
+      this.multicurrency.set(business.salesMulticurrency);
+      if (business.salesMulticurrency) {
         const currencies = await lastValueFrom(this.ratesApi.currencies(true));
         this.currencies.set(currencies.filter((c) => !c.isBase).map((c) => c.code).sort());
       }
-    } catch {}
+    } catch {
+      // Multicurrency is optional: the shift screen works on the base currency alone.
+    }
     if (this.canCashOut) {
       try {
         this.expenseCategories.set(await lastValueFrom(this.expenseApi.list()));
-      } catch {}
+      } catch {
+        // Cash-out still works without a category list.
+      }
     }
     if (this.canViewAll) {
       try {
         this.cashiers.set((await lastValueFrom(this.adminApi.users({ page: 0, pageSize: 0 }))).items);
-      } catch {}
+      } catch {
+        // The cashier filter is a convenience; its absence does not block the report.
+      }
     }
   }
 }
@@ -327,7 +342,7 @@ export class OpenShiftDialog implements OnInit {
     try {
       const business = await lastValueFrom(this.businessApi.get());
       this.base.set(business.currency);
-      if (!business.multicurrency) return;
+      if (!business.salesMulticurrency) return;
       const currencies = await lastValueFrom(this.ratesApi.currencies(true));
       this.rows.set(
         currencies
@@ -336,7 +351,9 @@ export class OpenShiftDialog implements OnInit {
           .sort()
           .map((code) => ({ currency: code, amount: signal(0) })),
       );
-    } catch {}
+    } catch {
+      // Falls back to the base currency row, which is the common case anyway.
+    }
   }
 
   async confirm(): Promise<void> {
@@ -593,6 +610,8 @@ export class CloseShiftDialog {
   `,
 })
 export class ZReportDialog {
+  private readonly remotePrint = inject(RemotePrintService);
+  private readonly notify = inject(NotifyService);
   readonly data = inject<ZReportData>(MAT_DIALOG_DATA);
   readonly r = this.data.report;
   readonly signed = signed;
@@ -613,7 +632,22 @@ export class ZReportDialog {
     { key: 'supply_pay_out', value: this.r.supplyPayOut },
   ];
 
-  print(): void {
+  async print(): Promise<void> {
+    try {
+      const queued = await this.remotePrint.send({
+        kind: 'ZReport',
+        permission: 'printing.z_reports.print',
+        sourceType: 'shift',
+        sourceId: String(this.r.shiftId),
+        payload: { shiftId: this.r.shiftId },
+        isReprint: true,
+        reason: 'web_reprint',
+      });
+      if (queued) return;
+    } catch (error) {
+      this.notify.error(error);
+      return;
+    }
     document.body.classList.add('zr-printing');
     window.print();
     document.body.classList.remove('zr-printing');

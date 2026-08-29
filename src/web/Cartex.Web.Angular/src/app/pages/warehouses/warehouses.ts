@@ -12,6 +12,7 @@ import { MatTableModule } from '@angular/material/table';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import { AdminApi, AdminWarehouse, Branch } from '../../core/api/admin.api';
+import { AuthService } from '../../core/auth.service';
 import { NotifyService } from '../../core/notify.service';
 import { EmptyState } from '../../shared/empty-state';
 import { PageHeader } from '../../shared/page-header';
@@ -34,7 +35,10 @@ export class Warehouses implements OnInit {
   private readonly api = inject(AdminApi);
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
+  private readonly auth = inject(AuthService);
 
+  readonly canCreate = this.auth.hasPermission('warehouses.create');
+  readonly canEdit = this.auth.hasPermission('warehouses.edit');
   readonly loading = signal(true);
   readonly warehouses = signal<AdminWarehouse[]>([]);
   readonly cols = ['name', 'branch', 'online'];
@@ -57,15 +61,18 @@ export class Warehouses implements OnInit {
   }
 
   open(warehouse: AdminWarehouse | null): void {
+    if (warehouse ? !this.canEdit : !this.canCreate) return;
     this.dialog
       .open(WarehouseDialog, {
         data: { warehouse, branches: this.branches },
         width: '460px',
         maxWidth: '94vw',
-        autoFocus: false,
+        autoFocus: 'first-tabbable',
       })
       .afterClosed()
-      .subscribe((saved) => saved && this.reload());
+      .subscribe((saved) => {
+        if (saved) void this.reload();
+      });
   }
 
   private async reload(): Promise<void> {
@@ -100,7 +107,7 @@ export class Warehouses implements OnInit {
       <div mat-dialog-content class="dlg-form">
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('name') }}</mat-label>
-          <input matInput [(ngModel)]="name" />
+          <input matInput cdkFocusInitial [(ngModel)]="name" />
         </mat-form-field>
         @if (!warehouse) {
           <mat-form-field appearance="outline" subscriptSizing="dynamic">

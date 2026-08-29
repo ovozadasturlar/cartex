@@ -8,9 +8,9 @@
              x:CompileBindings="False">
 
     <Panel>
-        <DockPanel Margin="24" Classes.blurred="{Binding IsEditOpen}">
+        <DockPanel Margin="24" Classes.blurred="{Binding IsModalOpen}">
             <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[branch]}" Margin="0,0,0,16">
-                <Button Classes="brand" Command="{Binding OpenCreateCommand}">
+                <Button Classes="brand" Command="{Binding OpenCreateCommand}" IsVisible="{Binding CanCreate}">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <mi:MaterialIcon Kind="Plus" Width="18" Height="18" />
                         <TextBlock Text="{Binding L[add]}" VerticalAlignment="Center" />
@@ -43,12 +43,21 @@
                             <DataGridTemplateColumn Width="Auto">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Button Classes="icon" Margin="6,0"
-                                                Command="{Binding $parent[DataGrid].DataContext.OpenEditCommand}"
-                                                CommandParameter="{Binding}" ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[edit]}">
-                                            <mi:MaterialIcon Kind="Pencil" Width="16" Height="16"
-                                                             Foreground="{DynamicResource TextSecondary}" />
-                                        </Button>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button Classes="icon" Margin="6,0"
+                                                    IsVisible="{Binding $parent[DataGrid].DataContext.CanEdit}"
+                                                    Command="{Binding $parent[DataGrid].DataContext.OpenCatalogCommand}"
+                                                    CommandParameter="{Binding}" ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[assortment]}">
+                                                <mi:MaterialIcon Kind="FormatListBulleted" Width="16" Height="16"
+                                                                 Foreground="{DynamicResource TextSecondary}" />
+                                            </Button>
+                                            <Button Classes="icon" Margin="0,0,6,0"
+                                                    Command="{Binding $parent[DataGrid].DataContext.OpenEditCommand}"
+                                                    CommandParameter="{Binding}" ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[edit]}">
+                                                <mi:MaterialIcon Kind="Pencil" Width="16" Height="16"
+                                                                 Foreground="{DynamicResource TextSecondary}" />
+                                            </Button>
+                                        </StackPanel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
@@ -93,6 +102,70 @@
                         <Button Classes="brand" Command="{Binding SaveCommand}" Content="{Binding L[save]}" />
                     </StackPanel>
                 </StackPanel>
+            </Border>
+        </Border>
+
+        <Border IsVisible="{Binding IsCatalogOpen}" c:FormBehaviors.AutoFocus="True" Background="#30000000"
+                c:OverlayBehaviors.DismissCommand="{Binding CloseCatalogCommand}">
+            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="900" MaxHeight="680"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    HorizontalAlignment="Center" VerticalAlignment="Center" Padding="22">
+                <DockPanel>
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,14">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="{Binding L[assortment]}" FontSize="18" FontWeight="Bold"
+                                       Foreground="{DynamicResource TextPrimary}" />
+                            <TextBlock Text="{Binding CatalogBranchName}" FontSize="12.5"
+                                       Foreground="{DynamicResource TextSecondary}" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Classes="icon" Command="{Binding CloseCatalogCommand}">
+                            <mi:MaterialIcon Kind="Close" Width="18" Height="18" />
+                        </Button>
+                    </Grid>
+                    <TextBox DockPanel.Dock="Top" Text="{Binding CatalogSearch}" MinHeight="40" Margin="0,0,0,12"
+                             PlaceholderText="{Binding L[search_product_hint]}">
+                        <TextBox.InnerLeftContent>
+                            <mi:MaterialIcon Kind="Magnify" Width="16" Height="16" Margin="10,0,0,0"
+                                             Foreground="{DynamicResource TextMuted}" />
+                        </TextBox.InnerLeftContent>
+                    </TextBox>
+                    <TextBlock DockPanel.Dock="Bottom" Text="{Binding CatalogTotalCount, StringFormat='{}{0:N0}'}"
+                               FontSize="12" Foreground="{DynamicResource TextMuted}" Margin="0,12,0,0" />
+                    <Border CornerRadius="10" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
+                        <DataGrid ItemsSource="{Binding CatalogItems}" AutoGenerateColumns="False" IsReadOnly="True"
+                                  GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Width="*" Binding="{Binding ProductName}"
+                                                    Header="{Binding [name], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                <DataGridTextColumn Width="160" Binding="{Binding Code}"
+                                                    Header="{Binding [code], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                <DataGridTextColumn Width="160" Binding="{Binding Barcode}"
+                                                    Header="{Binding [barcode], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                <DataGridTemplateColumn Width="Auto" Header="{Binding [active], Source={x:Static svc:LocalizationManager.Instance}}">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <CheckBox IsChecked="{Binding IsActive}" IsEnabled="False" IsHitTestVisible="False" HorizontalAlignment="Center" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Width="Auto">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" Spacing="4" Margin="6,0">
+                                                <Button Classes="outline" Padding="8,4" Command="{Binding SetAutoCommand}" IsEnabled="{Binding !IsUpdating}"
+                                                        Content="{Binding $parent[DataGrid].DataContext.L[catalog_auto]}" />
+                                                <Button Classes="outline" Padding="8,4" Command="{Binding SetVisibleCommand}" IsEnabled="{Binding !IsUpdating}"
+                                                        Content="{Binding $parent[DataGrid].DataContext.L[catalog_visible]}" />
+                                                <Button Classes="outline" Padding="8,4" Command="{Binding SetHiddenCommand}" IsEnabled="{Binding !IsUpdating}"
+                                                        Content="{Binding $parent[DataGrid].DataContext.L[catalog_hidden]}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Border>
+                </DockPanel>
             </Border>
         </Border>
     </Panel>

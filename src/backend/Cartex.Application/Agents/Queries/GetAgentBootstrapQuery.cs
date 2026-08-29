@@ -1,16 +1,13 @@
-using Cartex.Application.Common.Messaging;
-using Cartex.Application.Common.Models;
+﻿using Cartex.Application.Common.Models;
 using Cartex.Application.Stocks.Queries;
 using Cartex.Domain.Common;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Common;
+using Cartex.Shared.Models.Agents;
 
 namespace Cartex.Application.Agents.Queries;
-
-public record AgentCustomerDto(long Id, string FullName, string? Phone, string? Address, decimal DebtBalance, decimal CreditLimit, List<CurrencyAmountDto> DebtBalances, double? Latitude, double? Longitude);
-
-public record AgentBootstrapDto(long? WarehouseId, string? WarehouseName, string BaseCurrency, DateTime ServerTime, List<AgentCustomerDto> Customers, IReadOnlyCollection<StockOnHandDto> VanStock);
 
 public record GetAgentBootstrapQuery : IRequest<AgentBootstrapDto>;
 
@@ -28,13 +25,13 @@ public sealed class GetAgentBootstrapQueryHandler(IApplicationDbContext db, ICur
             .FirstOrDefaultAsync(cancellationToken);
 
         var customers = await db.Customers
-            .Where(c => c.AgentId == userId)
-            .OrderBy(c => c.FullName)
+            .Where(c => c.AssignedUserId == userId)
+            .OrderBy(c => c.Party.FullName)
             .Select(c => new AgentCustomerDto(
                 c.Id,
-                c.FullName,
-                c.Phone,
-                c.Address,
+                c.Party.FullName,
+                c.Party.Phone,
+                c.Party.Address,
                 c.Accounts.Where(a => a.Type == AccountType.Debt).Sum(a => a.Balance * (a.Currency == baseCode ? 1m
                     : db.ExchangeRates.Where(r => r.Code == a.Currency).OrderByDescending(r => r.EffectiveAt).Select(r => r.Rate).FirstOrDefault())),
                 c.CreditLimit,

@@ -4,6 +4,15 @@ on:
   push:
     branches: [ main ]
   pull_request:
+  # The heavy analysis scopes cost far more runner minutes than they are worth on every push,
+  # so they run weekly (and on demand) instead. See the qodana job.
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-and-test:
@@ -18,6 +27,14 @@ jobs:
       - name: Build backend
         run: dotnet build src/backend/Cartex.Api/Cartex.Api.csproj -c Release
 
+      # MobileStoreCapabilityContractTests reflects on the compiled Store assembly to prove the
+      # scan screen's cart gate delegates to AccessState (RUXSAT-04a), so the app must be built
+      # first — the MAUI Android workload is not preinstalled on the runner.
+      - name: Build mobile store for the contract test
+        run: |
+          dotnet workload install maui-android
+          dotnet build src/mobile/Cartex.Mobile.Store/Cartex.Mobile.Store.csproj -c Release -f net10.0-android -p:AndroidLinkMode=None
+
       - name: Architecture tests
         run: dotnet test tests/Cartex.ArchitectureTests/Cartex.ArchitectureTests.csproj -c Release
 
@@ -29,3 +46,117 @@ jobs:
 
       - name: API integration tests
         run: dotnet test tests/Cartex.Api.IntegrationTests/Cartex.Api.IntegrationTests.csproj -c Release
+
+      # The web client has no compiler to catch dead imports or a promise nobody waits on, so the
+      # linter is the guard. It is free and survives the Qodana trial (CI-05 in docs/code-quality.md).
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Web lint
+        working-directory: src/web/Cartex.Web.Angular
+        run: npm ci && npm run lint
+
+      # Screens are built and laid out headlessly so a binding that only breaks when the view is
+      # shown fails here, not in front of a cashier.
+      - name: Desktop UI render tests
+        run: dotnet test tests/Cartex.UiTests/Cartex.UiTests.csproj -c Release
+
+  qodana:
+    name: Qodana (${{ matrix.scope }})
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      # Each matrix entry is an isolated GitHub runner. Keep them sequential so
+      # the Qodana containers never contend for the hosted-runner resources.
+      max-parallel: 1
+      # One Qodana Cloud project holds exactly one "latest report", so every scope needs its
+      # OWN token. Sharing a single token made the scopes overwrite each other and only the
+      # last one survived — see CI-01 in docs/code-quality.md.
+      #
+      # A scope whose token secret is unset is skipped, so a scope can be added or retired
+      # from Qodana Cloud alone, without touching this file.
+      #
+      # onPush: cheap scopes that guard every change. The rest run weekly / on demand, because
+      # a .NET solution scan costs ~30 runner minutes and five of them per push would burn the
+      # whole monthly budget in a handful of commits.
+      matrix:
+        include:
+          - scope: Backend
+            token: QODANA_TOKEN
+            onPush: true
+            args: |
+              --linter qodana-dotnet
+              --property=qodana.net.solution=Cartex.Backend.slnx
+          - scope: Web
+            token: QODANA_TOKEN_WEB
+            onPush: true
+            args: |
+              --linter qodana-js
+              --config=qodana-web.yaml
+          - scope: Desktop
+            token: QODANA_TOKEN_DESKTOP
+            onPush: false
+            args: |
+              --linter qodana-dotnet
+              --property=qodana.net.solution=Cartex.Desktop.slnx
+          # The mobile scopes need the MAUI workload inside the container, otherwise the
+          # analyzer cannot resolve even System/object and the report is noise dressed up as
+          # green (CI-02). qodana-mobile.yaml installs it in the bootstrap step.
+          - scope: Mobile Store
+            token: QODANA_TOKEN_MOBILE_STORE
+            onPush: false
+            args: |
+              --linter qodana-dotnet
+              --config=qodana-mobile.yaml
+              --property=qodana.net.solution=Cartex.Mobile.Store.slnx
+          - scope: Mobile Agent
+            token: QODANA_TOKEN_MOBILE_AGENT
+            onPush: false
+            args: |
+              --linter qodana-dotnet
+              --config=qodana-mobile.yaml
+              --property=qodana.net.solution=Cartex.Mobile.Agent.slnx
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+    # The secrets context is not available in a step-level `if`, so the token is lifted to the
+    # job environment: that is both what the action reads and what the skip condition tests.
+    env:
+      QODANA_TOKEN: ${{ secrets[matrix.token] }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      # The Qodana image and the MAUI workload together do not fit in the default runner disk;
+      # the first attempt died mid-scan with no "Complete job" step, which is what a killed
+      # runner looks like. None of this is used by the analysis, which runs inside Docker.
+      - name: Free disk space
+        if: ${{ startsWith(matrix.scope, 'Mobile') }}
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android/sdk/ndk /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache
+          df -h /
+      - name: Qodana Scan
+        # Each scope runs in its own Docker container and GitHub-hosted runner.
+        # Rider/local Qodana remains native, as configured in qodana.yaml.
+        if: ${{ env.QODANA_TOKEN != '' && (matrix.onPush || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
+        uses: JetBrains/qodana-action@v2026.1.3
+        with:
+          # Qodana defaults to 80% of runner RAM. Reserve memory for the GitHub runner
+          # and Docker itself so the analysis process cannot terminate the runner agent.
+          # --no-build is deliberately absent: without a restore the analyzer resolves nothing.
+          args: |
+            -e _JAVA_OPTIONS=-Xmx4g
+            --within-docker true
+            ${{ matrix.args }}
+          pr-mode: false
+          # Do not persist Qodana caches while validating the new CI execution mode.
+          use-caches: false
+          # One comment per scope would create PR noise; Qodana Cloud and annotations
+          # remain available for every scope.
+          post-pr-comment: false
+          use-annotations: true
+          upload-result: true
+          push-fixes: 'none'

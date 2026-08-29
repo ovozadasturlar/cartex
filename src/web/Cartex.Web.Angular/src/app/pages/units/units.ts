@@ -14,6 +14,7 @@ import { lastValueFrom } from 'rxjs';
 import { Unit, UnitsApi } from '../../core/api/catalog.api';
 import { AuthService } from '../../core/auth.service';
 import { NotifyService } from '../../core/notify.service';
+import { downloadCsv } from '../../core/csv-export';
 import { PageHeader } from '../../shared/page-header';
 
 @Component({
@@ -34,12 +35,28 @@ import { PageHeader } from '../../shared/page-header';
 })
 export class Units implements OnInit {
   private readonly api = inject(UnitsApi);
+  private readonly transloco = inject(TranslocoService);
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
 
-  readonly canManage = inject(AuthService).hasPermission('products.manage');
+  private readonly auth = inject(AuthService);
+  readonly canCreate = this.auth.hasPermission('units.create');
+  readonly canEdit = this.auth.hasPermission('units.edit');
+  readonly canToggle = this.auth.hasPermission('units.toggle');
   readonly loading = signal(true);
   readonly all = signal<Unit[]>([]);
+  readonly canExport = inject(AuthService).hasPermission('reports.export');
+
+  exportCsv(): void {
+    if (!this.canExport) return;
+    const t = (key: string): string => this.transloco.translate(key);
+    downloadCsv(t('units'), this.all(), [
+      { header: t('name'), value: (u) => u.name },
+      { header: t('short_name'), value: (u) => u.shortName },
+      { header: t('active'), value: (u) => u.isEnabled },
+      { header: t('default'), value: (u) => u.isDefault },
+    ]);
+  }
   readonly search = signal('');
   readonly dimensions = ['Count', 'Weight', 'Volume', 'Length'];
   readonly groups = computed(() => {
@@ -51,18 +68,20 @@ export class Units implements OnInit {
   });
 
   ngOnInit(): void {
-    this.load();
+    void this.load();
   }
 
   openCreate(dimension?: string): void {
+    if (!this.canCreate) return;
     this.openDialog(null, dimension);
   }
 
   openEdit(unit: Unit): void {
-    if (this.canManage && !unit.isSystem) this.openDialog(unit);
+    if (this.canEdit && !unit.isSystem) this.openDialog(unit);
   }
 
   async toggleEnabled(unit: Unit, event: MatSlideToggleChange): Promise<void> {
+    if (!this.canToggle) return;
     try {
       await lastValueFrom(this.api.setState(unit.id, event.checked, unit.isDefault));
       await this.load();
@@ -73,7 +92,7 @@ export class Units implements OnInit {
 
   async makeDefault(unit: Unit, event: Event): Promise<void> {
     event.stopPropagation();
-    if (unit.isDefault) return;
+    if (!this.canToggle || unit.isDefault) return;
     try {
       await lastValueFrom(this.api.setState(unit.id, true, true));
       await this.load();
@@ -84,10 +103,10 @@ export class Units implements OnInit {
 
   private openDialog(unit: Unit | null, dimension?: string): void {
     this.dialog
-      .open(UnitDialog, { data: { unit, dimension: dimension ?? null }, width: '440px', maxWidth: '94vw', autoFocus: false })
+      .open(UnitDialog, { data: { unit, dimension: dimension ?? null }, width: '440px', maxWidth: '94vw', autoFocus: 'first-tabbable' })
       .afterClosed()
       .subscribe((saved) => {
-        if (saved) this.load();
+        if (saved) void this.load();
       });
   }
 
@@ -113,6 +132,7 @@ export class Units implements OnInit {
     MatIconModule,
     MatInputModule,
     MatSelectModule,
+    MatSlideToggleModule,
     TranslocoModule,
   ],
   styleUrl: './units.scss',
@@ -125,7 +145,7 @@ export class Units implements OnInit {
       <div mat-dialog-content class="dlg-body">
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('name') }}</mat-label>
-          <input matInput [(ngModel)]="name" />
+          <input matInput cdkFocusInitial [(ngModel)]="name" />
         </mat-form-field>
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('short_name') }}</mat-label>
@@ -143,6 +163,7 @@ export class Units implements OnInit {
           <mat-label>{{ t('factor') }}</mat-label>
           <input matInput type="number" min="0" [(ngModel)]="factor" />
         </mat-form-field>
+        <mat-slide-toggle [(ngModel)]="allowFractional">{{ t('allow_fractional') }}</mat-slide-toggle>
       </div>
       <div mat-dialog-actions align="end">
         <button mat-button mat-dialog-close>{{ t('cancel') }}</button>
@@ -168,6 +189,7 @@ export class UnitDialog {
   shortName = this.unit?.shortName ?? '';
   dimension = this.unit?.dimension ?? this.data.dimension ?? 'Count';
   factor = this.unit?.factor ?? 1;
+  allowFractional = this.unit?.allowFractional ?? this.dimension !== 'Count';
 
   async save(): Promise<void> {
     if (!this.name.trim() || !this.shortName.trim()) return;
@@ -178,6 +200,7 @@ export class UnitDialog {
         shortName: this.shortName.trim(),
         dimension: this.dimension,
         factor: this.factor > 0 ? this.factor : 1,
+        allowFractional: this.allowFractional,
       };
       if (this.unit) await lastValueFrom(this.api.update(this.unit.id, body));
       else await lastValueFrom(this.api.create(body));

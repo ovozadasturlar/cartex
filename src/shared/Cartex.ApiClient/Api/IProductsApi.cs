@@ -6,13 +6,13 @@ namespace Cartex.ApiClient.Api;
 public interface IProductsApi
 {
     [Get("/api/products")]
-    Task<List<ProductDto>> GetAllAsync([Query] long? categoryId = null, [Query] string? search = null);
+    Task<List<ProductDto>> GetAllAsync([Query] long? categoryId = null, [Query] string? search = null, [Query] long? variantId = null, [Query] decimal? minPrice = null, [Query] decimal? maxPrice = null);
 
     [Get("/api/products")]
     Task<IApiResponse<List<ProductDto>>> QueryAsync([Query] IDictionary<string, object> query);
 
     [Get("/api/products/totals")]
-    Task<ProductsTotalsDto> GetTotalsAsync([Query] string? search = null, [Query] long? categoryId = null);
+    Task<ProductsTotalsDto> GetTotalsAsync([Query] string? search = null, [Query] long? categoryId = null, [Query] decimal? minPrice = null, [Query] decimal? maxPrice = null);
 
     [Get("/api/products/category-counts")]
     Task<List<CategoryCountDto>> GetCategoryCountsAsync();
@@ -21,7 +21,7 @@ public interface IProductsApi
     Task<List<ProductOptionDto>> GetLookupAsync();
 
     [Get("/api/products/by-barcode")]
-    Task<ProductLookupDto> GetByBarcodeAsync([Query] string code, [Query] long warehouseId);
+    Task<ProductLookupDto> GetByBarcodeAsync([Query] string code, [Query] long warehouseId, [Query] bool forSale = false);
 
     [Get("/api/products/variants/{id}/price-info")]
     Task<VariantPriceInfoDto> GetVariantPriceInfoAsync(long id, [Query] long warehouseId);
@@ -31,6 +31,12 @@ public interface IProductsApi
 
     [Put("/api/products/{id}")]
     Task UpdateAsync(long id, [Body] UpdateProductRequest request);
+
+    [Put("/api/products/{id}/state")]
+    Task SetStateAsync(long id, [Body] SetProductStateRequest request);
+
+    [Delete("/api/products/{id}")]
+    Task DeleteAsync(long id);
 
     [Post("/api/products/price")]
     Task SetPriceAsync([Body] SetProductPriceRequest request);

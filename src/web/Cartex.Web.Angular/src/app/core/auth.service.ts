@@ -2,6 +2,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import { webDeviceId, webDeviceName } from './device-identity';
 
 interface LoginResponse {
   token: string;
@@ -34,7 +35,13 @@ const REFRESH = 'cartex.refresh';
 
 function decodePayload(token: string): Record<string, unknown> {
   const part = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-  return JSON.parse(atob(part));
+  return JSON.parse(atob(part)) as Record<string, unknown>;
+}
+
+/// A claim that is not a string is not a name: turning an object into "[object Object]" would put
+/// nonsense on screen, so anything unexpected becomes empty instead.
+function text(value: unknown): string {
+  return typeof value === 'string' ? value : typeof value === 'number' ? String(value) : '';
 }
 
 function parseToken(token: string): UserInfo {
@@ -45,8 +52,8 @@ function parseToken(token: string): UserInfo {
   };
   return {
     userId: Number(claims['userId'] ?? 0),
-    username: String(claims['username'] ?? ''),
-    fullName: String(claims['fullName'] ?? claims['username'] ?? ''),
+    username: text(claims['username']),
+    fullName: text(claims['fullName']) || text(claims['username']),
     roles: many('role'),
     permissions: many('permission'),
     startPage: (claims['startPage'] as string) ?? null,
@@ -81,7 +88,7 @@ export class AuthService {
 
   async login(username: string, password: string, rememberMe: boolean): Promise<void> {
     const res = await firstValueFrom(
-      this.http.post<LoginResponse>('/api/auth/login', { username, password, deviceName: 'Web' }),
+      this.http.post<LoginResponse>('/api/auth/login', { username, password, deviceName: webDeviceName(), deviceId: webDeviceId() }),
     );
     this.apply(res, rememberMe);
   }
@@ -96,7 +103,7 @@ export class AuthService {
 
   async pollQr(code: string): Promise<boolean> {
     const res = await firstValueFrom(
-      this.http.post<LoginResponse | null>('/api/auth/qr/poll', { code, deviceName: 'Web' }),
+      this.http.post<LoginResponse | null>('/api/auth/qr/poll', { code, deviceName: webDeviceName(), deviceId: webDeviceId() }),
     );
     if (!res) return false;
     this.apply(res, false);
@@ -117,7 +124,10 @@ export class AuthService {
 
   hasPermission(permission: string): boolean {
     const user = this.user();
-    return !!user && (user.permissions.includes('*') || user.permissions.includes(permission));
+    return !!user && (
+      user.permissions.includes('*')
+      || permission.split('|').some((candidate) => user.permissions.includes(candidate))
+    );
   }
 
   logout(): void {
@@ -135,13 +145,13 @@ export class AuthService {
   private async doRefresh(): Promise<string | null> {
     try {
       const res = await firstValueFrom(
-        this.http.post<LoginResponse>('/api/auth/refresh', { refreshToken: this.refreshToken, deviceName: 'Web' }),
+        this.http.post<LoginResponse>('/api/auth/refresh', { refreshToken: this.refreshToken, deviceName: webDeviceName(), deviceId: webDeviceId() }),
       );
       this.apply(res, this.persist);
     } catch (e) {
       if (e instanceof HttpErrorResponse && e.status === 401) {
         this.logout();
-        this.router.navigate(['/login']);
+        void this.router.navigate(['/login']);
         return null;
       }
     }

@@ -21,6 +21,9 @@ export interface StockOnHand {
   imageUrl: string | null;
   code: string | null;
   discountPct: number | null;
+  dimension: string;
+  allowsAmountEntry: boolean;
+  allowsFractional: boolean;
 }
 
 export interface StockOnHandPage {
@@ -35,6 +38,9 @@ export interface ProductLookup {
   packQty: number;
   sellingPrice: number;
   onHand: number;
+  dimension: string;
+  allowsAmountEntry: boolean;
+  allowsFractional: boolean;
 }
 
 export interface CreateSalePayload {
@@ -43,7 +49,13 @@ export interface CreateSalePayload {
   paidCash: number;
   paidCard: number;
   paidBonus: number;
-  items: { variantId: number; quantity: number; unitPrice?: number | null }[];
+  items: {
+    variantId: number;
+    quantity: number;
+    unitPrice?: number | null;
+    expectedUnitPrice?: number | null;
+    prepackId?: number | null;
+  }[];
   debtDueDate?: string | null;
   idempotencyKey: string;
   applyAutoDiscount: boolean;
@@ -52,6 +64,8 @@ export interface CreateSalePayload {
 export interface CreateSaleResult {
   saleId: number;
   receiptToken: string;
+  /// OFF-17: savdo yakunlanadi, lekin kassirga ko'rsatiladigan kod bo'lishi mumkin.
+  warnings?: string[] | null;
 }
 
 export interface ZReportCurrency {
@@ -125,14 +139,15 @@ export class PosApi {
   }
 
   onHand(warehouseId: number, categoryId: number | null, search: string, page: number, pageSize = 40): Observable<StockOnHandPage> {
-    const params: Record<string, string | number> = { warehouseId, page, pageSize };
+    const params: Record<string, string | number | boolean> = { warehouseId, page, pageSize, forSale: true };
     if (categoryId) params['categoryId'] = categoryId;
     if (search) params['search'] = search;
     return this.http.get<StockOnHandPage>('/api/stocks/on-hand', { params });
   }
 
-  byBarcode(code: string, warehouseId: number): Observable<ProductLookup> {
-    return this.http.get<ProductLookup>('/api/products/by-barcode', { params: { code, warehouseId } });
+  /// TUZ-06: savat tiklanganda har qator uchun joriy qoldiq shu yerdan aniq so'raladi.
+  onHandByVariants(warehouseId: number, variantIds: number[]): Observable<StockOnHand[]> {
+    return this.http.post<StockOnHand[]>('/api/stocks/on-hand/by-variants', variantIds, { params: { warehouseId } });
   }
 
   customers(q: ListQuery): Observable<Paged<Customer>> {
@@ -153,7 +168,7 @@ export class PosApi {
     address: string | null;
     cardBarcode: string | null;
     discountPct: number;
-    creditLimit: number;
+    creditLimit: number | null;
   }): Observable<number> {
     return this.http.post<number>('/api/customers', body);
   }
@@ -195,4 +210,12 @@ export class PosApi {
   cashMovement(payload: { amount: number; isPayOut: boolean; reason?: string | null; expenseCategoryId?: number | null }): Observable<void> {
     return this.http.post<void>('/api/shifts/cash-movement', payload);
   }
+}
+
+/// NARX-09: `price_changed` xatosining `details` qismi.
+export interface PriceChange {
+  variantId: number;
+  productName: string;
+  expected: number;
+  current: number;
 }

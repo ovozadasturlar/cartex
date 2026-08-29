@@ -1,8 +1,8 @@
-using Cartex.Application.Common.Extensions;
+﻿using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
 using Cartex.Persistence;
-using Cartex.Application.Common.Messaging;
+using Cartex.Shared.Models.Supplies;
 
 namespace Cartex.Application.Supplies.Queries;
 
@@ -12,8 +12,6 @@ public record GetSuppliesQuery : FilteringRequest, IRequest<IReadOnlyCollection<
     public DateTime? ToDate { get; set; }
     public long? SupplierId { get; set; }
 }
-
-public record SupplyDto(long Id, DateOnly SupplyDate, decimal TotalAmount, string? SupplierName, string WarehouseName, string UserName);
 
 public sealed class GetSuppliesQueryHandler(
     IApplicationDbContext db,

@@ -1,5 +1,6 @@
-using Cartex.Persistence;
+﻿using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Products;
 
 namespace Cartex.Application.Products.Import;
 
@@ -16,7 +17,7 @@ public static class ProductImportMatcher
         return rows;
     }
 
-    private static async Task MatchAsync(IApplicationDbContext db, List<ImportRowDto> rows, CancellationToken cancellationToken)
+    public static async Task MatchAsync(IApplicationDbContext db, List<ImportRowDto> rows, CancellationToken cancellationToken)
     {
         var codes = rows.Where(r => r.Barcode is not null).Select(r => r.Barcode!).Distinct().ToList();
         Dictionary<string, Match> byBarcode = codes.Count == 0 ? [] : (await db.Barcodes
@@ -91,9 +92,9 @@ public static class ProductImportMatcher
 
     private static void Validate(List<ImportRowDto> rows)
     {
-        var duplicateBarcodes = Duplicates(rows.Where(r => r.Barcode is not null), r => r.Barcode!);
-        var duplicateSkus = Duplicates(rows.Where(r => r.Action == ImportRowAction.Create && r.Sku is not null), r => r.Sku!);
-        var duplicateNames = Duplicates(rows.Where(r => r.Action == ImportRowAction.Create && r.Name is not null), r => r.Name!.Trim());
+        var duplicateBarcodes = Duplicates(rows.Where(r => !string.IsNullOrWhiteSpace(r.Barcode)), r => r.Barcode!.Trim());
+        var duplicateSkus = Duplicates(rows.Where(r => r.Action == ImportRowAction.Create && !string.IsNullOrWhiteSpace(r.Sku)), r => r.Sku!.Trim());
+        var duplicateNames = Duplicates(rows.Where(r => r.Action == ImportRowAction.Create && !string.IsNullOrWhiteSpace(r.Name)), r => r.Name!.Trim());
 
         for (var i = 0; i < rows.Count; i++)
         {
@@ -101,12 +102,12 @@ public static class ProductImportMatcher
 
             if (string.IsNullOrWhiteSpace(row.Name))
                 row.Errors.Add("Mahsulot nomi bo'sh.");
-            if (row.Barcode is { } code && duplicateBarcodes.Contains(code))
-                row.Errors.Add($"Fayl ichida takroriy barkod: {code}");
-            if (row.Action == ImportRowAction.Create && row.Sku is { } sku && duplicateSkus.Contains(sku))
-                row.Errors.Add($"Fayl ichida takroriy artikul: {sku}");
-            if (row.Action == ImportRowAction.Create && row.Name is { } name && duplicateNames.Contains(name.Trim()))
-                row.Errors.Add($"Fayl ichida takroriy nom: {name.Trim()}");
+            if (!string.IsNullOrWhiteSpace(row.Barcode) && duplicateBarcodes.Contains(row.Barcode.Trim()))
+                row.Errors.Add($"Fayl ichida takroriy barkod: {row.Barcode}");
+            if (row.Action == ImportRowAction.Create && !string.IsNullOrWhiteSpace(row.Sku) && duplicateSkus.Contains(row.Sku.Trim()))
+                row.Errors.Add($"Fayl ichida takroriy artikul: {row.Sku}");
+            if (row.Action == ImportRowAction.Create && !string.IsNullOrWhiteSpace(row.Name) && duplicateNames.Contains(row.Name.Trim()))
+                row.Errors.Add($"Fayl ichida takroriy nom: {row.Name.Trim()}");
             if (row.Quantity < 0 || row.MinStock < 0)
                 row.Errors.Add("Son manfiy bo'lishi mumkin emas.");
             if (row.SellingPrice < 0 || row.PurchasePrice < 0)

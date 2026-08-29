@@ -54,7 +54,7 @@
                 <ComboBox Grid.Column="2" MinWidth="180" VerticalAlignment="Center"
                           ItemsSource="{Binding FilterCategories}" SelectedItem="{Binding FilterCategory}"
                           IsVisible="{Binding IsOnHand}">
-                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding FullPath}" TextTrimming="PrefixCharacterEllipsis" /></DataTemplate></ComboBox.ItemTemplate>
                 </ComboBox>
 
                 <TextBox Grid.Column="4" Text="{Binding SearchText, Mode=TwoWay}"
@@ -95,8 +95,15 @@
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Width="2*" Binding="{Binding ProductName}"
                                                         Header="{Binding [product_name], Source={x:Static svc:LocalizationManager.Instance}}" />
-                                    <DataGridTextColumn Width="*" Binding="{Binding CategoryName}"
-                                                        Header="{Binding [category], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                    <DataGridTemplateColumn Width="*"
+                                                            Header="{Binding [category], Source={x:Static svc:LocalizationManager.Instance}}">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding CategoryName}" TextTrimming="PrefixCharacterEllipsis"
+                                                           VerticalAlignment="Center" Margin="12,0" />
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
                                     <DataGridTextColumn Width="Auto" Binding="{Binding UnitName}"
                                                         Header="{Binding [unit], Source={x:Static svc:LocalizationManager.Instance}}" />
                                     <DataGridTextColumn Width="Auto" Binding="{Binding Quantity, StringFormat='{}{0:N0}'}"
@@ -204,7 +211,7 @@
         </DockPanel>
 
         <Border Background="#30000000" IsVisible="{Binding IsModalOpen}"
-                c:OverlayBehaviors.DismissCommand="{Binding AdjustVm.CancelCommand}">
+                c:OverlayBehaviors.DismissCommand="{Binding CloseAdjustCommand}">
             <v:AdjustStockDialog DataContext="{Binding AdjustVm}"
                                  HorizontalAlignment="Center" VerticalAlignment="Center" />
         </Border>

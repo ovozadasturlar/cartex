@@ -1,0 +1,87 @@
+using Cartex.Application.Common.Interfaces;
+using Cartex.Domain.Authorization;
+using Cartex.Domain.Common;
+using Cartex.Domain.Entities;
+using Cartex.Domain.Enums;
+using Cartex.Persistence;
+using Microsoft.EntityFrameworkCore;
+using Cartex.Application.Common.Measurement;
+using Unit = Cartex.Application.Common.Messaging.Unit;
+
+namespace Cartex.Application.Ordering.Commands;
+
+public record UpdateCartItemsCommand(string Code, List<SubmitCartItemDto> Items, int? ExpectedVersion = null) : ICommand<Unit>;
+
+public sealed class UpdateCartItemsCommandHandler(
+    IApplicationDbContext db,
+    ICurrentUser currentUser,
+    ICartNotifier notifier,
+    IQuantityPolicyService quantityPolicy,
+    IAuditService audit) : IRequestHandler<UpdateCartItemsCommand, Unit>
+{
+    public async Task<Unit> Handle(UpdateCartItemsCommand request, CancellationToken cancellationToken)
+    {
+        var cart = await db.Carts
+            .FromSqlInterpolated($"SELECT * FROM carts WHERE aggregate_code = {request.Code} FOR UPDATE")
+            .Include(x => x.Items).FirstOrDefaultAsync(cancellationToken)
+            ?? throw new NotFoundException("Cart not found.");
+
+        if (cart.Status is not (CartStatus.Open or CartStatus.Confirmed))
+            throw new BusinessRuleException("Bu savat endi tahrirlanmaydi.");
+        if (!currentUser.HasPermission(AppPermissions.Sales.Create))
+            throw new ForbiddenException("Savatni faqat kassir tahrirlashi mumkin.");
+        if (cart.Status == CartStatus.Confirmed && cart.ClaimedByUserId != currentUser.UserId
+            && !currentUser.HasPermission(AppPermissions.Sales.OverrideClaim))
+            throw new ForbiddenException("Savat kassaga olingan.");
+        if (request.ExpectedVersion.HasValue && cart.Version != request.ExpectedVersion)
+            throw new ConflictException("Savat boshqa qurilmada o'zgartirilgan. Yangilab qayta urinib ko'ring.", "cart_version_conflict");
+        if (request.Items.Count == 0)
+        {
+            cart.Status = CartStatus.Cancelled;
+            cart.CancelledByUserId = currentUser.UserId;
+            cart.CancelledAt = DateTime.UtcNow;
+            cart.CancellationReason = "empty_cart";
+            cart.Version++;
+            await db.SaveChangesAsync(cancellationToken);
+            audit.SetOutcome("cart.cancelled", "carts", cart.Id,
+                new { cart.AggregateCode, reason = "empty_cart" }, "Bo'sh savat bekor qilindi", cart.BranchId);
+            await db.RunAfterCommitAsync(() => notifier.CartsChangedAsync(cart.BranchId, cart.Kind.ToString(), cancellationToken));
+            return Unit.Value;
+        }
+
+        if (request.Items.Select(x => (x.VariantId, x.PrepackId)).Distinct().Count() != request.Items.Count)
+            throw new BusinessRuleException("Bir mahsulot varianti savatda takrorlanmasligi kerak.", "duplicate_cart_item");
+
+        // Savatda avvaldan (ruxsatli foydalanuvchi tomonidan) saqlangan override'ni har kim
+        // qaytarib yuborishi mumkin; yangi yoki o'zgartirilgan narx esa o'z ruxsatini talab qiladi.
+        var storedOverrides = cart.Items
+            .Where(i => i.UnitPriceOverride != null)
+            .ToDictionary(i => i.VariantId, i => i.UnitPriceOverride!.Value);
+        if (request.Items.Any(i => i.UnitPrice is not null
+                && (!storedOverrides.TryGetValue(i.VariantId, out var stored) || stored != i.UnitPrice))
+            && !currentUser.HasPermission(AppPermissions.Sales.PriceOverride))
+            throw new ForbiddenException("Savdoda narxni o'zgartirishga ruxsat yo'q.");
+
+        await quantityPolicy.ValidateAsync(
+            request.Items.Where(x => x.PrepackId is null).Select(x => (x.VariantId, x.Quantity)), cancellationToken);
+
+        cart.Items.Clear();
+        foreach (var item in request.Items)
+        {
+            cart.Items.Add(new CartItem
+            {
+                VariantId = item.VariantId,
+                PrepackId = item.PrepackId,
+                Quantity = item.Quantity,
+                UnitPriceOverride = item.UnitPrice
+            });
+        }
+        cart.Version++;
+
+        await db.SaveChangesAsync(cancellationToken);
+        audit.SetOutcome("cart.items_updated", "carts", cart.Id,
+            new { cart.AggregateCode, items = request.Items }, "Savatdagi mahsulotlar o'zgartirildi", cart.BranchId);
+        await db.RunAfterCommitAsync(() => notifier.CartsChangedAsync(cart.BranchId, cart.Kind.ToString(), cancellationToken));
+        return Unit.Value;
+    }
+}

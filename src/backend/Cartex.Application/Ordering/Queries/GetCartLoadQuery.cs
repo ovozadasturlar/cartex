@@ -1,11 +1,10 @@
-using Cartex.Application.Common.Messaging;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace Cartex.Application.Ordering.Queries;
+using Cartex.Shared.Models.Ordering;
 
-public record CartLoadItemDto(long VariantId, string ProductName, string UnitName, decimal TotalQuantity);
+namespace Cartex.Application.Ordering.Queries;
 
 public record GetCartLoadQuery(long? WarehouseId = null, string? Status = null) : IRequest<IReadOnlyCollection<CartLoadItemDto>>;
 

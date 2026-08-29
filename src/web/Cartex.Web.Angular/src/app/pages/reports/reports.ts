@@ -83,13 +83,13 @@ export class Reports implements OnInit {
   );
 
   ngOnInit(): void {
-    this.load();
+    void this.load();
   }
 
   setDays(days: number): void {
     if (days === this.days()) return;
     this.days.set(days);
-    this.load();
+    void this.load();
   }
 
   bucketClass(bucket: string): string {

@@ -6,7 +6,7 @@
              x:Class="Cartex.UI.Views.PrepackView"
              x:CompileBindings="False">
 
-    <Border Background="#30000000" IsVisible="{Binding IsOpen}"
+    <Border Background="#30000000" IsVisible="{Binding IsOpen}" c:FormBehaviors.AutoFocus="True"
             c:OverlayBehaviors.DismissCommand="{Binding CloseCommand}">
         <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="560" MaxHeight="640"
                 VerticalAlignment="Center" HorizontalAlignment="Center"
@@ -31,7 +31,8 @@
                     </ListBox.ItemTemplate>
                 </ListBox>
 
-                <Grid ColumnDefinitions="*,10,*,10,*">
+                <Grid Classes="form" ColumnDefinitions="*,10,*,10,*"
+                      c:FormBehaviors.EnterSubmits="{Binding CreateCommand}">
                     <StackPanel Spacing="5">
                         <TextBlock Text="{Binding L[prepack_qty]}" Classes="caption" />
                         <NumericUpDown Value="{Binding Quantity, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0.001" Increment="0.5" FormatString="0.###"
@@ -45,7 +46,7 @@
                     <StackPanel Grid.Column="4" Spacing="5">
                         <TextBlock Text="{Binding L[prepack_expiry]}" Classes="caption" />
                         <NumericUpDown Value="{Binding ExpiresHours, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="1" Increment="1" FormatString="0"
-                                       ShowButtonSpinner="False" MinHeight="40" Watermark="{Binding L[prepack_expiry_hint]}" />
+                                       ShowButtonSpinner="False" MinHeight="40" PlaceholderText="{Binding L[prepack_expiry_hint]}" />
                     </StackPanel>
                 </Grid>
 

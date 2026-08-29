@@ -6,6 +6,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleChange, MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -27,6 +28,7 @@ import { PageHeader } from '../../shared/page-header';
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
+    MatSelectModule,
     MatProgressBarModule,
     MatSlideToggleModule,
     MatTableModule,
@@ -47,8 +49,10 @@ export class Rates implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly auth = inject(AuthService);
 
-  readonly canManageCurrencies = this.auth.hasPermission('currencies.manage');
-  readonly canManageRates = this.auth.hasPermission('rates.manage');
+  readonly canCreateCurrency = this.auth.hasPermission('currencies.create');
+  readonly canEditCurrency = this.auth.hasPermission('currencies.edit');
+  readonly canDeleteCurrency = this.auth.hasPermission('currencies.delete');
+  readonly canManageRates = this.auth.hasPermission('rates.edit');
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly currencies = signal<Currency[]>([]);
@@ -84,6 +88,7 @@ export class Rates implements OnInit {
   }
 
   async toggle(currency: Currency, event: MatSlideToggleChange): Promise<void> {
+    if (!this.canEditCurrency) return;
     try {
       await lastValueFrom(this.api.updateCurrency(currency.code, event.checked, currency.isDefault));
     } catch (e) {
@@ -94,7 +99,7 @@ export class Rates implements OnInit {
 
   async makeDefault(currency: Currency, event: Event): Promise<void> {
     event.stopPropagation();
-    if (currency.isDefault) return;
+    if (!this.canEditCurrency || currency.isDefault) return;
     try {
       await lastValueFrom(this.api.updateCurrency(currency.code, true, true));
       await this.reload();
@@ -104,6 +109,7 @@ export class Rates implements OnInit {
   }
 
   async saveRate(currency: Currency): Promise<void> {
+    if (!this.canManageRates) return;
     const rate = this.drafts[currency.code];
     if (!rate || rate <= 0) return;
     this.saving.set(true);
@@ -122,8 +128,9 @@ export class Rates implements OnInit {
 
   remove(currency: Currency, event: Event): void {
     event.stopPropagation();
+    if (!this.canDeleteCurrency) return;
     this.dialog
-      .open(ConfirmDialog, { data: 'delete_currency_confirm', width: '380px', autoFocus: false })
+      .open(ConfirmDialog, { data: 'delete_currency_confirm', width: '380px', autoFocus: 'first-tabbable' })
       .afterClosed()
       .subscribe(async (ok) => {
         if (!ok) return;
@@ -138,11 +145,12 @@ export class Rates implements OnInit {
   }
 
   openAdd(): void {
+    if (!this.canCreateCurrency) return;
     this.dialog
-      .open(CurrencyDialog, { width: '400px', maxWidth: '94vw', autoFocus: false })
+      .open(CurrencyDialog, { width: '400px', maxWidth: '94vw', autoFocus: 'first-tabbable' })
       .afterClosed()
       .subscribe((saved) => {
-        if (saved) this.reload();
+        if (saved) void this.reload();
       });
   }
 
@@ -170,6 +178,7 @@ export class Rates implements OnInit {
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
+    MatSelectModule,
     TranslocoModule,
   ],
   styleUrl: './rates.scss',
@@ -182,11 +191,26 @@ export class Rates implements OnInit {
       <div mat-dialog-content class="dlg-body">
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('code') }}</mat-label>
-          <input matInput maxlength="3" [(ngModel)]="code" style="text-transform: uppercase" />
+          <input matInput cdkFocusInitial maxlength="3" [(ngModel)]="code" style="text-transform: uppercase" />
         </mat-form-field>
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('name') }}</mat-label>
           <input matInput [(ngModel)]="name" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('currency_symbol') }}</mat-label>
+          <input matInput maxlength="8" [(ngModel)]="symbol" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('currency_symbol_position') }}</mat-label>
+          <mat-select [(ngModel)]="symbolPosition">
+            <mat-option value="Prefix">{{ t('currency_prefix') }}</mat-option>
+            <mat-option value="Suffix">{{ t('currency_suffix') }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>{{ t('decimal_digits') }}</mat-label>
+          <input matInput type="number" min="0" max="4" [(ngModel)]="decimalDigits" />
         </mat-form-field>
       </div>
       <div mat-dialog-actions align="end">
@@ -205,6 +229,9 @@ export class CurrencyDialog {
   readonly busy = signal(false);
   code = '';
   name = '';
+  symbol = '';
+  symbolPosition: 'Prefix' | 'Suffix' = 'Suffix';
+  decimalDigits = 2;
 
   get valid(): boolean {
     return /^[A-Za-z]{3}$/.test(this.code.trim()) && !!this.name.trim();
@@ -214,7 +241,13 @@ export class CurrencyDialog {
     if (!this.valid) return;
     this.busy.set(true);
     try {
-      await lastValueFrom(this.api.createCurrency(this.code.trim().toUpperCase(), this.name.trim()));
+      await lastValueFrom(this.api.createCurrency(
+        this.code.trim().toUpperCase(),
+        this.name.trim(),
+        this.symbol.trim(),
+        this.symbolPosition,
+        Math.max(0, Math.min(4, Math.round(this.decimalDigits))),
+      ));
       this.notify.success(this.transloco.translate('success'));
       this.ref.close(true);
     } catch (e) {

@@ -13,7 +13,7 @@
             <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[product_types]}" Margin="0,0,0,16">
                 <StackPanel Orientation="Horizontal" Spacing="10">
                     <c:ExportButton Command="{Binding ExportCommand}" Text="{Binding L[export]}" IsVisible="{Binding CanExport}" />
-                    <Button Classes="brand" Command="{Binding OpenCreateCommand}">
+                    <Button Classes="brand" Command="{Binding OpenCreateCommand}" IsVisible="{Binding CanCreate}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <mi:MaterialIcon Kind="Plus" Width="18" Height="18" />
                             <TextBlock Text="{Binding L[add]}" VerticalAlignment="Center" />
@@ -47,6 +47,7 @@
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Button Classes="icon" Margin="6,0"
+                                                IsVisible="{Binding $parent[DataGrid].DataContext.CanEdit}"
                                                 Command="{Binding $parent[DataGrid].DataContext.OpenEditCommand}"
                                                 CommandParameter="{Binding}" ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[edit]}">
                                             <mi:MaterialIcon Kind="Pencil" Width="16" Height="16"

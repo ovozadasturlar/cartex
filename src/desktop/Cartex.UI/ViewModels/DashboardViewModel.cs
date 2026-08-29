@@ -9,7 +9,6 @@ using Cartex.Shared.Models.Transactions;
 using Cartex.UI.Services;
 using Avalonia.Media;
 using LiveChartsCore;
-using LiveChartsCore.Drawing;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
 using SkiaSharp;
@@ -81,6 +80,8 @@ public partial class DashboardViewModel(
     public async Task LoadAsync()
     {
         IsLoading = true;
+        var completed = 0;
+        var failures = new List<Exception>();
         WelcomeMessage = $"{L["welcome"]}, {ServiceLocator.Resolve<AuthService>().UserInfo?.FullName ?? ""}!";
 
         var todayStart = new DateTimeOffset(DateTime.Today).UtcDateTime;
@@ -108,9 +109,11 @@ public partial class DashboardViewModel(
             var report = await todayReportTask;
             TodaySales = report.Revenue;
             TodayProfit = report.Profit;
+            completed++;
         }
         catch (Exception ex)
         {
+            failures.Add(ex);
             TodaySales = 0;
             TodayProfit = 0;
             toast.Error(ApiErrors.Describe(ex));
@@ -137,9 +140,11 @@ public partial class DashboardViewModel(
                 CategoryLegend.Add(new CategoryLegendItem($"{name} ({categoryGroups[i].Count})",
                     new SolidColorBrush(Color.Parse(hex))));
             }
+            completed++;
         }
-        catch
+        catch (Exception exception)
         {
+            failures.Add(exception);
             TotalProducts = 0;
             CategorySeries.Clear();
             CategoryLegend.Clear();
@@ -157,9 +162,11 @@ public partial class DashboardViewModel(
             }
             else
                 LowStockCount = 0;
+            completed++;
         }
         catch (Exception ex)
         {
+            failures.Add(ex);
             LowStockCount = 0;
             LowStockItems.Clear();
             toast.Error(ApiErrors.Describe(ex));
@@ -171,9 +178,11 @@ public partial class DashboardViewModel(
             RecentTransactions.Clear();
             foreach (var t in transactions.Content ?? [])
                 RecentTransactions.Add(t);
+            completed++;
         }
-        catch
+        catch (Exception exception)
         {
+            failures.Add(exception);
             RecentTransactions.Clear();
         }
 
@@ -197,9 +206,11 @@ public partial class DashboardViewModel(
 
             TopProducts.Clear();
             foreach (var p in report.TopProducts.Take(2)) TopProducts.Add(p);
+            completed++;
         }
-        catch
+        catch (Exception exception)
         {
+            failures.Add(exception);
             CashFlowSeries.Clear();
             TopProducts.Clear();
         }
@@ -209,13 +220,17 @@ public partial class DashboardViewModel(
             var top = await topCustomersTask;
             TopCustomers.Clear();
             foreach (var c in top.Take(2)) TopCustomers.Add(c);
+            completed++;
         }
-        catch
+        catch (Exception exception)
         {
+            failures.Add(exception);
             TopCustomers.Clear();
         }
 
         IsLoading = false;
+        if (completed == 0 && failures.Count > 0)
+            throw new AggregateException(failures);
     }
 
     [RelayCommand]

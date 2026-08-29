@@ -13,9 +13,6 @@ public class Shift : SoftDeleteEntity, IBranchScoped
     public DateTime OpenedAt { get; set; }
     public DateTime? ClosedAt { get; set; }
 
-    public decimal OpeningFloat { get; set; }
-    public decimal? CountedCash { get; set; }
-
     public ShiftStatus Status { get; set; } = ShiftStatus.Open;
 
     public ICollection<Transaction> Transactions { get; set; } = [];

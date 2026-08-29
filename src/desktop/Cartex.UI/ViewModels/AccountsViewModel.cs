@@ -20,7 +20,7 @@ public partial class AccountsViewModel : ViewModelBase, ILoadable
 
     public ObservableCollection<AccountDto> Accounts { get; } = [];
     public PaginationState Paging { get; } = new();
-    [ObservableProperty] private AccountsTotalsDto? _totals;
+    [ObservableProperty] private AccountsTotalsDto _totals = new(0, 0);
     [ObservableProperty] private string _searchText = "";
     public bool IsEmpty => Accounts.Count == 0;
     public bool CanExport => _auth.HasPermission("reports.export");
@@ -63,8 +63,7 @@ public partial class AccountsViewModel : ViewModelBase, ILoadable
 
     partial void OnSearchTextChanged(string value)
     {
-        _searchCts?.Cancel();
-        var cts = _searchCts = new CancellationTokenSource();
+        var cts = Debounce.Restart(ref _searchCts);
         _ = DebouncedSearchAsync(cts.Token);
     }
 
@@ -81,7 +80,13 @@ public partial class AccountsViewModel : ViewModelBase, ILoadable
     {
         try
         {
-            var all = await _api.GetAllAsync();
+            var search = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
+            var response = await _api.QueryAsync(QueryRequest.Create()
+                .Page(0, 0)
+                .Sort(Paging.SortBy, Paging.Descending)
+                .Search(search)
+                .Build());
+            var all = response.Content ?? [];
             await _export.ExportAsync(L["accounts"], all,
             [
                 new(L["name"], a => a.Name),

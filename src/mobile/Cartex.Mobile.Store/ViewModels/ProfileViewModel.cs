@@ -5,7 +5,13 @@ using Cartex.Mobile.Core;
 
 namespace Cartex.Mobile.Store.ViewModels;
 
-public partial class ProfileViewModel(MobileAuthService auth, SessionStore session, CartStore cart, WarehouseContext warehouseContext) : ObservableObject
+public partial class ProfileViewModel(
+    MobileAuthService auth,
+    SessionStore session,
+    StoreSignOut signOut,
+    WarehouseContext warehouseContext,
+    MobileOfflineService offline,
+    AccessState access) : AccessAwareViewModel(access)
 {
     [ObservableProperty] private string _fullName = "";
     [ObservableProperty] private string _initials = "";
@@ -14,11 +20,17 @@ public partial class ProfileViewModel(MobileAuthService auth, SessionStore sessi
     [ObservableProperty] private string _languageName = "";
     [ObservableProperty] private string _footer = "";
     [ObservableProperty] private string _themeName = "";
+    [ObservableProperty] private string _offlineStatus = "";
+
+    public bool CanViewDevices => Access.CanViewDevices;
+    public bool CanHostSms => Access.CanHostSms;
+    public bool OfflineVisible => Access.CanManageOffline;
 
     private static readonly string[] LangNames = ["O'zbekcha (lotin)", "Ўзбекча (кирилл)", "Русский", "English"];
     private static readonly string[] LangCodes = ["uz-latn", "uz-cyrl", "ru", "en"];
+    private bool _observingAccess;
 
-    public void Appear()
+    public async Task AppearAsync()
     {
         FullName = auth.FullName is { Length: > 0 } name ? name : "—";
         Initials = string.Concat(FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => char.ToUpper(w[0])));
@@ -27,13 +39,24 @@ public partial class ProfileViewModel(MobileAuthService auth, SessionStore sessi
         LanguageName = LangNames[Math.Max(0, Array.IndexOf(LangCodes, Loc.Instance.Language))];
         Footer = $"Cartex Do'kon {AppInfo.Current.VersionString} • {session.ServerUrl}";
         ThemeName = Loc.Instance["theme_" + Preferences.Get("app_theme", "system")];
+        await Access.EnsureLoadedAsync();
+        if (!_observingAccess)
+        {
+            ObserveAccess(nameof(CanViewDevices), nameof(CanHostSms), nameof(OfflineVisible));
+            _observingAccess = true;
+        }
+        if (!OfflineVisible) return;
+        // Vakolat kaliti saqlangan joydan o'qilmaguncha IsEnabled "yo'q" deydi, shuning
+        // uchun holat faqat servis tayyor bo'lgach ko'rsatiladi.
+        await offline.StartAsync();
+        OfflineStatus = offline.IsEnabled ? WarehouseName : Loc.Instance["offline_mode_off"];
     }
 
     [RelayCommand]
     private async Task ChangeWarehouseAsync()
     {
         await warehouseContext.ChangeAsync();
-        Appear();
+        await AppearAsync();
     }
 
     [RelayCommand]
@@ -46,17 +69,23 @@ public partial class ProfileViewModel(MobileAuthService auth, SessionStore sessi
     private Task OpenSecurityAsync() => Shell.Current.GoToAsync("security");
 
     [RelayCommand]
+    private Task OpenSmsGatewayAsync() => Shell.Current.GoToAsync("sms-gateway");
+
+    [RelayCommand]
+    private Task OpenOfflineSettingsAsync() => Shell.Current.GoToAsync("offline-settings");
+
+    [RelayCommand]
     private async Task ChooseThemeAsync()
     {
         string[] keys = ["system", "light", "dark"];
         var names = keys.Select(k => Loc.Instance["theme_" + k]).ToArray();
-        var choice = await Shell.Current.CurrentPage.DisplayActionSheet(
+        var choice = await Shell.Current.CurrentPage.DisplayActionSheetAsync(
             Loc.Instance["theme"], Loc.Instance["cancel"], null, names);
         var index = Array.IndexOf(names, choice);
         if (index < 0) return;
         Preferences.Set("app_theme", keys[index]);
         ApplyTheme();
-        Appear();
+        await AppearAsync();
     }
 
     public static void ApplyTheme() =>
@@ -70,7 +99,7 @@ public partial class ProfileViewModel(MobileAuthService auth, SessionStore sessi
     [RelayCommand]
     private async Task ChooseLanguageAsync()
     {
-        var choice = await Shell.Current.CurrentPage.DisplayActionSheet(
+        var choice = await Shell.Current.CurrentPage.DisplayActionSheetAsync(
             Loc.Instance["language"], Loc.Instance["cancel"], null, LangNames);
         var index = Array.IndexOf(LangNames, choice);
         if (index < 0) return;
@@ -84,12 +113,18 @@ public partial class ProfileViewModel(MobileAuthService auth, SessionStore sessi
     private async Task LogoutAsync()
     {
         var page = Shell.Current.CurrentPage;
-        if (!await page.DisplayAlert(Loc.Instance["logout"], Loc.Instance["logout_confirm"], Loc.Instance["logout"], Loc.Instance["cancel"]))
+        if (!await page.DisplayAlertAsync(Loc.Instance["logout"], Loc.Instance["logout_confirm"], Loc.Instance["logout"], Loc.Instance["cancel"]))
             return;
-        AppLock.Disable();
-        await auth.LogoutAsync();
-        cart.Clear();
-        warehouseContext.Reset();
+        // Chiqish guvohnomani o'chiradi: yuborilmagan qatorlar keyingi kirishgacha HUB'ga
+        // ketolmaydi. Vakolat kaliti o'qilmaguncha sanoq nol chiqadi, shuning uchun avval
+        // xizmat ishga tushiriladi (server almashtirish yo'lidagi qo'riqchi bilan bir xil).
+        await offline.StartAsync();
+        var unsent = await offline.PendingCountAsync() + await offline.ErrorCountAsync();
+        if (unsent > 0 && !await page.DisplayAlertAsync(
+                Loc.Instance["logout"], string.Format(Loc.Instance["logout_pending_fmt"], unsent),
+                Loc.Instance["logout"], Loc.Instance["cancel"]))
+            return;
+        await signOut.RunAsync();
         await Shell.Current.GoToAsync("//login");
     }
 }

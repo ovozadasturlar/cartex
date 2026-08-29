@@ -62,7 +62,7 @@ public partial class DevicesViewModel(ISessionsApi sessionsApi, MobileAuthServic
     private async Task TerminateOthersAsync()
     {
         var page = Shell.Current.CurrentPage;
-        if (!await page.DisplayAlert(Loc.Instance["terminate_all"], Loc.Instance["terminate_all_confirm"],
+        if (!await page.DisplayAlertAsync(Loc.Instance["terminate_all"], Loc.Instance["terminate_all_confirm"],
                 Loc.Instance["terminate_all"], Loc.Instance["cancel"]))
             return;
         foreach (var row in Devices.Where(d => !d.IsCurrent).ToList())
@@ -77,7 +77,7 @@ public partial class DevicesViewModel(ISessionsApi sessionsApi, MobileAuthServic
     private async Task RevokeAsync(DeviceRow row)
     {
         var page = Shell.Current.CurrentPage;
-        if (!await page.DisplayAlert(Loc.Instance["device_revoke"],
+        if (!await page.DisplayAlertAsync(Loc.Instance["device_revoke"],
                 string.Format(Loc.Instance["device_revoke_confirm"], row.Name),
                 Loc.Instance["device_revoke"], Loc.Instance["cancel"]))
             return;

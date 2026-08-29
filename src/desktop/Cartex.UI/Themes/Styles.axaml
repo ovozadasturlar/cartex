@@ -1,7 +1,9 @@
-﻿<Styles xmlns="https://github.com/avaloniaui"
+<Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:mi="using:Material.Icons.Avalonia"
-        xmlns:c="using:Cartex.UI.Controls">
+        xmlns:c="using:Cartex.UI.Controls"
+        xmlns:svc="using:Cartex.UI.Services"
+        xmlns:u="https://irihi.tech/ursa">
 
     <Styles.Resources>
         <ResourceDictionary>
@@ -195,6 +197,15 @@
     <Style Selector=":is(Control).form :is(CalendarDatePicker)">
         <Setter Property="(c:FormBehaviors.EnterMovesNext)" Value="True" />
     </Style>
+    <Style Selector=":is(Control).form :is(DatePicker)">
+        <Setter Property="(c:FormBehaviors.EnterMovesNext)" Value="True" />
+    </Style>
+
+    <!-- Avalonia kalitga "On"/"Off" ni o'zi yozadi; ular til fayllaridan o'tmaydi. -->
+    <Style Selector="ToggleSwitch">
+        <Setter Property="OnContent" Value="{Binding [toggle_on], Source={x:Static svc:LocalizationManager.Instance}}" />
+        <Setter Property="OffContent" Value="{Binding [toggle_off], Source={x:Static svc:LocalizationManager.Instance}}" />
+    </Style>
 
     <Style Selector="NumericUpDown">
         <Setter Property="(c:MoneyInput.Group)" Value="True" />
@@ -203,6 +214,13 @@
 
     <Style Selector="AutoCompleteBox">
         <Setter Property="(c:FormBehaviors.CloseOnSelect)" Value="True" />
+    </Style>
+
+    <Style Selector="u|OverlayDialogHost Button#PART_CloseButton">
+        <Setter Property="IsVisible" Value="False" />
+    </Style>
+    <Style Selector="u|OverlayDialogHost /template/ Button#PART_CloseButton">
+        <Setter Property="IsVisible" Value="False" />
     </Style>
 
 </Styles>

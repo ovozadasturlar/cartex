@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Cartex.Mobile.Agent.Views.CartPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Cartex.Mobile.Agent.ViewModels"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
+    xmlns:data="clr-namespace:Cartex.Mobile.Agent.Data"
+    xmlns:s="clr-namespace:Cartex.Mobile.Agent.Services"
+    xmlns:ctl="clr-namespace:Cartex.Mobile.Core.Controls;assembly=Cartex.Mobile.Core"
+    x:DataType="vm:CartViewModel"
+    Title="{svc:T cart}">
+
+    <Grid>
+    <Grid RowDefinitions="*,Auto" IsVisible="{Binding CanUseCart}">
+
+            <ScrollView>
+                <VerticalStackLayout Padding="16" Spacing="10">
+
+                    <Border Style="{StaticResource Card}" IsVisible="{Binding Cart.IsEmpty}">
+                        <VerticalStackLayout Spacing="10" Padding="8,20">
+                            <Label Text="{StaticResource IcCart}" Style="{StaticResource Icon}" FontSize="34" />
+                            <Label Text="{svc:T cart_empty}" Style="{StaticResource TxTitle}" HorizontalTextAlignment="Center" />
+                            <Button Text="{svc:T to_catalog}" Style="{StaticResource BtnSecondary}" Command="{Binding ContinueCommand}" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Cart.Lines}" Spacing="8">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="s:CartLine">
+                                <Border Style="{StaticResource Card}" Padding="10">
+                                    <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="56,*,Auto" ColumnSpacing="10" RowSpacing="8">
+                                        <ctl:Thumb Source="{Binding ImageUrl}" Size="56" Radius="10" />
+                                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                            <Label Text="{Binding Name}" Style="{StaticResource TxBody}" MaxLines="2" LineBreakMode="TailTruncation" />
+                                            <Label Text="{Binding PriceText}" Style="{StaticResource TxCaption}" />
+                                            <Label Text="{svc:T over_stock}" Style="{StaticResource TxDanger}" IsVisible="{Binding IsOverStock}" />
+                                        </VerticalStackLayout>
+                                        <Label Grid.Column="2" Text="{StaticResource IcClose}" Style="{StaticResource Icon}" FontSize="20"
+                                               VerticalOptions="Start"
+                                               TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}">
+                                            <Label.GestureRecognizers>
+                                                <TapGestureRecognizer Command="{Binding RemoveCommand, Source={RelativeSource AncestorType={x:Type vm:CartViewModel}}}"
+                                                                      CommandParameter="{Binding .}" />
+                                            </Label.GestureRecognizers>
+                                        </Label>
+
+                                        <Grid Grid.Row="1" Grid.ColumnSpan="3" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                                            <ctl:QtyStepper Quantity="{Binding Quantity, Mode=TwoWay}" Unit="{Binding UnitName}" />
+                                            <Border Grid.Column="1" Style="{StaticResource InputWrap}" Padding="10,0" HeightRequest="44"
+                                                    IsVisible="{Binding CanOverridePrice, Source={RelativeSource AncestorType={x:Type vm:CartViewModel}}}">
+                                                <Entry Text="{Binding UnitPrice, Mode=TwoWay}" Keyboard="Numeric"
+                                                       HorizontalTextAlignment="End" VerticalOptions="Center" />
+                                            </Border>
+                                            <Label Grid.Column="2" Text="{Binding LineTotalText}" Style="{StaticResource TxBodyStrong}"
+                                                   VerticalOptions="Center" />
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+
+                    <Border Style="{StaticResource Card}" IsVisible="{Binding Cart.IsEmpty, Converter={StaticResource Invert}}">
+                        <VerticalStackLayout Spacing="12">
+
+                            <Grid ColumnDefinitions="*,Auto">
+                                <VerticalStackLayout Spacing="1">
+                                    <Label Text="{svc:T customer}" Style="{StaticResource TxCaption}" />
+                                    <Label Text="{Binding CustomerLabel}" Style="{StaticResource TxBody}" />
+                                </VerticalStackLayout>
+                                <Button Grid.Column="1" Text="{svc:T change}" Style="{StaticResource BtnGhost}"
+                                        Command="{Binding PickCustomerCommand}" />
+                            </Grid>
+
+                            <BoxView Style="{StaticResource Divider}" />
+
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="{svc:T total}" Style="{StaticResource TxBody}" VerticalOptions="Center" />
+                                <Label Grid.Column="1" Text="{Binding Cart.TotalText}" Style="{StaticResource TxMoney}" />
+                            </Grid>
+
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="{svc:T paid_cash}" Style="{StaticResource TxCaption}" />
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                                    <Border Style="{StaticResource InputWrap}">
+                                        <Entry Text="{Binding PaidText}" Keyboard="Numeric" VerticalOptions="Center" />
+                                    </Border>
+                                    <Button Grid.Column="1" Text="{svc:T full_cash}" Style="{StaticResource BtnGhost}" Command="{Binding FullPaidCommand}" />
+                                    <Button Grid.Column="2" Text="{svc:T full_debt}" Style="{StaticResource BtnGhost}" Command="{Binding FullDebtCommand}" />
+                                </Grid>
+                            </VerticalStackLayout>
+
+                            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasDebt}">
+                                <Label Text="{svc:T debt}" Style="{StaticResource TxBody}" VerticalOptions="Center" />
+                                <Label Grid.Column="1" Text="{Binding DebtText}" Style="{StaticResource TxBodyStrong}"
+                                       TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+                            </Grid>
+
+                            <Label Text="{svc:T credit_warning}" Style="{StaticResource TxWarn}" IsVisible="{Binding CreditExceeded}" />
+                            <Label Text="{Binding Error}" Style="{StaticResource TxDanger}" IsVisible="{Binding Error, Converter={StaticResource NotEmpty}}" />
+
+                            <Button Text="{svc:T clear_cart}" Style="{StaticResource BtnGhost}" Command="{Binding ClearCommand}" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                </VerticalStackLayout>
+            </ScrollView>
+
+            <Border Grid.Row="1" Style="{StaticResource Sheet}" Padding="16,12"
+                    IsVisible="{Binding Cart.IsEmpty, Converter={StaticResource Invert}}">
+                <Button Text="{svc:T checkout}" Style="{StaticResource BtnPrimary}" Command="{Binding CheckoutCommand}" />
+            </Border>
+        </Grid>
+
+        <Grid IsVisible="{Binding IsPickingCustomer}" BackgroundColor="#99000000">
+            <Grid.GestureRecognizers>
+                <TapGestureRecognizer Command="{Binding CancelPickCommand}" />
+            </Grid.GestureRecognizers>
+            <Border Style="{StaticResource Sheet}" VerticalOptions="End" Padding="16" HeightRequest="440">
+                <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10">
+                    <Label Text="{svc:T select_customer}" Style="{StaticResource TxTitle}" />
+                    <Border Grid.Row="1" Style="{StaticResource SearchField}">
+                        <Entry Text="{Binding CustomerSearch}" Placeholder="{svc:T search}" VerticalOptions="Center" />
+                    </Border>
+                    <CollectionView Grid.Row="2" ItemsSource="{Binding CustomerResults}">
+                        <CollectionView.Header>
+                            <Grid Padding="0,4">
+                                <Label Text="{svc:T cash_customer}" Style="{StaticResource TxBody}" Padding="4,12">
+                                    <Label.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding ChooseCustomerCommand, Source={RelativeSource AncestorType={x:Type vm:CartViewModel}}}" />
+                                    </Label.GestureRecognizers>
+                                </Label>
+                            </Grid>
+                        </CollectionView.Header>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="data:LocalCustomer">
+                                <Grid Padding="4,12" ColumnDefinitions="*,Auto">
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding ChooseCustomerCommand, Source={RelativeSource AncestorType={x:Type vm:CartViewModel}}}"
+                                                              CommandParameter="{Binding .}" />
+                                    </Grid.GestureRecognizers>
+                                    <Label Text="{Binding FullName}" Style="{StaticResource TxBody}" />
+                                    <Label Grid.Column="1" Text="{Binding Phone}" Style="{StaticResource TxCaption}" />
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</ContentPage>

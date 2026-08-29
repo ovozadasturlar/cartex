@@ -1,8 +1,8 @@
-using Cartex.Application.Common.Extensions;
+﻿using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
 using Cartex.Persistence;
-using Cartex.Application.Common.Messaging;
+using Cartex.Shared.Models.StockTransfers;
 
 namespace Cartex.Application.StockTransfers.Queries;
 
@@ -13,16 +13,6 @@ public record GetStockTransfersQuery : FilteringRequest, IRequest<IReadOnlyColle
     public long? WarehouseId { get; set; }
     public long? ToWarehouseId { get; set; }
 }
-
-public record StockTransferDto(
-    long Id,
-    string ProductName,
-    decimal Quantity,
-    string FromWarehouse,
-    string ToWarehouse,
-    string Status,
-    DateTime CreatedAt,
-    string UserName);
 
 public sealed class GetStockTransfersQueryHandler(
     IApplicationDbContext db,

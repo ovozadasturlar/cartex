@@ -2,7 +2,8 @@
   @if (loading()) {
     <mat-progress-bar mode="indeterminate" />
   } @else {
-    <div class="layout" [style.grid-template-columns]="'minmax(0, 1fr) ' + cartWidth() + 'px'">
+    <div class="layout" [class.cart-open]="cartOpen()"
+         [style.grid-template-columns]="'minmax(0, 1fr) ' + cartWidth() + 'px'">
       <div class="catalog">
         <div class="toolbar">
           <mat-form-field appearance="outline" subscriptSizing="dynamic" class="scan-field">
@@ -14,7 +15,14 @@
               [placeholder]="t('scan_barcode')"
               (input)="onSearch(scan.value)"
               (keydown.enter)="onScanEnter(scan)" />
+            <cx-scan-indicator matSuffix [state]="scanIndicator.state()" />
           </mat-form-field>
+          @if (cameraScan) {
+            <button matIconButton class="camera-btn" [disabled]="!canCreateCart"
+                    [matTooltip]="t('scan_with_camera')" (click)="openCameraScan()">
+              <mat-icon>photo_camera</mat-icon>
+            </button>
+          }
           @if (shiftRequired()) {
             @if (shift(); as s) {
               <span class="cx-chip ok shift-chip">
@@ -33,6 +41,16 @@
                 </button>
               }
             }
+          }
+          @if (isMulticurrency() && canManageRates) {
+            <button class="view-toggle" (click)="openQuickRates()" [matTooltip]="t('rates')">
+              <mat-icon>currency_exchange</mat-icon>
+            </button>
+          }
+          @if (canCreateProduct) {
+            <button matButton="outlined" class="add-product-btn" (click)="newProduct()">
+              <mat-icon>add</mat-icon>{{ t('add_product') }}
+            </button>
           }
           <button class="view-toggle" (click)="toggleView()" [matTooltip]="t('view_mode')" >
             <mat-icon>{{ viewMode() === 'grid' ? 'view_list' : 'grid_view' }}</mat-icon>
@@ -62,10 +80,11 @@
           @if (viewMode() === 'grid') {
             <div class="tiles">
               @for (p of tiles(); track p.variantId) {
-                <button class="tile" (click)="addTile(p)">
+                <button class="tile" [disabled]="!canCreateCart" (click)="addTile(p)"
+                        (cxLongPress)="showDetail(p)">
                   <div class="thumb">
                     @if (p.imageUrl) {
-                      <img [src]="p.imageUrl + '&thumb=true'" [alt]="p.productName" (error)="p.imageUrl = null" />
+                      <img [src]="p.imageUrl + '&amp;thumb=true'" [alt]="p.productName" (error)="p.imageUrl = null" />
                     } @else {
                       <mat-icon>inventory_2</mat-icon>
                     }
@@ -89,10 +108,11 @@
           } @else {
             <div class="rows">
               @for (p of tiles(); track p.variantId) {
-                <button class="prow" (click)="addTile(p)">
+                <button class="prow" [disabled]="!canCreateCart" (click)="addTile(p)"
+                        (cxLongPress)="showDetail(p)">
                   <div class="thumb">
                     @if (p.imageUrl) {
-                      <img [src]="p.imageUrl + '&thumb=true'" [alt]="p.productName" (error)="p.imageUrl = null" />
+                      <img [src]="p.imageUrl + '&amp;thumb=true'" [alt]="p.productName" (error)="p.imageUrl = null" />
                     } @else {
                       <mat-icon>inventory_2</mat-icon>
                     }
@@ -126,10 +146,12 @@
         </div>
         <div class="cart-head">
           <h2>{{ t('cart') }}</h2>
-          @if (queue().length) {
+          @if (canCreateCart && queueAllowed()) {
             <button class="queue-btn" [matTooltip]="t('queue')" [matMenuTriggerFor]="queueMenu">
               <mat-icon>menu</mat-icon>
-              <span class="badge">{{ queue().length }}</span>
+              @if (queue().length) {
+                <span class="badge">{{ queue().length }}</span>
+              }
             </button>
             <mat-menu #queueMenu="matMenu" class="queue-menu">
               @for (q of queue(); track q.aggregateCode) {
@@ -151,19 +173,49 @@
               }
             </mat-menu>
           }
-          @if (state.held().length) {
-            <button class="held-btn" [matTooltip]="t('held_sales')" [matMenuTriggerFor]="heldMenu">
-              <mat-icon>pause_circle</mat-icon>
-              {{ state.held().length }}
+          @if (canPrepack()) {
+            <button class="queue-btn" [matTooltip]="t('prepack_title')" (click)="openPrepack()">
+              <mat-icon>balance</mat-icon>
             </button>
-            <mat-menu #heldMenu="matMenu">
-              @for (h of state.held(); track h.heldAt; let i = $index) {
-                <button mat-menu-item (click)="resumeHeld(i)">
-                  <mat-icon>play_arrow</mat-icon>
-                  <span>{{ h.customer?.fullName || t('cash_customer') }} · {{ h.total | cxMoney }}</span>
-                </button>
-              }
-            </mat-menu>
+          }
+          <button class="held-btn" [matTooltip]="t('held_sales')" [matMenuTriggerFor]="heldMenu"
+                  [disabled]="!state.held().length">
+            <mat-icon>pause_circle</mat-icon>
+            {{ state.held().length }}
+          </button>
+          <mat-menu #heldMenu="matMenu">
+            @for (h of state.held(); track h.heldAt; let i = $index) {
+              <button mat-menu-item (click)="resumeHeld(i)">
+                <mat-icon>play_arrow</mat-icon>
+                <span>{{ h.customer?.fullName || t('cash_customer') }} · {{ h.total | cxMoney }}</span>
+              </button>
+            }
+          </mat-menu>
+
+          <button class="queue-btn note-btn" [matTooltip]="t('note')" [matMenuTriggerFor]="noteMenu">
+            <mat-icon>info_outline</mat-icon>
+            @if (note().trim()) {
+              <span class="dot"></span>
+            }
+          </button>
+          <mat-menu #noteMenu="matMenu" class="note-menu">
+            <div class="note-pad" (click)="$event.stopPropagation()">
+              <textarea rows="4" [ngModel]="note()" (ngModelChange)="note.set($event)"
+                        [placeholder]="t('note')"></textarea>
+            </div>
+          </mat-menu>
+
+          @if (canCreateCart && queueAllowed()) {
+            <button class="queue-btn" [matTooltip]="t('send_to_queue')" [disabled]="!cart().length || paying()"
+                    (click)="sendToQueue()">
+              <mat-icon>outbox</mat-icon>
+            </button>
+          }
+          @if (canCreateCart && proformaAllowed()) {
+            <button class="queue-btn" [matTooltip]="t('print_kind_preview')" [disabled]="!cart().length || paying()"
+                    (click)="printPreview()">
+              <mat-icon>print</mat-icon>
+            </button>
           }
           <button class="clear-btn" [disabled]="!cart().length" (click)="clearCart()">
             <mat-icon>delete_outline</mat-icon>
@@ -184,9 +236,9 @@
                   } @else {
                     <span class="cbonus cx-money">{{ c.cashbackBalance | cxMoney }} 🎁</span>
                   }
-                  @if (c.creditLimit > 0) {
+                  @if ((c.creditLimit ?? 0) > 0) {
                     <span class="cdebt cx-money">{{ c.debtBalance | cxMoney }}</span>
-                    <span class="climit cx-money">{{ t('credit_remaining') }} {{ c.creditLimit - c.debtBalance | cxMoney }}</span>
+                    <span class="climit cx-money">{{ t('credit_remaining') }} {{ (c.creditLimit ?? 0) - c.debtBalance | cxMoney }}</span>
                   }
                 </span>
               </div>
@@ -203,7 +255,7 @@
 
         <div class="lines">
           @for (line of cart(); track line.variantId) {
-            <div class="line" [class.over]="isOver(line)">
+            <div class="line" [class.over]="isOver(line)" (cxLongPress)="showCartDetail(line)">
               <div class="info">
                 <span class="name">{{ line.name }}</span>
                 @if (canOverridePrice) {
@@ -220,7 +272,13 @@
                 <button (click)="changeQty(line, 1)"><mat-icon>add</mat-icon></button>
               </div>
               <div class="line-end">
-                <span class="sum cx-money">{{ line.price * line.qty | cxMoney }}</span>
+                @if (line.allowsAmountEntry) {
+                  <input class="sum-edit" type="text" inputmode="numeric" cxMoneyInput
+                         [ngModel]="line.price * line.qty" (ngModelChange)="onLineAmount(line, $event)"
+                         [matTooltip]="t('amount_entry_sale_hint')" />
+                } @else {
+                  <span class="sum cx-money">{{ line.price * line.qty | cxMoney }}</span>
+                }
                 <button class="del" (click)="remove(line)"><mat-icon>close</mat-icon></button>
               </div>
             </div>
@@ -235,6 +293,7 @@
             <span class="cx-money">{{ subTotal() | cxMoney }}</span>
           </div>
 
+          @if (paymentPanelOpen()) {
           <div class="discount-row">
             <span>{{ t('discount') }}</span>
             <div class="dinputs">
@@ -246,8 +305,17 @@
                 <input type="text" inputmode="numeric" cxMoneyInput [ngModel]="discount()" (ngModelChange)="onDiscountAmount($event)" />
                 <span class="suffix">{{ t('currency_sum') }}</span>
               </div>
+              <button class="fill-shortfall" type="button" (click)="fillDiscountFromTender()"
+                      [disabled]="!hasShortfall()" [matTooltip]="t('discount_fill_shortfall')">=</button>
             </div>
           </div>
+
+          @if (hasAutoDiscount()) {
+            <div class="row">
+              <span>{{ t('loyalty_discount') }}</span>
+              <span class="cx-money auto-discount">-{{ autoDiscount() | cxMoney }}</span>
+            </div>
+          }
 
           <div class="sep"></div>
 
@@ -256,28 +324,80 @@
             <span class="cx-money">{{ total() | cxMoney }}</span>
           </div>
 
-          <div class="pay-grid">
-            <button class="exact" [matTooltip]="t('shortcut_pay_exact')" (click)="payExact()">
-              <mat-icon>functions</mat-icon>
-            </button>
-            <label>
-              <span>{{ t('cash') }}</span>
-              <input type="text" inputmode="numeric" cxMoneyInput [(ngModel)]="cash" />
-            </label>
-            <label>
-              <span>{{ t('card') }}</span>
-              <input type="text" inputmode="numeric" cxMoneyInput [(ngModel)]="card" />
-            </label>
-            <label>
-              <span>{{ t('bonus') }}</span>
-              <input type="text" inputmode="numeric" cxMoneyInput [ngModel]="bonus()" (ngModelChange)="onBonusManual($event)" />
-            </label>
-          </div>
+          @if (canCheckout && !isMulticurrency()) {
+            <div class="pay-grid">
+              <button class="exact" [matTooltip]="t('shortcut_pay_exact')" (click)="payExact()">
+                <mat-icon>functions</mat-icon>
+              </button>
+              <label>
+                <span>{{ t('cash') }}</span>
+                <input type="text" inputmode="numeric" cxMoneyInput [(ngModel)]="cash" />
+              </label>
+              <label>
+                <span>{{ t('card') }}</span>
+                <input type="text" inputmode="numeric" cxMoneyInput [(ngModel)]="card" />
+              </label>
+              <label>
+                <span>{{ t('bonus') }}</span>
+                <input type="text" inputmode="numeric" cxMoneyInput [ngModel]="bonus()" (ngModelChange)="onBonusManual($event)" />
+              </label>
+            </div>
+          }
 
-          @if (change() > 0 || debt() > 0) {
+          @if (canCheckout && isMulticurrency()) {
+            <div class="pay-rows">
+              @for (row of paymentRows(); track $index) {
+                <div class="pay-row">
+                  <select [ngModel]="row.method" (ngModelChange)="updatePayment($index, { method: $event })">
+                    @for (m of payMethods; track m) {
+                      <option [value]="m">{{ t(m === 'transfer' ? 'pay_transfer' : m === 'bank' ? 'pay_bank' : m) }}</option>
+                    }
+                  </select>
+                  <select [ngModel]="row.currency" (ngModelChange)="updatePayment($index, { currency: $event })">
+                    @for (c of currencies(); track c.code) {
+                      <option [value]="c.code">{{ c.code }}</option>
+                    }
+                  </select>
+                  <div class="amt">
+                    <input type="text" inputmode="numeric" cxMoneyInput
+                           [ngModel]="row.amount" (ngModelChange)="updatePayment($index, { amount: $event })" />
+                    @if (row.currency !== baseCurrency()) {
+                      <span class="base cx-money">≈ {{ toBase(row.amount, row.currency) | cxMoney }}</span>
+                    }
+                  </div>
+                  <button class="rm" type="button" (click)="removePayment($index)"><mat-icon>close</mat-icon></button>
+                </div>
+              }
+              <div class="pay-actions">
+                <button class="exact" [matTooltip]="t('shortcut_pay_exact')" (click)="payExact()">
+                  <mat-icon>functions</mat-icon>
+                </button>
+                <button class="add" type="button" (click)="addPayment()">
+                  <mat-icon>add</mat-icon><span>{{ t('add_payment') }}</span>
+                </button>
+              </div>
+              @if (hasRateGap()) {
+                <div class="rate-warn">{{ t('stale_rate_warning') }}</div>
+              }
+            </div>
+          }
+
+          @if (canCheckout && (change() > 0 || debt() > 0)) {
             <div class="due">
               @if (change() > 0) {
-                <span class="chg cx-money">{{ change() | cxMoney }}</span>
+                <button
+                  type="button"
+                  class="chg cx-money"
+                  [class.credit]="excessToCredit()"
+                  [disabled]="!canCreditExcess()"
+                  [matTooltip]="canCreditExcess() ? t('excess_toggle_hint') : ''"
+                  (click)="toggleExcessTarget()">
+                  @if (canCreditExcess()) {
+                    <mat-icon>swap_vert</mat-icon>
+                  }
+                  <span class="what">{{ excessToCredit() ? t('pos_to_account') : t('change') }}</span>
+                  {{ change() | cxMoney }}
+                </button>
               }
               @if (debt() > 0) {
                 <span class="dbt cx-money">{{ debt() | cxMoney }}</span>
@@ -285,30 +405,47 @@
             </div>
           }
 
-          @if (debt() > 0) {
+          @if (canCheckout && debt() > 0) {
             <label class="due-date">
               <span>{{ t('debt_due_date') }}</span>
               <input type="date" [min]="minDueDate" [value]="dueDate()" [class.missing]="dueDateMissing()" (change)="onDueDate($event)" />
             </label>
           }
-          @if (overCreditLimit()) {
+          @if (canCheckout && overCreditLimit()) {
             <div class="warn-box">
               <mat-icon>warning_amber</mat-icon>
               <span>{{ t('credit_limit_exceeded') }}</span>
             </div>
           }
+          }
 
           <div class="pay-row">
+          <button matButton="outlined" class="hold-btn" [matTooltip]="t('payment_details')"
+                  (click)="paymentPanelOpen.set(!paymentPanelOpen())">
+            <mat-icon>{{ paymentPanelOpen() ? 'expand_more' : 'expand_less' }}</mat-icon>
+          </button>
           <button matButton="outlined" class="hold-btn" [disabled]="!cart().length || paying()"
                   [matTooltip]="t('hold_sale')" (click)="holdSale()">
             <mat-icon>pause</mat-icon>
           </button>
-          <button matButton="filled" class="pay-btn" [disabled]="paying()" (click)="pay()">
-            {{ t('complete_sale') }}
-          </button>
+          @if (canCheckout) {
+            <button matButton="filled" class="pay-btn" [disabled]="!cart().length || paying()" (click)="pay()">
+              {{ t('complete_sale') }}
+            </button>
+          }
           </div>
         </div>
       </div>
+      @if (stacked()) {
+        <button type="button" class="cart-switch" (click)="cartOpen.set(!cartOpen())">
+          <mat-icon>{{ cartOpen() ? 'grid_view' : 'shopping_cart' }}</mat-icon>
+          <span class="label">{{ cartOpen() ? t('catalog') : t('cart') }}</span>
+          @if (cart().length) {
+            <span class="count">{{ cart().length }}</span>
+            <span class="sum cx-money">{{ total() | cxMoney }}</span>
+          }
+        </button>
+      }
     </div>
   }
 </div>

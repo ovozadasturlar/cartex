@@ -3,11 +3,16 @@ import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { from, switchMap, catchError, throwError } from 'rxjs';
 import { AuthService } from './auth.service';
+import { asciiHeader, webDeviceId, webDeviceName } from './device-identity';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   if (!req.url.startsWith('/api')) return next(req);
 
-  req = req.clone({ setHeaders: { 'X-Client': 'web' } });
+  req = req.clone({ setHeaders: {
+    'X-Client': 'web',
+    'X-Device-Id': webDeviceId(),
+    'X-Device-Name': asciiHeader(webDeviceName()),
+  } });
   const anonymous = ['/api/auth/login', '/api/auth/refresh', '/api/auth/logout', '/api/auth/qr/'];
   if (anonymous.some((p) => req.url.startsWith(p))) return next(req);
 
@@ -18,10 +23,10 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     switchMap((token) =>
       next(token ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } }) : req),
     ),
-    catchError((error) => {
+    catchError((error: unknown) => {
       if (error instanceof HttpErrorResponse && error.status === 401) {
         auth.logout();
-        router.navigate(['/login']);
+        void router.navigate(['/login']);
       }
       return throwError(() => error);
     }),

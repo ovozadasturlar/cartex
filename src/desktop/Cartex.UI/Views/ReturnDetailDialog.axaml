@@ -1,0 +1,107 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mi="using:Material.Icons.Avalonia"
+             xmlns:svc="using:Cartex.UI.Services"
+             xmlns:conv="using:Cartex.UI.Converters"
+             xmlns:vm="using:Cartex.UI.ViewModels"
+             x:Class="Cartex.UI.Views.ReturnDetailDialog"
+             x:DataType="vm:ReturnDetailViewModel"
+             x:CompileBindings="True">
+    <Border Background="{DynamicResource CardBg}" CornerRadius="16" Width="780" MinHeight="560" MaxHeight="700"
+            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True"
+            HorizontalAlignment="Center" VerticalAlignment="Center" BoxShadow="0 24 80 0 #44000000">
+        <DockPanel Margin="20">
+            <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,14">
+                <StackPanel Spacing="2">
+                    <TextBlock Text="{Binding Document.DocumentNumber}" Classes="h2" />
+                    <TextBlock Text="{Binding Document.CreatedAt, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
+                               Foreground="{DynamicResource TextMuted}" FontSize="12" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <Button Classes="outline" Command="{Binding PrintCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <mi:MaterialIcon Kind="Printer" Width="17" Height="17" />
+                            <TextBlock Text="{Binding L[print]}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="icon" Command="{Binding CloseDialogCommand}">
+                        <mi:MaterialIcon Kind="Close" Width="18" Height="18" />
+                    </Button>
+                </StackPanel>
+            </Grid>
+
+            <Grid DockPanel.Dock="Top" ColumnDefinitions="*,*,*,*" ColumnSpacing="12" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="{Binding L[customer]}" FontSize="12" Foreground="{DynamicResource TextSecondary}" />
+                    <TextBlock Text="{Binding Document.CustomerName}" FontWeight="SemiBold" IsVisible="{Binding HasCustomer}" />
+                    <TextBlock Text="—" Foreground="{DynamicResource TextMuted}" IsVisible="{Binding !HasCustomer}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1">
+                    <TextBlock Text="{Binding L[warehouse]}" FontSize="12" Foreground="{DynamicResource TextSecondary}" />
+                    <TextBlock Text="{Binding Document.WarehouseName}" FontWeight="SemiBold" />
+                </StackPanel>
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="{Binding L[user]}" FontSize="12" Foreground="{DynamicResource TextSecondary}" />
+                    <TextBlock Text="{Binding Document.UserName}" FontWeight="SemiBold" />
+                </StackPanel>
+                <StackPanel Grid.Column="3">
+                    <TextBlock Text="{Binding L[total]}" FontSize="12" Foreground="{DynamicResource TextSecondary}" />
+                    <TextBlock Text="{Binding Document.RefundAmount, StringFormat='{}{0:N0}'}" FontWeight="Bold"
+                               Foreground="{DynamicResource BrandPrimaryBrush}" />
+                </StackPanel>
+            </Grid>
+
+            <Grid DockPanel.Dock="Bottom" ColumnDefinitions="110,*" Margin="0,12,0,0" IsVisible="{Binding HasNote}">
+                <TextBlock Text="{Binding L[note]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+                <TextBlock Grid.Column="1" Text="{Binding Document.Note}" TextWrapping="Wrap" FontSize="12.5" />
+            </Grid>
+
+            <Border DockPanel.Dock="Bottom" Background="{DynamicResource AppBg}" CornerRadius="10" Padding="10" Margin="0,12,0,0"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                <StackPanel>
+                    <TextBlock Text="{Binding L[ret_settlement]}" FontWeight="SemiBold" Margin="0,0,0,6" />
+                    <ScrollViewer MaxHeight="110" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding Document.Settlements}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10" Margin="0,2">
+                                    <TextBlock Text="{Binding Method, Converter={x:Static conv:EnumLocalizationConverter.Instance}, ConverterParameter=settlement}" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Currency}" Foreground="{DynamicResource TextMuted}" />
+                                    <TextBlock Grid.Column="2" Text="{Binding AmountBase, StringFormat='{}{0:N0}'}" FontWeight="SemiBold" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    </ScrollViewer>
+                </StackPanel>
+            </Border>
+
+            <Border Background="{DynamicResource AppBg}" CornerRadius="10" ClipToBounds="True"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                <DataGrid ItemsSource="{Binding Document.Lines}" AutoGenerateColumns="False" IsReadOnly="True"
+                          MinHeight="160" GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Width="*" Binding="{Binding ProductName}"
+                                            Header="{Binding [product], Source={x:Static svc:LocalizationManager.Instance}}" />
+                        <DataGridTextColumn Width="Auto" Binding="{Binding Quantity, StringFormat='{}{0:0.###}'}"
+                                            Header="{Binding [qty], Source={x:Static svc:LocalizationManager.Instance}}" />
+                        <DataGridTextColumn Width="Auto" Binding="{Binding UnitName}"
+                                            Header="{Binding [unit], Source={x:Static svc:LocalizationManager.Instance}}" />
+                        <DataGridTextColumn Width="Auto" Binding="{Binding UnitPrice, StringFormat='{}{0:N0}'}"
+                                            Header="{Binding [price], Source={x:Static svc:LocalizationManager.Instance}}" />
+                        <DataGridTextColumn Width="Auto" Binding="{Binding LineAmount, StringFormat='{}{0:N0}'}"
+                                            Header="{Binding [total], Source={x:Static svc:LocalizationManager.Instance}}" />
+                        <DataGridTextColumn Width="Auto"
+                                            Binding="{Binding Condition, Converter={x:Static conv:EnumLocalizationConverter.Instance}, ConverterParameter=condition}"
+                                            Header="{Binding [ret_condition], Source={x:Static svc:LocalizationManager.Instance}}" />
+                        <DataGridTextColumn Width="Auto"
+                                            Binding="{Binding Disposition, Converter={x:Static conv:EnumLocalizationConverter.Instance}, ConverterParameter=disposition}"
+                                            Header="{Binding [ret_disposition], Source={x:Static svc:LocalizationManager.Instance}}" />
+                        <DataGridTextColumn Width="*" Binding="{Binding Reason}"
+                                            Header="{Binding [reason], Source={x:Static svc:LocalizationManager.Instance}}" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+        </DockPanel>
+    </Border>
+</UserControl>

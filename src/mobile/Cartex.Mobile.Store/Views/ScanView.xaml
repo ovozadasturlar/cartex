@@ -1,0 +1,402 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView
+    x:Class="Cartex.Mobile.Store.Views.ScanView"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:scanner="clr-namespace:BarcodeScanning;assembly=BarcodeScanning.Native.Maui"
+    xmlns:vm="clr-namespace:Cartex.Mobile.Store.ViewModels"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
+    xmlns:ctl="clr-namespace:Cartex.Mobile.Core.Controls;assembly=Cartex.Mobile.Core"
+    xmlns:local="clr-namespace:Cartex.Mobile.Store.Controls"
+    x:DataType="vm:ScanViewModel">
+    <Grid>
+        <scanner:CameraView
+            x:Name="Reader"
+            BarcodeSymbologies="Ean13,Ean8,Upca,Upce,Code128,Code39,Itf,QRCode,DataMatrix"
+            AimMode="True"
+            TapToFocusEnabled="True"
+            PauseScanning="{Binding IsDetecting, Converter={StaticResource Invert}}"
+            TorchOn="{Binding TorchOn}"
+            OnDetectionFinished="OnDetectionFinished" />
+
+        <Border VerticalOptions="Center" HorizontalOptions="Center"
+                WidthRequest="260" HeightRequest="160"
+                StrokeThickness="3" StrokeShape="RoundRectangle 20"
+                Stroke="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
+                BackgroundColor="Transparent" />
+
+        <!-- Chiroq: qorong'i javonda shtrixkod o'qilmaydi. Tugma ramka bilan izoh o'rtasida,
+             pastda turadi — telefonni bir qo'lda ushlab turib bosh barmoq yetadigan joyda.
+             Yoqilganda sariq bo'ladi, ya'ni chiroq yonib qolgani ekranda ko'rinib turadi. -->
+        <Button FontFamily="MDI" FontSize="26" Padding="0"
+                WidthRequest="62" HeightRequest="62" CornerRadius="31"
+                VerticalOptions="End" HorizontalOptions="Center" Margin="0,0,0,176"
+                Command="{Binding ToggleTorchCommand}">
+            <Button.Triggers>
+                <DataTrigger TargetType="Button" Binding="{Binding TorchOn}" Value="True">
+                    <Setter Property="Text" Value="{StaticResource IcFlashlight}" />
+                    <Setter Property="BackgroundColor" Value="#FBBF24" />
+                    <Setter Property="TextColor" Value="#111827" />
+                </DataTrigger>
+                <DataTrigger TargetType="Button" Binding="{Binding TorchOn}" Value="False">
+                    <Setter Property="Text" Value="{StaticResource IcFlashlightOff}" />
+                </DataTrigger>
+            </Button.Triggers>
+        </Button>
+
+        <!-- Yuqorida amal tugmalari, ostida qidiruv maydoni: maydon o'z natijalariga tutash
+             turadi, ilgari esa lupani bosib, keyin izlash kerak edi — ikki qadam.
+             Maydon kamera ustida suzadi, shuning uchun u sahifa kartasi emas, pastdagi holat
+             yozuvi bilan bir xil yarim shaffof qoplama — aks holda tasvir o'rtasida yopishmagan
+             plita bo'lib ko'rinadi. -->
+        <Grid VerticalOptions="Start" Margin="12,12,12,0" RowDefinitions="Auto,Auto" RowSpacing="10">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <Button FontFamily="MDI" Text="{StaticResource IcPlus}" FontSize="22" Padding="0"
+                        WidthRequest="52" HeightRequest="52" CornerRadius="26"
+                        Command="{Binding CreateProductFromSearchCommand}"
+                        IsVisible="{Binding CanEditProduct}" />
+                <HorizontalStackLayout Grid.Column="2" Spacing="8">
+                    <Grid IsVisible="{Binding CanReceiveStock}">
+                        <Button FontFamily="MDI" Text="{StaticResource IcTruck}" FontSize="22" Padding="0"
+                                WidthRequest="52" HeightRequest="52" CornerRadius="26"
+                                Command="{Binding OpenSupplyCartCommand}" />
+                        <Border VerticalOptions="Start" HorizontalOptions="End" Margin="0,-4,-4,0"
+                                Padding="6,1" StrokeThickness="0" StrokeShape="RoundRectangle 10"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}"
+                                InputTransparent="True"
+                                IsVisible="{Binding SupplyCartCount, Converter={StaticResource Positive}}">
+                            <Label Text="{Binding SupplyCartCount}" FontSize="11" FontAttributes="Bold"
+                                   TextColor="White" />
+                        </Border>
+                    </Grid>
+                    <Grid IsVisible="{Binding CanUseCart}">
+                        <Button FontFamily="MDI" Text="{StaticResource IcCart}" FontSize="22" Padding="0"
+                                WidthRequest="52" HeightRequest="52" CornerRadius="26"
+                                Command="{Binding OpenCartCommand}" />
+                        <Border VerticalOptions="Start" HorizontalOptions="End" Margin="0,-4,-4,0"
+                                Padding="6,1" StrokeThickness="0" StrokeShape="RoundRectangle 10"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}"
+                                InputTransparent="True"
+                                IsVisible="{Binding CartCount, Converter={StaticResource Positive}}">
+                            <Label Text="{Binding CartCount}" FontSize="11" FontAttributes="Bold"
+                                   TextColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource DangerBgDark}}" />
+                        </Border>
+                    </Grid>
+                </HorizontalStackLayout>
+            </Grid>
+
+            <Border Grid.Row="1" HeightRequest="48" Padding="12,0"
+                    StrokeThickness="0" StrokeShape="RoundRectangle 14"
+                    BackgroundColor="#B3000000"
+                    IsVisible="{Binding CanSearchProducts}">
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                    <Label FontFamily="MDI" Text="{StaticResource IcMagnify}" FontSize="18"
+                           VerticalOptions="Center" TextColor="#D7DEDA" />
+                    <Entry x:Name="SearchBox" Grid.Column="1" Placeholder="{svc:T search_product}"
+                           Text="{Binding SearchText}" ReturnType="Search"
+                           TextColor="White" PlaceholderColor="#9FA8A3"
+                           Completed="OnSearchCompleted" Focused="OnSearchFocused" Unfocused="OnSearchUnfocused" />
+                    <Button Grid.Column="2" FontFamily="MDI" Text="{StaticResource IcClose}" FontSize="18"
+                            Padding="0" WidthRequest="32" HeightRequest="32" CornerRadius="16"
+                            BackgroundColor="Transparent" TextColor="#D7DEDA"
+                            Command="{Binding CloseSearchCommand}"
+                            IsVisible="{Binding SearchOpen}" />
+                </Grid>
+            </Border>
+        </Grid>
+
+        <Border VerticalOptions="End" Margin="24,0,24,112" Padding="14,10"
+                StrokeThickness="0" StrokeShape="RoundRectangle 12"
+                BackgroundColor="#B3000000"
+                IsVisible="{Binding OverlayVisible, Converter={StaticResource Invert}}">
+            <Label Text="{Binding Status}"
+                   TextColor="White" FontSize="14" HorizontalTextAlignment="Center" />
+        </Border>
+
+        <Border VerticalOptions="Start" HorizontalOptions="Center" Margin="0,14,0,0" Padding="0"
+                WidthRequest="40" HeightRequest="40"
+                StrokeThickness="0" StrokeShape="RoundRectangle 20"
+                BackgroundColor="#B3000000" InputTransparent="True"
+                IsVisible="{Binding ScanIndicator.IsVisible}">
+            <Grid>
+                <ActivityIndicator WidthRequest="20" HeightRequest="20" Color="White"
+                                   HorizontalOptions="Center" VerticalOptions="Center"
+                                   IsRunning="{Binding ScanIndicator.IsBusy}"
+                                   IsVisible="{Binding ScanIndicator.IsBusy}" />
+                <Label FontFamily="MDI" Text="{StaticResource IcCheckPlain}" FontSize="22"
+                       HorizontalOptions="Center" VerticalOptions="Center"
+                       TextColor="{StaticResource SuccessDark}"
+                       IsVisible="{Binding ScanIndicator.IsFound}" />
+                <Label FontFamily="MDI" Text="{StaticResource IcClose}" FontSize="22"
+                       HorizontalOptions="Center" VerticalOptions="Center"
+                       TextColor="#9FA8A3"
+                       IsVisible="{Binding ScanIndicator.IsMissing}" />
+            </Grid>
+        </Border>
+
+        <!-- Natijalar qidiruv maydonining bevosita ostidan ochiladi. Yuqori chekinish sarlavha
+             balandligiga teng: 12 tepa + 52 tugma + 10 oraliq + 48 maydon + 12 oraliq. Pastda esa
+             tab paneli (29 + 62) turadi — natijalarning oxirgi qatori uning ostida qolib ketmasin. -->
+        <Border Style="{StaticResource Card}" Margin="12,134,12,104"
+                IsVisible="{Binding SearchOpen}">
+            <Grid RowDefinitions="Auto,*" RowSpacing="10">
+                <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never"
+                            IsVisible="{Binding SearchCategories.Count, Converter={StaticResource Positive}}">
+                    <HorizontalStackLayout BindableLayout.ItemsSource="{Binding SearchCategories}" Spacing="8">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SearchCategory">
+                                <Button Text="{Binding Name}" Style="{StaticResource BtnOutline}"
+                                        Padding="14,6" HeightRequest="36" MinimumHeightRequest="36" FontSize="13"
+                                        Command="{Binding SelectSearchCategoryCommand, Source={RelativeSource AncestorType={x:Type vm:ScanViewModel}}}"
+                                        CommandParameter="{Binding .}">
+                                    <Button.Triggers>
+                                        <DataTrigger TargetType="Button" Binding="{Binding IsSelected}" Value="True">
+                                            <Setter Property="BackgroundColor"
+                                                    Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                                            <Setter Property="TextColor" Value="White" />
+                                        </DataTrigger>
+                                    </Button.Triggers>
+                                </Button>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </HorizontalStackLayout>
+                </ScrollView>
+                <CollectionView Grid.Row="1" ItemsSource="{Binding SearchResults}"
+                                RemainingItemsThreshold="5"
+                                RemainingItemsThresholdReachedCommand="{Binding LoadMoreResultsCommand}"
+                                IsVisible="{Binding IsSearching, Converter={StaticResource Invert}}">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="vm:SearchRow">
+                            <Grid Padding="4,10" ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto"
+                                  BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}">
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding PickResultCommand, Source={RelativeSource AncestorType={x:Type vm:ScanViewModel}}}"
+                                                          CommandParameter="{Binding .}" />
+                                </Grid.GestureRecognizers>
+                                <ctl:Thumb Grid.RowSpan="2" Source="{Binding ImageUrl}" Size="36" Radius="4"
+                                           Margin="0,0,10,0" IsVisible="{Binding ImageUrl, Converter={StaticResource NotEmpty}}" />
+                                <Label Grid.Column="1" Text="{Binding Name}" FontAttributes="Bold"
+                                       LineBreakMode="TailTruncation"
+                                       TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                <Label Grid.Column="2" Text="{Binding PriceText}" FontAttributes="Bold"
+                                       TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                                <Label Grid.Row="1" Grid.Column="1" Text="{Binding StockText}"
+                                       Style="{StaticResource MutedLabel}" FontSize="12" />
+                            </Grid>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                    <CollectionView.Footer>
+                        <ActivityIndicator Margin="0,12" IsRunning="{Binding IsLoadingMoreResults}"
+                                           IsVisible="{Binding IsLoadingMoreResults}"
+                                           HorizontalOptions="Center" />
+                    </CollectionView.Footer>
+                </CollectionView>
+                <ActivityIndicator Grid.Row="1" Margin="0,24" IsRunning="{Binding IsSearching}" IsVisible="{Binding IsSearching}"
+                                   VerticalOptions="Center" HorizontalOptions="Center" />
+            </Grid>
+        </Border>
+
+        <Border Style="{StaticResource Card}" Padding="0" VerticalOptions="End" Margin="12,0,12,104"
+                IsVisible="{Binding OverlayVisible}">
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto">
+
+                <Grid Grid.Row="0" HeightRequest="178" BackgroundColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource SurfaceDark}}">
+                    <ctl:Thumb Source="{Binding ImageUrl}" Size="200" Stretch="True" Radius="0"
+                               IsVisible="{Binding IsBarcodeMode, Converter={StaticResource Invert}}" />
+                    <Grid Padding="18,10" IsVisible="{Binding IsBarcodeMode}">
+                        <Border BackgroundColor="White" Stroke="#D8DEE8" StrokeThickness="1"
+                                WidthRequest="200" HeightRequest="150" HorizontalOptions="Center"
+                                StrokeShape="RoundRectangle 10" Padding="0">
+                            <local:BarcodePreviewView Code="{Binding SelectedBarcode.Code}"
+                                                      ProductName="{Binding ProductName}"
+                                                      PriceText="{Binding BarcodePreviewPrice}"
+                                                      Sku="{Binding BarcodePreviewSku}"
+                                                      NameLines="{Binding BarcodePreviewNameLines}" />
+                        </Border>
+                    </Grid>
+
+                    <VerticalStackLayout x:Name="ProductActionMenu" Spacing="8"
+                                         VerticalOptions="Start" HorizontalOptions="End" Margin="0,58,10,0"
+                                         IsVisible="False" Opacity="0" TranslationY="-12">
+                        <Button FontFamily="MDI" Text="{StaticResource IcPencil}" FontSize="18" Padding="0"
+                                WidthRequest="40" HeightRequest="40" CornerRadius="20"
+                                BackgroundColor="#CC000000" TextColor="White"
+                                Command="{Binding EditProductCommand}"
+                                IsVisible="{Binding CanEditProduct}" />
+                        <Button FontFamily="MDI" Text="{StaticResource IcBarcode}" FontSize="18" Padding="0"
+                                WidthRequest="40" HeightRequest="40" CornerRadius="20"
+                                BackgroundColor="#CC000000" TextColor="White"
+                                Command="{Binding OpenBarcodePrintCommand}"
+                                Clicked="OnBarcodeActionClicked"
+                                IsVisible="{Binding CanPrintBarcode}" />
+                    </VerticalStackLayout>
+                    <Button x:Name="ProductActionToggle" FontFamily="MDI" Text="{StaticResource IcDotsVertical}" FontSize="18" Padding="0"
+                            WidthRequest="40" HeightRequest="40" CornerRadius="20"
+                            VerticalOptions="Start" HorizontalOptions="End" Margin="0,10,10,0"
+                            BackgroundColor="#CC000000" TextColor="White"
+                            Clicked="OnProductActionToggleClicked"
+                            IsVisible="{Binding HasProductActions}">
+                        <Button.Triggers>
+                            <DataTrigger TargetType="Button" Binding="{Binding ProductActionsExpanded}" Value="True">
+                                <Setter Property="Text" Value="{StaticResource IcChevronUp}" />
+                            </DataTrigger>
+                            <DataTrigger TargetType="Button" Binding="{Binding IsBarcodeMode}" Value="True">
+                                <Setter Property="IsVisible" Value="False" />
+                            </DataTrigger>
+                        </Button.Triggers>
+                    </Button>
+                    <Button FontFamily="MDI" Text="{StaticResource IcClose}" FontSize="18" Padding="0"
+                            WidthRequest="40" HeightRequest="40" CornerRadius="20"
+                            VerticalOptions="Start" HorizontalOptions="Start" Margin="10,10,0,0"
+                            BackgroundColor="#CC000000" TextColor="White"
+                            Command="{Binding CloseOverlayCommand}"
+                            IsVisible="{Binding IsBarcodeMode, Converter={StaticResource Invert}}" />
+                    <Button FontFamily="MDI" Text="{StaticResource IcArrowLeft}" FontSize="18" Padding="0"
+                            WidthRequest="40" HeightRequest="40" CornerRadius="20"
+                            VerticalOptions="Start" HorizontalOptions="Start" Margin="10,10,0,0"
+                            BackgroundColor="#CC000000" TextColor="White"
+                            Command="{Binding BackToProductCommand}"
+                            IsVisible="{Binding IsBarcodeMode}" />
+                </Grid>
+
+
+                <VerticalStackLayout Grid.Row="1" Padding="16,12,16,8" Spacing="4">
+                    <Label Text="{Binding ProductName}" FontSize="20" FontAttributes="Bold"
+                           LineBreakMode="TailTruncation" MaxLines="2"
+                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                    <Label Text="{Binding PriceText}" Style="{StaticResource StatValue}" FontSize="24" />
+                    <Label Text="{Binding StockText}" Style="{StaticResource MutedLabel}" />
+                </VerticalStackLayout>
+
+                <Grid Grid.Row="2" Padding="16,0,16,12" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"
+                      IsVisible="{Binding IsBarcodeMode, Converter={StaticResource Invert}}">
+                    <ctl:HoldRepeatButton Text="&#x2212;" Style="{StaticResource PinKey}"
+                                          WidthRequest="52" HeightRequest="52"
+                                          RepeatCommand="{Binding DecreaseCommand}" />
+                    <Border Grid.Column="1" Style="{StaticResource InputWrap}" WidthRequest="120"
+                            HorizontalOptions="Center">
+                        <Entry Text="{Binding QuantityText, Mode=TwoWay}" Keyboard="Numeric"
+                               ReturnType="Done"
+                               FontSize="24" FontAttributes="Bold"
+                               HorizontalTextAlignment="Center" VerticalTextAlignment="Center"
+                               Completed="OnQuantityEntryCompleted"
+                               Unfocused="OnQuantityEntryUnfocused" />
+                    </Border>
+                    <ctl:HoldRepeatButton Grid.Column="2" Text="+" Style="{StaticResource PinKey}"
+                                          WidthRequest="52" HeightRequest="52"
+                                          RepeatCommand="{Binding IncreaseCommand}" />
+                </Grid>
+
+                <VerticalStackLayout Grid.Row="3" Padding="16,0,16,16" Spacing="10"
+                                     IsVisible="{Binding IsBarcodeMode, Converter={StaticResource Invert}}">
+                    <Button Text="{svc:T add_to_cart}" Style="{StaticResource BtnPrimary}"
+                            Command="{Binding AddToCartCommand}" IsVisible="{Binding CanUseCart}" />
+                    <Button Text="{svc:T receive_stock}" Style="{StaticResource BtnOutline}"
+                            Command="{Binding ReceiveStockCommand}"
+                            IsVisible="{Binding CanReceiveStock}" />
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Grid.Row="2" Grid.RowSpan="2" Padding="16,0,16,12" Spacing="8"
+                                     IsVisible="{Binding IsBarcodeMode}">
+                    <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+                        <HorizontalStackLayout BindableLayout.ItemsSource="{Binding BarcodeChoices}" Spacing="8">
+                            <BindableLayout.ItemTemplate>
+                                <DataTemplate x:DataType="vm:BarcodeChoice">
+                                    <Button Text="{Binding PackText}" Style="{StaticResource BtnOutline}"
+                                            Padding="16,8" HeightRequest="40" MinimumHeightRequest="40"
+                                            Command="{Binding SelectBarcodeCommand, Source={RelativeSource AncestorType={x:Type vm:ScanViewModel}}}"
+                                            CommandParameter="{Binding .}" />
+                                </DataTemplate>
+                            </BindableLayout.ItemTemplate>
+                        </HorizontalStackLayout>
+                    </ScrollView>
+                    <HorizontalStackLayout Spacing="8" Padding="2,0">
+                        <Label Text="{svc:T price}" VerticalOptions="Center"
+                               TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                        <Switch IsToggled="{Binding PrintWithPrice}"
+                                IsEnabled="{Binding CanOverridePrintPrice}" />
+                        <Label Text="SKU" Margin="10,0,0,0" VerticalOptions="Center"
+                               TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                        <Switch IsToggled="{Binding PrintWithSku}" />
+                    </HorizontalStackLayout>
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                        <Button Text="&#x2212;" Style="{StaticResource PinKey}" WidthRequest="52" HeightRequest="52"
+                                Command="{Binding DecreasePrintCopiesCommand}" />
+                        <VerticalStackLayout Grid.Column="1" Spacing="0" VerticalOptions="Center">
+                            <Label Text="{Binding PrintCopies}" FontSize="24" FontAttributes="Bold" HorizontalTextAlignment="Center"
+                                   TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                            <Label Text="{Binding PrintTotalText}" Style="{StaticResource MutedLabel}" HorizontalTextAlignment="Center" />
+                        </VerticalStackLayout>
+                        <Button Grid.Column="2" Text="+" Style="{StaticResource PinKey}" WidthRequest="52" HeightRequest="52"
+                                Command="{Binding IncreasePrintCopiesCommand}" />
+                    </Grid>
+                    <Button Text="{svc:T print}" Style="{StaticResource BtnPrimary}"
+                            Command="{Binding PrintBarcodeCommand}" IsEnabled="{Binding IsPrintingBarcode, Converter={StaticResource Invert}}" />
+                </VerticalStackLayout>
+            </Grid>
+        </Border>
+
+        <Grid BackgroundColor="#CC000000" IsVisible="{Binding UnknownBarcodeVisible}">
+            <Grid.GestureRecognizers>
+                <TapGestureRecognizer Command="{Binding CloseUnknownBarcodeCommand}" />
+            </Grid.GestureRecognizers>
+            <Border Style="{StaticResource Card}" Padding="20" Margin="24" VerticalOptions="Center">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer />
+                </Border.GestureRecognizers>
+                <VerticalStackLayout Spacing="16">
+                    <Label Text="{Binding UnknownBarcode}" FontSize="22" FontAttributes="Bold"
+                           HorizontalTextAlignment="Center" LineBreakMode="CharacterWrap"
+                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                    <Button Text="{svc:T attach_existing}" Style="{StaticResource BtnPrimary}"
+                            Command="{Binding AttachUnknownBarcodeCommand}" />
+                    <Button Text="{svc:T add_new}" Style="{StaticResource BtnOutline}"
+                            Command="{Binding CreateProductFromUnknownBarcodeCommand}" />
+                    <Button Text="{svc:T cancel}" Style="{StaticResource BtnOutline}"
+                            Command="{Binding CloseUnknownBarcodeCommand}" />
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+
+        <Border Style="{StaticResource Card}" Padding="0" VerticalOptions="End" Margin="12,0,12,104"
+                IsVisible="{Binding ReferenceVisible}">
+            <Grid RowDefinitions="Auto,Auto,Auto">
+                <Grid HeightRequest="178" BackgroundColor="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource SurfaceDark}}">
+                    <ctl:Thumb Source="{Binding ReferenceImageUrl}" Size="200" Stretch="True" Radius="0" />
+                    <Button FontFamily="MDI" Text="{StaticResource IcClose}" FontSize="18" Padding="0"
+                            WidthRequest="40" HeightRequest="40" CornerRadius="20"
+                            VerticalOptions="Start" HorizontalOptions="Start" Margin="10,10,0,0"
+                            BackgroundColor="#CC000000" TextColor="White"
+                            Command="{Binding CloseReferenceCommand}" />
+                </Grid>
+
+                <VerticalStackLayout Grid.Row="1" Padding="16,12,16,8" Spacing="6">
+                    <Label Text="{Binding ReferenceName}" FontSize="20" FontAttributes="Bold"
+                           LineBreakMode="TailTruncation" MaxLines="2"
+                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                    <Label Text="{svc:T catalog_reference_hint}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding ReferenceFields}" Spacing="2">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ReferenceField">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                    <Label Text="{Binding Label}" Style="{StaticResource MutedLabel}" />
+                                    <Label Grid.Column="1" Text="{Binding Value}" HorizontalTextAlignment="End"
+                                           LineBreakMode="TailTruncation"
+                                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                </Grid>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Grid.Row="2" Padding="16,0,16,16" Spacing="10">
+                    <Button Text="{svc:T add}" Style="{StaticResource BtnPrimary}"
+                            Command="{Binding AddReferenceCommand}"
+                            IsVisible="{Binding CanCreateProduct}" />
+                    <Button Text="{svc:T cancel}" Style="{StaticResource BtnOutline}"
+                            Command="{Binding CloseReferenceCommand}" />
+                </VerticalStackLayout>
+            </Grid>
+        </Border>
+    </Grid>
+</ContentView>

@@ -47,7 +47,7 @@ public partial class PaginationState : ObservableObject
     {
         TotalCount = meta.TotalCount;
         TotalPages = Math.Max(1, meta.TotalPages);
-        if (Page > TotalPages) { _page = TotalPages; OnPropertyChanged(nameof(Page)); }
+        if (Page > TotalPages) Page = TotalPages;
     }
 
     private Task Reload() => _reload?.Invoke() ?? Task.CompletedTask;
@@ -69,7 +69,7 @@ public partial class PaginationState : ObservableObject
     partial void OnPageSizeChanged(int value)
     {
         if (_suppress) return;
-        if (Page != 1) { _page = 1; OnPropertyChanged(nameof(Page)); }
+        if (Page != 1) Page = 1;
         _ = Reload();
     }
 
@@ -77,7 +77,7 @@ public partial class PaginationState : ObservableObject
     {
         if (_suppress) return;
         SortBy = value?.Column;
-        _page = 1; OnPropertyChanged(nameof(Page));
+        Page = 1;
         _ = Reload();
     }
 
@@ -85,7 +85,7 @@ public partial class PaginationState : ObservableObject
     private Task ToggleDirection()
     {
         Descending = !Descending;
-        _page = 1; OnPropertyChanged(nameof(Page));
+        Page = 1;
         return Reload();
     }
 

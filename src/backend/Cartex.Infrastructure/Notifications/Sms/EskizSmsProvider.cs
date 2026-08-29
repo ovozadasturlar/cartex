@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
 using Cartex.Application.Common.Settings;
+using Cartex.Application.Common.Interfaces;
 using Cartex.Domain.Enums;
 using Microsoft.Extensions.Logging;
 
@@ -10,7 +11,7 @@ public sealed class EskizSmsProvider(IHttpClientFactory httpClientFactory, ILogg
 {
     public string Name => "eskiz";
 
-    public async Task<SmsSendResult> SendAsync(SmsSettings settings, string password, string phone, string text, CancellationToken cancellationToken)
+    public async Task<SmsSendResult> SendAsync(SmsSettings settings, string password, string phone, string text, SmsSendContext context, CancellationToken cancellationToken)
     {
         var baseUrl = BaseUrl(settings);
         var client = httpClientFactory.CreateClient();
@@ -22,7 +23,8 @@ public sealed class EskizSmsProvider(IHttpClientFactory httpClientFactory, ILogg
             ["message"] = text,
             ["from"] = settings.Sender ?? "4546"
         });
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/api/message/sms/send") { Content = sendForm };
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/api/message/sms/send");
+        request.Content = sendForm;
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var sendResponse = await client.SendAsync(request, cancellationToken);
         if (!sendResponse.IsSuccessStatusCode)
@@ -38,7 +40,7 @@ public sealed class EskizSmsProvider(IHttpClientFactory httpClientFactory, ILogg
         return new SmsSendResult(id);
     }
 
-    public async Task<SmsStatus?> GetStatusAsync(SmsSettings settings, string password, string providerMessageId, CancellationToken cancellationToken)
+    public async Task<NotificationDeliveryStatus?> GetStatusAsync(SmsSettings settings, string password, string providerMessageId, CancellationToken cancellationToken)
     {
         var baseUrl = BaseUrl(settings);
         var client = httpClientFactory.CreateClient();
@@ -56,8 +58,8 @@ public sealed class EskizSmsProvider(IHttpClientFactory httpClientFactory, ILogg
 
         return statusProp.GetString()?.ToUpperInvariant() switch
         {
-            "DELIVRD" => SmsStatus.Delivered,
-            "UNDELIV" or "REJECTD" or "EXPIRED" or "DELETED" => SmsStatus.Undelivered,
+            "DELIVRD" => NotificationDeliveryStatus.Delivered,
+            "UNDELIV" or "REJECTD" or "EXPIRED" or "DELETED" => NotificationDeliveryStatus.Undelivered,
             _ => null
         };
     }

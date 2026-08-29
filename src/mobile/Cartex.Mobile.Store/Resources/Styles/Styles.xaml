@@ -27,7 +27,10 @@
     <x:String x:Key="IcHistory">&#xF02DA;</x:String>
     <x:String x:Key="IcCash">&#xF0116;</x:String>
     <x:String x:Key="IcMagnify">&#xF0349;</x:String>
+    <x:String x:Key="IcFlashlight">&#xF0244;</x:String>
+    <x:String x:Key="IcFlashlightOff">&#xF0245;</x:String>
     <x:String x:Key="IcClose">&#xF0156;</x:String>
+    <x:String x:Key="IcDelete">&#xF01B4;</x:String>
     <x:String x:Key="IcClock">&#xF0150;</x:String>
     <x:String x:Key="IcCart">&#xF0111;</x:String>
     <x:String x:Key="IcPlus">&#xF0415;</x:String>
@@ -38,6 +41,19 @@
     <x:String x:Key="IcStore">&#xF04DC;</x:String>
     <x:String x:Key="IcCheckPlain">&#xF012C;</x:String>
     <x:String x:Key="IcPencil">&#xF03EB;</x:String>
+    <x:String x:Key="IcDotsVertical">&#xF01D9;</x:String>
+    <x:String x:Key="IcChevronUp">&#xF0143;</x:String>
+    <x:String x:Key="IcBarcode">&#xF0071;</x:String>
+    <x:String x:Key="IcPrinter">&#xF042A;</x:String>
+    <x:String x:Key="IcArrowLeft">&#xF004D;</x:String>
+    <x:String x:Key="IcSend">&#xF048A;</x:String>
+    <x:String x:Key="IcMessage">&#xF0365;</x:String>
+    <x:String x:Key="IcMessageText">&#xF0369;</x:String>
+    <x:String x:Key="IcEmail">&#xF01F0;</x:String>
+
+    <Style TargetType="ContentPage" ApplyToDerivedTypes="True">
+        <Setter Property="Shell.TabBarIsVisible" Value="False" />
+    </Style>
 
     <Style x:Key="Icon" TargetType="Label">
         <Setter Property="FontFamily" Value="MDI" />
@@ -465,9 +481,12 @@
     <Style x:Key="BtnPrimary" TargetType="Button">
         <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource PrimaryDarkText}}" />
-        <Setter Property="CornerRadius" Value="14" />
-        <Setter Property="HeightRequest" Value="52" />
-        <Setter Property="FontSize" Value="16" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="HeightRequest" Value="40" />
+        <Setter Property="MinimumHeightRequest" Value="0" />
+        <Setter Property="MinimumWidthRequest" Value="0" />
+        <Setter Property="Padding" Value="16,0" />
+        <Setter Property="FontSize" Value="13.5" />
         <Setter Property="FontAttributes" Value="Bold" />
         <Setter Property="VisualStateManager.VisualStateGroups">
             <VisualStateGroupList>
@@ -492,10 +511,13 @@
         <Setter Property="BackgroundColor" Value="Transparent" />
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
         <Setter Property="BorderColor" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
-        <Setter Property="BorderWidth" Value="1.4" />
-        <Setter Property="CornerRadius" Value="14" />
-        <Setter Property="HeightRequest" Value="48" />
-        <Setter Property="FontSize" Value="15" />
+        <Setter Property="BorderWidth" Value="1" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="HeightRequest" Value="40" />
+        <Setter Property="MinimumHeightRequest" Value="0" />
+        <Setter Property="MinimumWidthRequest" Value="0" />
+        <Setter Property="Padding" Value="16,0" />
+        <Setter Property="FontSize" Value="13.5" />
         <Setter Property="FontAttributes" Value="Bold" />
     </Style>
 

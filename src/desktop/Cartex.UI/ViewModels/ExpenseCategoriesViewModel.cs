@@ -13,6 +13,7 @@ public partial class ExpenseCategoriesViewModel : ViewModelBase, ILoadable
     private readonly IExpenseCategoriesApi _api;
     private readonly IToastService _toast;
     private readonly IBusyService _busy;
+    private readonly AuthService _auth;
     private long _editId;
 
     public ObservableCollection<ExpenseCategoryDto> Categories { get; } = [];
@@ -22,17 +23,20 @@ public partial class ExpenseCategoriesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string _editName = "";
 
     public bool IsEmpty => Categories.Count == 0;
+    public bool CanCreate => _auth.HasPermission("expense_categories.create");
+    public bool CanEdit => _auth.HasPermission("expense_categories.edit");
 
     private IReadOnlyList<PageShortcut>? _shortcuts;
 
     public IReadOnlyList<PageShortcut> Shortcuts => _shortcuts ??=
         CrudShortcuts(OpenCreateCommand, SaveCommand, () => IsEditOpen = false, () => IsEditOpen);
 
-    public ExpenseCategoriesViewModel(IExpenseCategoriesApi api, IToastService toast, IBusyService busy)
+    public ExpenseCategoriesViewModel(IExpenseCategoriesApi api, IToastService toast, IBusyService busy, AuthService auth)
     {
         _api = api;
         _toast = toast;
         _busy = busy;
+        _auth = auth;
     }
 
     public async Task LoadAsync()
@@ -53,6 +57,7 @@ public partial class ExpenseCategoriesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void OpenCreate()
     {
+        if (!CanCreate) return;
         IsNew = true;
         _editId = 0;
         EditName = "";
@@ -62,6 +67,7 @@ public partial class ExpenseCategoriesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void OpenEdit(ExpenseCategoryDto category)
     {
+        if (!CanEdit) return;
         IsNew = false;
         _editId = category.Id;
         EditName = category.Name;
@@ -74,6 +80,7 @@ public partial class ExpenseCategoriesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task SaveAsync()
     {
+        if (IsNew ? !CanCreate : !CanEdit) return;
         if (string.IsNullOrWhiteSpace(EditName)) { _toast.Error(L["error"]); return; }
         try
         {

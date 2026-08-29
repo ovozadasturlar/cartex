@@ -11,6 +11,8 @@ public class BusinessConfiguration : IEntityTypeConfiguration<Business>
         builder.ToTable("businesses");
         builder.Property(x => x.Name).HasMaxLength(100).IsRequired();
         builder.Property(x => x.LegalName).HasMaxLength(150);
+        builder.Property(x => x.LogoImageKey).HasMaxLength(500);
+        builder.Property(x => x.MonochromeLogoImageKey).HasMaxLength(500);
     }
 }
 

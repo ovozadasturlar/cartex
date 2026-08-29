@@ -38,7 +38,7 @@ public partial class RepayViewModel(AgentDb db, SyncService sync) : ObservableOb
     {
         Error = null;
         if (_customer is null) return;
-        if (!decimal.TryParse(AmountText?.Replace(" ", ""), out var amount) || amount <= 0)
+        if (!decimal.TryParse(AmountText.Replace(" ", ""), out var amount) || amount <= 0)
         {
             Error = Loc.Instance["err_enter_amount"];
             return;

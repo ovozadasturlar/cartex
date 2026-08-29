@@ -13,6 +13,7 @@ public partial class ManufacturersViewModel : ViewModelBase, ILoadable
     private readonly IManufacturersApi _api;
     private readonly IToastService _toast;
     private readonly IBusyService _busy;
+    private readonly AuthService _auth;
     private long _editId;
 
     public ObservableCollection<ManufacturerDto> Manufacturers { get; } = [];
@@ -22,17 +23,21 @@ public partial class ManufacturersViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string _editName = "";
 
     public bool IsEmpty => Manufacturers.Count == 0;
+    public bool CanCreate => _auth.HasPermission("manufacturers.create");
+    public bool CanEdit => _auth.HasPermission("manufacturers.edit");
+    public bool CanDelete => _auth.HasPermission("manufacturers.delete");
 
     private IReadOnlyList<PageShortcut>? _shortcuts;
 
     public IReadOnlyList<PageShortcut> Shortcuts => _shortcuts ??=
         CrudShortcuts(OpenCreateCommand, SaveCommand, () => IsEditOpen = false, () => IsEditOpen);
 
-    public ManufacturersViewModel(IManufacturersApi api, IToastService toast, IBusyService busy)
+    public ManufacturersViewModel(IManufacturersApi api, IToastService toast, IBusyService busy, AuthService auth)
     {
         _api = api;
         _toast = toast;
         _busy = busy;
+        _auth = auth;
     }
 
     public async Task LoadAsync()
@@ -53,6 +58,7 @@ public partial class ManufacturersViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void OpenCreate()
     {
+        if (!CanCreate) return;
         IsNew = true;
         _editId = 0;
         EditName = "";
@@ -62,6 +68,7 @@ public partial class ManufacturersViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void OpenEdit(ManufacturerDto manufacturer)
     {
+        if (!CanEdit) return;
         IsNew = false;
         _editId = manufacturer.Id;
         EditName = manufacturer.Name;
@@ -74,6 +81,7 @@ public partial class ManufacturersViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task SaveAsync()
     {
+        if (IsNew ? !CanCreate : !CanEdit) return;
         if (string.IsNullOrWhiteSpace(EditName)) { _toast.Error(L["error"]); return; }
         try
         {
@@ -95,6 +103,7 @@ public partial class ManufacturersViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task DeleteAsync(ManufacturerDto manufacturer)
     {
+        if (!CanDelete) return;
         try
         {
             using (_busy.Begin(L["loading"]))

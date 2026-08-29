@@ -15,7 +15,13 @@ public abstract class ViewModelBase : ObservableObject
 {
     private LocalizationLookup _l = new();
     private readonly Action _refreshAction;
+    private PageLoadState _loadState;
     public LocalizationLookup L => _l;
+    public PageLoadState LoadState
+    {
+        get => _loadState;
+        internal set => SetProperty(ref _loadState, value);
+    }
 
     protected ViewModelBase()
     {
@@ -35,5 +41,9 @@ public abstract class ViewModelBase : ObservableObject
         new(Key.F2, KeyModifiers.None, "shortcut_save", () => save.Execute(null), isEditOpen, WorksInText: true),
         new(Key.Escape, KeyModifiers.None, "shortcut_close", close, isEditOpen, WorksInText: true),
     ];
+
+    public virtual void OnNavigatedFrom()
+    {
+    }
 }
 

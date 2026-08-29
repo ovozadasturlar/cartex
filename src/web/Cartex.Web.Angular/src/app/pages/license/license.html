@@ -18,7 +18,7 @@
         <div class="row2">
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
             <mat-label>{{ t('tariff') }}</mat-label>
-            <mat-select [(ngModel)]="tariff" (ngModelChange)="onTariffChange($event)">
+            <mat-select [(ngModel)]="tariff" [disabled]="!canFeatures" (ngModelChange)="onTariffChange($event)">
               @for (tf of options()?.tariffs; track tf) {
                 <mat-option [value]="tf">{{ tf }}</mat-option>
               }
@@ -26,7 +26,7 @@
           </mat-form-field>
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
             <mat-label>{{ t('expires_at') }}</mat-label>
-            <input matInput type="date" [(ngModel)]="expires" />
+            <input matInput type="date" [(ngModel)]="expires" [disabled]="!canFeatures" />
           </mat-form-field>
         </div>
       </div>
@@ -37,7 +37,7 @@
           <div class="feature-row">
             <mat-slide-toggle
               [checked]="f.isEnabled"
-              [disabled]="busy()"
+              [disabled]="busy() || !canFeatures"
               (change)="toggle(f.code, $event.checked)" />
             <div class="feature-text">
               <span class="feature-name">{{ f.name }}</span>
@@ -47,12 +47,14 @@
             </div>
           </div>
         }
+        @if (canFeatures) {
         <div class="actions">
           <button matButton="filled" [disabled]="busy()" (click)="save(t('success'))">
             <mat-icon>save</mat-icon>
             {{ t('save') }}
           </button>
         </div>
+        }
       </div>
     </div>
   }

@@ -28,4 +28,11 @@ public interface ISuppliesApi
 
     [Delete("/api/supplies/{id}")]
     Task DeleteAsync(long id);
+
+    [Multipart]
+    [Post("/api/supplies/import/preview")]
+    Task<SupplyImportPreviewDto> PreviewImportAsync(StreamPart file);
+
+    [Get("/api/supplies/import/template")]
+    Task<Stream> GetImportTemplateAsync();
 }

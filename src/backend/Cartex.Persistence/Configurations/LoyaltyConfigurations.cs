@@ -66,6 +66,7 @@ public class ManufacturerConfiguration : IEntityTypeConfiguration<Manufacturer>
     {
         builder.ToTable("manufacturers");
         builder.Property(x => x.Name).HasMaxLength(100).IsRequired();
+        builder.HasIndex(x => x.SearchFold, "ix_manufacturers_search_fold_trgm").HasDatabaseName("ix_manufacturers_search_fold_trgm").HasMethod("gin").HasOperators("gin_trgm_ops");
         builder.HasIndex(x => x.Name).IsUnique().HasFilter("NOT \"is_deleted\"");
     }
 }

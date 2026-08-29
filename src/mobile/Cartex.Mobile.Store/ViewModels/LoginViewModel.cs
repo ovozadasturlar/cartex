@@ -3,17 +3,22 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Refit;
 using Cartex.Mobile.Core;
+using Cartex.Mobile.Store.Services;
 
 namespace Cartex.Mobile.Store.ViewModels;
 
-public partial class LoginViewModel(MobileAuthService auth, SessionStore session) : ObservableObject
+public partial class LoginViewModel(
+    MobileAuthService auth,
+    AccessState access,
+    SessionStore session,
+    MobileOfflineService offline,
+    SmsGatewayHostService smsGateway) : ObservableObject, IQueryAttributable
 {
     [ObservableProperty] private string _serverUrl = session.ServerUrl;
     [ObservableProperty] private string _username = "";
     [ObservableProperty] private string _password = "";
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private bool _isServerVisible;
-    [ObservableProperty] private bool _isChecking = true;
     [ObservableProperty] private bool _hidePassword = true;
     [ObservableProperty] private string _eyeGlyph = "\U000F0208";
     [ObservableProperty] private string _languageShort = "";
@@ -31,6 +36,15 @@ public partial class LoginViewModel(MobileAuthService auth, SessionStore session
     private void ToggleServer() => IsServerVisible = !IsServerVisible;
 
     [RelayCommand]
+    private Task ScanServerAsync() => Shell.Current.GoToAsync("server-scan");
+
+    public void ApplyQueryAttributes(IDictionary<string, object> query)
+    {
+        if (query.TryGetValue("server", out var value))
+            ServerUrl = (string)value;
+    }
+
+    [RelayCommand]
     private void ToggleEye()
     {
         HidePassword = !HidePassword;
@@ -40,7 +54,7 @@ public partial class LoginViewModel(MobileAuthService auth, SessionStore session
     [RelayCommand]
     private async Task ChooseLanguageAsync()
     {
-        var choice = await Shell.Current.CurrentPage.DisplayActionSheet(
+        var choice = await Shell.Current.CurrentPage.DisplayActionSheetAsync(
             Loc.Instance["language"], Loc.Instance["cancel"], null, LangNames);
         var index = Array.IndexOf(LangNames, choice);
         if (index < 0) return;
@@ -55,24 +69,8 @@ public partial class LoginViewModel(MobileAuthService auth, SessionStore session
         OnPropertyChanged(nameof(ServerText));
     }
 
-    public async Task InitializeAsync()
-    {
+    public void Initialize() =>
         LanguageShort = LangShorts[Math.Max(0, Array.IndexOf(LangCodes, Loc.Instance.Language))];
-        var restored = false;
-        try
-        {
-            restored = await auth.TryRestoreAsync();
-        }
-        finally
-        {
-            if (!restored) IsChecking = false;
-        }
-        if (!restored) return;
-        await Shell.Current.GoToAsync("//home", false);
-        _ = auth.ValidateSessionAsync();
-        if (AppLock.PinEnabled)
-            await Shell.Current.GoToAsync("pin", false);
-    }
 
     private static async Task OfferPinSetupAsync()
     {
@@ -81,7 +79,7 @@ public partial class LoginViewModel(MobileAuthService auth, SessionStore session
         try
         {
             if (Shell.Current?.CurrentPage is not { } page) return;
-            if (await page.DisplayAlert(Loc.Instance["pin_offer_title"], Loc.Instance["pin_offer_msg"],
+            if (await page.DisplayAlertAsync(Loc.Instance["pin_offer_title"], Loc.Instance["pin_offer_msg"],
                     Loc.Instance["pin_offer_yes"], Loc.Instance["later"]))
                 await Shell.Current.GoToAsync("pin?setup=1");
         }
@@ -108,8 +106,16 @@ public partial class LoginViewModel(MobileAuthService auth, SessionStore session
         {
             session.ServerUrl = ServerUrl.Trim();
             await auth.LoginAsync(Username.Trim(), Password);
+            await access.RefreshAsync();
+            if (!SessionStore.HasSession)
+            {
+                Error = Loc.Instance["access_session_error"];
+                return;
+            }
+            await offline.StartAsync();
+            _ = StartSmsGatewayAsync();
             Password = "";
-            await Shell.Current.GoToAsync("//home");
+            await Shell.Current.GoToAsync("//main");
             _ = OfferPinSetupAsync();
         }
         catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.Unauthorized)
@@ -124,6 +130,18 @@ public partial class LoginViewModel(MobileAuthService auth, SessionStore session
         finally
         {
             IsBusy = false;
+        }
+    }
+
+    private async Task StartSmsGatewayAsync()
+    {
+        try
+        {
+            await smsGateway.StartAsync();
+        }
+        catch (Exception exception)
+        {
+            System.Diagnostics.Debug.WriteLine(exception);
         }
     }
 }

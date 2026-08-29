@@ -1,0 +1,159 @@
+:host {
+  display: block;
+}
+
+.filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.day {
+  width: 170px;
+}
+
+.pick {
+  width: 180px;
+}
+
+.tabs {
+  margin-bottom: 16px;
+}
+
+.hint {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--cx-text-2);
+}
+
+.warn {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--cx-warn, #c47f17);
+}
+
+.picker {
+  padding: 16px;
+  margin-bottom: 14px;
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+
+    + .row {
+      margin-top: 12px;
+    }
+
+    mat-form-field {
+      flex: 0 1 220px;
+    }
+
+    .grow {
+      flex: 1 1 320px;
+    }
+  }
+}
+
+.batch {
+  width: 100%;
+  min-width: 230px;
+}
+
+.cell {
+  width: 92px;
+  padding: 6px 8px;
+  border: 1px solid var(--cx-border);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: right;
+
+  &.wide {
+    width: 100%;
+    min-width: 120px;
+    text-align: left;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--cx-brand);
+  }
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+.scroll {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  min-width: 820px;
+
+  /* Telefonda ustunlar kamaytirilgan — jadval ekranga sig'adi. */
+  @media (width <= 767px) {
+    min-width: 0;
+  }
+}
+
+.num {
+  text-align: right;
+}
+
+.strong {
+  font-weight: 600;
+}
+
+.detail {
+  padding: 14px 16px;
+  margin-top: 14px;
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+    font-size: 13px;
+    color: var(--cx-text-2);
+  }
+
+  .muted {
+    color: var(--cx-text-3);
+  }
+
+  .spacer {
+    flex: 1 1 auto;
+  }
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  margin-top: 14px;
+
+  .spacer {
+    flex: 1 1 auto;
+  }
+
+  .sum {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    color: var(--cx-text-2);
+    font-size: 13px;
+
+    strong {
+      font-size: 20px;
+      color: var(--cx-text-1);
+    }
+  }
+}

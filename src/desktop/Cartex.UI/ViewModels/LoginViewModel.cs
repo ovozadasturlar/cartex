@@ -10,6 +10,7 @@ namespace Cartex.UI.ViewModels;
 
 public partial class LoginViewModel : ViewModelBase
 {
+    private static readonly HttpClient HealthCheckHttpClient = new() { Timeout = TimeSpan.FromSeconds(5) };
     private readonly AuthService _authService;
     private readonly NavigationService _navigationService;
 
@@ -48,8 +49,7 @@ public partial class LoginViewModel : ViewModelBase
 
     private void CloseQr()
     {
-        _qrCts?.Cancel();
-        _qrCts = null;
+        Debounce.Cancel(ref _qrCts);
         IsQrOpen = false;
         QrImage = null;
     }
@@ -126,8 +126,7 @@ public partial class LoginViewModel : ViewModelBase
 
     private void StopDrivePolling()
     {
-        _driveCts?.Cancel();
-        _driveCts = null;
+        Debounce.Cancel(ref _driveCts);
     }
 
     public AppTheme CurrentTheme
@@ -205,7 +204,7 @@ public partial class LoginViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            HandleLoginError(ex);
+            HandleLoginError(ex, keyLogin: true);
         }
         finally
         {
@@ -233,8 +232,7 @@ public partial class LoginViewModel : ViewModelBase
         IsLoading = true;
         try
         {
-            using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(5) };
-            (await http.GetAsync($"{url}/health")).EnsureSuccessStatusCode();
+            (await HealthCheckHttpClient.GetAsync($"{url}/health")).EnsureSuccessStatusCode();
             SettingsService.Instance.ApiBaseUrl = url;
             ServerStatus = L["server_connected"];
             IsServerEditOpen = false;
@@ -254,7 +252,7 @@ public partial class LoginViewModel : ViewModelBase
         ex is System.Net.Http.HttpRequestException or TaskCanceledException
         || ex.InnerException is System.Net.Http.HttpRequestException or System.Net.Sockets.SocketException;
 
-    private void HandleLoginError(Exception ex)
+    private void HandleLoginError(Exception ex, bool keyLogin = false)
     {
         if (IsConnectionError(ex))
         {
@@ -265,7 +263,7 @@ public partial class LoginViewModel : ViewModelBase
             return;
         }
         ErrorMessage = ex.Message.Contains("401") || ex.Message.Contains("Unauthorized")
-            ? L["login_error"]
+            ? L[keyLogin ? "key_login_error" : "login_error"]
             : ex.Message;
     }
 

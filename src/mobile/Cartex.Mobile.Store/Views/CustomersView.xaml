@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView
+    x:Class="Cartex.Mobile.Store.Views.CustomersView"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:Cartex.Mobile.Store.ViewModels"
+    xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
+    xmlns:ctl="clr-namespace:Cartex.Mobile.Store.Controls"
+    x:DataType="vm:CustomersViewModel">
+    <Grid>
+    <Grid RowDefinitions="Auto,*" Padding="16,12,16,0" RowSpacing="12">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+            <Border Style="{StaticResource InputWrap}">
+                <Entry Text="{Binding Search}" Placeholder="{svc:T search_customer}" ClearButtonVisibility="WhileEditing" />
+            </Border>
+            <Button Grid.Column="1" Text="+" FontSize="22" FontAttributes="Bold" Padding="0"
+                    WidthRequest="44" HeightRequest="44" Style="{StaticResource BtnPrimary}"
+                    IsVisible="{Binding CanCreate}" Command="{Binding OpenCreateModalCommand}" />
+        </Grid>
+
+        <RefreshView Grid.Row="1" IsRefreshing="{Binding IsRefreshing}" Command="{Binding RefreshCommand}">
+            <Grid>
+                <CollectionView ItemsSource="{Binding Customers}"
+                                RemainingItemsThreshold="5"
+                                RemainingItemsThresholdReachedCommand="{Binding LoadMoreCommand}">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="vm:StoreCustomerRow">
+                          <SwipeView Margin="0,0,0,10">
+                            <SwipeView.RightItems>
+                                <SwipeItems Mode="Execute">
+                                    <SwipeItem Text="{svc:T call}" IsVisible="{Binding HasPhone}"
+                                               BackgroundColor="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}"
+                                               Command="{Binding CallCommand, Source={RelativeSource AncestorType={x:Type vm:CustomersViewModel}}}"
+                                               CommandParameter="{Binding .}" />
+                                </SwipeItems>
+                            </SwipeView.RightItems>
+                            <Border Style="{StaticResource Card}" Padding="14,12">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding OpenDetailCommand, Source={RelativeSource AncestorType={x:Type vm:CustomersViewModel}}}"
+                                                          CommandParameter="{Binding .}" />
+                                </Border.GestureRecognizers>
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                    <Border WidthRequest="42" HeightRequest="42" StrokeThickness="0" StrokeShape="RoundRectangle 21"
+                                            BackgroundColor="{AppThemeBinding Light={StaticResource Secondary}, Dark={StaticResource Tertiary}}">
+                                        <Label Text="{Binding Initials}" FontSize="15" FontAttributes="Bold"
+                                               HorizontalOptions="Center" VerticalOptions="Center"
+                                               TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                                    </Border>
+                                    <VerticalStackLayout Grid.Column="1" Spacing="3" VerticalOptions="Center">
+                                        <Label Text="{Binding Customer.FullName}" FontAttributes="Bold" FontSize="15"
+                                               LineBreakMode="TailTruncation" />
+                                        <Label Text="{Binding PhoneText}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                                    </VerticalStackLayout>
+                                    <Label Grid.Column="2" Text="{Binding DebtText}" FontSize="12.5" FontAttributes="Bold"
+                                           VerticalOptions="Center" HorizontalTextAlignment="End" MaxLines="2">
+                                        <Label.Triggers>
+                                            <DataTrigger TargetType="Label" Binding="{Binding HasDebt}" Value="True">
+                                                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+                                            </DataTrigger>
+                                        </Label.Triggers>
+                                    </Label>
+                                </Grid>
+                            </Border>
+                          </SwipeView>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                    <CollectionView.EmptyView>
+                        <Label Text="{svc:T customers_empty}" Style="{StaticResource MutedLabel}"
+                               HorizontalOptions="Center" Margin="0,60" />
+                    </CollectionView.EmptyView>
+                    <CollectionView.Footer>
+                        <VerticalStackLayout Padding="0,8,0,100">
+                            <ActivityIndicator IsRunning="{Binding IsLoadingMore}" IsVisible="{Binding IsLoadingMore}" HorizontalOptions="Center" />
+                        </VerticalStackLayout>
+                    </CollectionView.Footer>
+                </CollectionView>
+                <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
+                                   VerticalOptions="Center" HorizontalOptions="Center" />
+                <Label Text="{Binding Error}" Style="{StaticResource TxDanger}"
+                       IsVisible="{Binding Error, Converter={StaticResource NotEmpty}}"
+                       VerticalOptions="Center" HorizontalOptions="Center" />
+            </Grid>
+        </RefreshView>
+
+        <Grid Grid.RowSpan="2" BackgroundColor="#CC000000" IsVisible="{Binding IsCreateModalOpen}" svc:AutoFocus.OnVisible="True">
+            <Grid.GestureRecognizers>
+                <TapGestureRecognizer Command="{Binding CloseCreateModalCommand}" />
+            </Grid.GestureRecognizers>
+            <Border Style="{StaticResource Card}" Padding="20" Margin="24" VerticalOptions="Center">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer />
+                </Border.GestureRecognizers>
+                <VerticalStackLayout Spacing="16">
+                    <Label Text="{svc:T add_new}" FontSize="20" FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="{svc:T customer}" Style="{StaticResource MutedLabel}" FontSize="13" />
+                        <Border Style="{StaticResource InputWrap}">
+                            <Entry Text="{Binding NewCustomerName}" Placeholder="{svc:T customer_full_name}" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="{svc:T phone}" Style="{StaticResource MutedLabel}" FontSize="13" />
+                        <Border Style="{StaticResource InputWrap}">
+                            <Entry Text="{Binding NewCustomerPhone}" Keyboard="Telephone" Placeholder="+998" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="{svc:T credit_limit}" Style="{StaticResource MutedLabel}" FontSize="13" />
+                        <Border Style="{StaticResource InputWrap}">
+                            <Entry Text="{Binding NewCustomerCreditLimit}" Keyboard="Numeric"
+                                   Placeholder="{svc:T unlimited}" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <HorizontalStackLayout Spacing="10">
+                        <Switch IsToggled="{Binding NewCustomerAllowMarketingSms}" />
+                        <Label Text="{svc:T allow_marketing_sms}" VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10" Margin="0,10,0,0">
+                        <Button Text="{svc:T cancel}" Style="{StaticResource BtnOutline}" Command="{Binding CloseCreateModalCommand}" />
+                        <Button Grid.Column="1" Text="{svc:T save}" Style="{StaticResource BtnPrimary}" Command="{Binding SaveCustomerCommand}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+
+        <Grid Grid.RowSpan="2" BackgroundColor="#CC000000" IsVisible="{Binding IsOfflinePayOpen}" svc:AutoFocus.OnVisible="True">
+            <Grid.GestureRecognizers>
+                <TapGestureRecognizer Command="{Binding CloseOfflinePayCommand}" />
+            </Grid.GestureRecognizers>
+            <Border Style="{StaticResource Card}" Padding="20" Margin="24" VerticalOptions="Center">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer />
+                </Border.GestureRecognizers>
+                <VerticalStackLayout Spacing="14">
+                    <VerticalStackLayout Spacing="2">
+                        <Label Text="{svc:T receive_payment}" FontSize="20" FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                        <Label Text="{Binding OfflinePayName}" Style="{StaticResource MutedLabel}" FontSize="12.5" />
+                    </VerticalStackLayout>
+
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Text="{svc:T customer_debt}" Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
+                        <Label Grid.Column="1" Text="{Binding OfflinePayDebtText}" FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                    </Grid>
+
+                    <Border Style="{StaticResource InputWrap}">
+                        <Entry Text="{Binding OfflinePayAmount}" Placeholder="{svc:T payment_amount}" Keyboard="Numeric" FontSize="18" />
+                    </Border>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                        <Button Text="{svc:T pay_cash}" Style="{StaticResource BtnOutline}" HeightRequest="46"
+                                Command="{Binding SelectOfflinePayMethodCommand}" CommandParameter="Cash">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsOfflinePayCash}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}" />
+                                    <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource OnBrand}, Dark={StaticResource OnBrandDark}}" />
+                                    <Setter Property="BorderWidth" Value="0" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                        <Button Grid.Column="1" Text="{svc:T pay_card}" Style="{StaticResource BtnOutline}" HeightRequest="46"
+                                Command="{Binding SelectOfflinePayMethodCommand}" CommandParameter="Card">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsOfflinePayCard}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource Brand}, Dark={StaticResource BrandDark}}" />
+                                    <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource OnBrand}, Dark={StaticResource OnBrandDark}}" />
+                                    <Setter Property="BorderWidth" Value="0" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10" Margin="0,10,0,0">
+                        <Button Text="{svc:T cancel}" Style="{StaticResource BtnOutline}" Command="{Binding CloseOfflinePayCommand}" />
+                        <Button Grid.Column="1" Text="{svc:T save}" Style="{StaticResource BtnPrimary}" Command="{Binding SaveOfflinePayCommand}"
+                                IsEnabled="{Binding IsBusy, Converter={StaticResource Invert}}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+    </Grid>
+    </Grid>
+</ContentView>

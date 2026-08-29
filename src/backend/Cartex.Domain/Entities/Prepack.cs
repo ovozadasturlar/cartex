@@ -18,5 +18,4 @@ public class Prepack : SoftDeleteEntity, IBranchScoped
     public string LabelCode { get; set; } = null!;
     public PrepackStatus Status { get; set; }
     public DateTime? ExpiresAt { get; set; }
-    public long? SoldSaleId { get; set; }
 }

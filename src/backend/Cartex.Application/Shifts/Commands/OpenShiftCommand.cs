@@ -1,5 +1,4 @@
-using Cartex.Application.Common.Finance;
-using Cartex.Application.Common.Messaging;
+﻿using Cartex.Application.Common.Finance;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Application.Common.Models;
@@ -7,6 +6,7 @@ using Cartex.Persistence;
 using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
+using Cartex.Shared.Models.Common;
 
 namespace Cartex.Application.Shifts.Commands;
 
@@ -24,7 +24,7 @@ public sealed class OpenShiftCommandHandler(IApplicationDbContext db, ICurrentUs
         {
             if (string.Equals(row.Currency, baseCode, StringComparison.OrdinalIgnoreCase))
                 throw new BusinessRuleException("Bazaviy valyuta alohida qatorda yuborilmaydi.");
-            await currency.EnsureAllowedAsync(row.Currency, cancellationToken);
+            await currency.EnsureSalesAllowedAsync(row.Currency, cancellationToken);
         }
 
         var hasOpen = await db.Shifts.AnyAsync(s => s.UserId == userId && s.BranchId == branchId && s.Status == ShiftStatus.Open, cancellationToken);
@@ -36,10 +36,12 @@ public sealed class OpenShiftCommandHandler(IApplicationDbContext db, ICurrentUs
             BranchId = branchId,
             UserId = userId,
             OpenedAt = DateTime.UtcNow,
-            OpeningFloat = request.OpeningFloat,
             Status = ShiftStatus.Open
         };
 
+        // SMENA-06: bazaviy valyuta ham boshqalar kabi o'z qatorida yashaydi; klient uni
+        // shift darajasidagi maydonda yuboradi, alohida qator sifatida emas.
+        shift.CashRows.Add(new ShiftCash { Currency = baseCode, OpeningFloat = request.OpeningFloat });
         foreach (var row in request.Floats ?? [])
             shift.CashRows.Add(new ShiftCash { Currency = row.Currency, OpeningFloat = row.Amount });
 

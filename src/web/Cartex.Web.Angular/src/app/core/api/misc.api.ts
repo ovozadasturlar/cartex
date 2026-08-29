@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
+import { CreateSaleResult } from './pos.api';
 
 export interface CartListItem {
   id: number;
@@ -20,7 +21,13 @@ export interface CartItem {
   productName: string;
   quantity: number;
   unitPrice: number;
+  /// NARX-09: kassir ekranda ko'rgan katalog narxi - qator ustiga o'ralgan narx (agar bo'lsa)
+  /// shundan alohida saqlanadi.
+  originalUnitPrice?: number | null;
   lineTotal: number;
+  unitName?: string;
+  allowsFractional?: boolean;
+  prepackId?: number | null;
 }
 
 export interface Cart {
@@ -31,6 +38,8 @@ export interface Cart {
   total: number;
   items: CartItem[];
   note: string | null;
+  /// NAVBAT-01/05: sotuvchi kiritgan chegirma - tiklashda qaytariladi.
+  discountAmount?: number;
 }
 
 export interface CartLoadItem {
@@ -114,7 +123,10 @@ export interface Business {
   phone: string | null;
   address: string | null;
   logoImageKey: string | null;
+  monochromeLogoImageKey: string | null;
   multicurrency: boolean;
+  pricingMulticurrency: boolean;
+  salesMulticurrency: boolean;
   telegram: string | null;
   website: string | null;
 }
@@ -155,12 +167,57 @@ export class OrderingApi {
     return this.http.put<void>(`/api/ordering/carts/${code}/status`, { status });
   }
 
-  checkout(code: string, paidCash: number, paidCard: number, paidBonus: number): Observable<number> {
-    return this.http.post<number>(`/api/ordering/carts/${code}/checkout`, { paidCash, paidCard, paidBonus });
+  submit(body: {
+    warehouseId: number;
+    customerId: number | null;
+    items: { variantId: number; quantity: number; prepackId?: number | null }[];
+    idempotencyKey: string;
+    note: string | null;
+    discountAmount?: number;
+    kind?: string;
+  }): Observable<string> {
+    // Server savat kodini `text/plain` bilan qaytaradi (ASP.NET `Ok(string)` shunday
+    // ishlaydi), shuning uchun javob JSON deb o'qilmaydi: aks holda savat serverda
+    // yaratilib bo'lgach klient "xatolik" deb ko'rsatadi va navbatda arvoh savat qoladi.
+    return this.http.post('/api/ordering/carts', body, { responseType: 'text' });
+  }
+
+  checkout(
+    code: string,
+    paidCash: number,
+    paidCard: number,
+    paidBonus: number,
+    extra?: {
+      payments?: { method: string; currency: string; amount: number }[] | null;
+      customerId: number | null;
+      items: {
+        variantId: number;
+        quantity: number;
+        unitPrice: number | null;
+        /// NARX-09/10: server shu narxni katalog bilan solishtiradi.
+        expectedUnitPrice?: number | null;
+        prepackId?: number | null;
+      }[];
+      // NAVBAT-02: null - savatdagi qiymat saqlanadi (server `request ?? cart` bo'yicha
+      // birlashtiradi); son - kassir uni ataylab o'zgartirgan.
+      discountAmount: number | null;
+      note: string | null;
+      debtDueDate: string | null;
+      creditAmount?: number | null;
+    },
+  ): Observable<CreateSaleResult> {
+    return this.http.post<CreateSaleResult>(`/api/ordering/carts/${code}/checkout`, {
+      paidCash,
+      paidCard,
+      paidBonus,
+      ...extra,
+    });
   }
 
   load(status?: string): Observable<CartLoadItem[]> {
-    return this.http.get<CartLoadItem[]>('/api/ordering/load', { params: status ? { status } : {} });
+    return this.http.get<CartLoadItem[]>('/api/ordering/load', {
+      params: status ? { status } : {},
+    });
   }
 }
 
@@ -172,7 +229,12 @@ export class LoyaltyApi {
     return this.http.get<LoyaltyProgram>('/api/loyalty');
   }
 
-  updateProgram(body: { isEnabled: boolean; totalPercent: number; cashbackRounding: number; discountCombineMode: string }): Observable<void> {
+  updateProgram(body: {
+    isEnabled: boolean;
+    totalPercent: number;
+    cashbackRounding: number;
+    discountCombineMode: string;
+  }): Observable<void> {
     return this.http.put<void>('/api/loyalty', body);
   }
 
@@ -203,6 +265,17 @@ export class LoyaltyApi {
   stats(fromDate: string, toDate: string): Observable<LoyaltyStats> {
     return this.http.get<LoyaltyStats>('/api/loyalty/stats', { params: { fromDate, toDate } });
   }
+
+  // The till has to show the same total the server will charge, so the automatic rules are
+  // previewed the way the desktop does it instead of appearing only on the receipt.
+  // `total` is the discount the rules add up to, not the net basket — the name comes from the
+  // server contract and reading it as a net total silently turns a 0 into a 100% discount.
+  previewDiscount(
+    customerId: number | null,
+    items: { variantId: number; quantity: number; unitPrice: number }[],
+  ): Observable<{ total: number }> {
+    return this.http.post<{ total: number }>('/api/loyalty/discount-preview', { customerId, items });
+  }
 }
 
 @Injectable({ providedIn: 'root' })
@@ -213,7 +286,17 @@ export class BusinessApi {
     return this.http.get<Business>('/api/business');
   }
 
-  update(body: { name: string; legalName: string | null; currency: string; phone: string | null; address: string | null; logoImageKey: string | null; telegram: string | null; website: string | null }): Observable<void> {
+  update(body: {
+    name: string;
+    legalName: string | null;
+    currency: string;
+    phone: string | null;
+    address: string | null;
+    logoImageKey: string | null;
+    monochromeLogoImageKey: string | null;
+    telegram: string | null;
+    website: string | null;
+  }): Observable<void> {
     return this.http.put<void>('/api/business', body);
   }
 }
@@ -229,6 +312,22 @@ export class FeaturesApi {
   set(code: string, isEnabled: boolean): Observable<void> {
     return this.http.put<void>(`/api/features/${code}`, { isEnabled });
   }
+
+  /// Egaga tegishli kalit: faqat do'kon o'zgartira oladigan modullar va faqat o'z kaliti.
+  modules(): Observable<OwnerModule[]> {
+    return this.http.get<OwnerModule[]>('/api/features/modules');
+  }
+
+  setModule(code: string, isEnabled: boolean): Observable<void> {
+    return this.http.put<void>(`/api/features/modules/${code}`, { isEnabled });
+  }
+}
+
+export interface OwnerModule {
+  code: string;
+  name: string;
+  available: boolean;
+  isEnabled: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -248,6 +347,9 @@ export class LookupsApi {
   }
 
   customers(search: string): Observable<CustomerOption[]> {
-    return this.http.get<CustomerOption[]>('/api/customers', { params: { Search: search, Page: 1, PageSize: 20 } });
+    return this.http.get<CustomerOption[]>('/api/customers', {
+      params: { Search: search, Page: 1, PageSize: 20 },
+    });
   }
 }
+

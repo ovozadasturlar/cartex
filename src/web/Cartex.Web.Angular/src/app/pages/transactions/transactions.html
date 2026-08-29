@@ -1,5 +1,11 @@
 <div *transloco="let t">
-  <cx-page-header [title]="t('transactions')" [subtitle]="t('transactions_subtitle')" />
+  <cx-page-header [title]="t('transactions')" [subtitle]="t('transactions_subtitle')">
+    @if (canExport) {
+      <button matButton="outlined" (click)="exportCsv()">
+        <mat-icon>download</mat-icon>{{ t('export') }}
+      </button>
+    }
+  </cx-page-header>
 
   @if (loading()) {
     <mat-progress-bar mode="indeterminate" />
@@ -83,8 +89,8 @@
                 <td mat-cell *matCellDef="let tx">{{ tx.userName }}</td>
               </ng-container>
 
-              <tr mat-header-row *matHeaderRowDef="columns"></tr>
-              <tr mat-row *matRowDef="let tx; columns: columns"></tr>
+              <tr mat-header-row *matHeaderRowDef="columns()"></tr>
+              <tr mat-row *matRowDef="let tx; columns: columns()"></tr>
             </table>
           </div>
           <cx-paging-bar [meta]="pg.meta" (changed)="onPage($event)" />

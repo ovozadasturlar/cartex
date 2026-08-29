@@ -1,3 +1,4 @@
+using Cartex.Application.Common.Images;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
@@ -10,7 +11,7 @@ namespace Cartex.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class StorageController(IObjectStorage storage, IImageProcessor processor) : ControllerBase
+public class StorageController(IObjectStorage storage, IImageProcessor processor, IRemoteImageFetcher fetcher) : ControllerBase
 {
     private const long MaxFileSize = 5 * 1024 * 1024;
 
@@ -18,8 +19,8 @@ public class StorageController(IObjectStorage storage, IImageProcessor processor
         new(StringComparer.OrdinalIgnoreCase) { "image/png", "image/jpeg", "image/webp", "image/gif" };
 
     [HttpPost("upload")]
-    [HasPermission(AppPermissions.Products.Manage)]
-    public async Task<IActionResult> Upload(IFormFile file)
+    [HasPermission(AppPermissions.Products.Create, AppPermissions.Products.Edit, AppPermissions.Business.Edit)]
+    public async Task<IActionResult> Upload(IFormFile? file)
     {
         if (file is null || file.Length == 0)
             return BadRequest();
@@ -36,18 +37,34 @@ public class StorageController(IObjectStorage storage, IImageProcessor processor
         await stream.CopyToAsync(buffer, ct);
         buffer.Position = 0;
 
-        var processed = processor.Process(buffer);
-        if (processed is null)
-        {
-            buffer.Position = 0;
-            var originalKey = await storage.UploadAsync(buffer, buffer.Length, file.ContentType, Path.GetExtension(file.FileName), ct);
-            return Ok(new { key = originalKey });
-        }
+        var key = await ImageStore.SaveAsync(storage, processor, buffer, file.ContentType, Path.GetExtension(file.FileName), ct);
+        return Ok(new { key });
+    }
 
-        using var display = new MemoryStream(processed.Display);
-        var key = await storage.UploadAsync(display, processed.Display.Length, processed.ContentType, processed.Extension, ct);
-        using var thumb = new MemoryStream(processed.Thumb);
-        await storage.UploadAsync(thumb, processed.Thumb.Length, processed.ContentType, processed.Extension, ct, $"t_{key}");
+    [HttpPost("upload-logo")]
+    [HasPermission(AppPermissions.Business.Edit)]
+    public async Task<IActionResult> UploadLogo(IFormFile? file)
+    {
+        ValidateImage(file);
+        var ct = HttpContext.RequestAborted;
+        await using var stream = file!.OpenReadStream();
+        using var buffer = new MemoryStream();
+        await stream.CopyToAsync(buffer, ct);
+        var (colorKey, monochromeKey) = await ImageStore.SaveLogoPairAsync(
+            storage, processor, buffer, file.ContentType, Path.GetExtension(file.FileName), ct);
+        return Ok(new { colorKey, monochromeKey });
+    }
+
+    [HttpPost("from-url")]
+    [HasPermission(AppPermissions.Products.Create, AppPermissions.Products.Edit)]
+    public async Task<IActionResult> UploadFromUrl(ImageUrlRequest request)
+    {
+        var ct = HttpContext.RequestAborted;
+        var fetched = await fetcher.FetchAsync(request.Url ?? string.Empty, ct)
+            ?? throw new BusinessRuleException("Havoladan rasm olib bo'lmadi — manzilni tekshiring (png, jpeg, webp, gif, 5 MB gacha).");
+
+        using var buffer = new MemoryStream(fetched.Content);
+        var key = await ImageStore.SaveAsync(storage, processor, buffer, fetched.ContentType, fetched.Extension, ct);
         return Ok(new { key });
     }
 
@@ -70,4 +87,16 @@ public class StorageController(IObjectStorage storage, IImageProcessor processor
         Response.Headers.CacheControl = "public,max-age=86400,immutable";
         return File(result.Value.Content, result.Value.ContentType);
     }
+
+    private static void ValidateImage(IFormFile? file)
+    {
+        if (file is null || file.Length == 0)
+            throw new BusinessRuleException("Rasm fayli tanlanmagan.");
+        if (file.Length > MaxFileSize)
+            throw new BusinessRuleException("Fayl hajmi 5 MB dan oshmasligi kerak.");
+        if (!AllowedContentTypes.Contains(file.ContentType))
+            throw new BusinessRuleException("Faqat rasm fayllariga ruxsat (png, jpeg, webp, gif).");
+    }
 }
+
+public record ImageUrlRequest(string? Url);

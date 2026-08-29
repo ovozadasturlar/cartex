@@ -17,9 +17,11 @@ import { CxDatePipe, CxMoneyPipe, isoDay } from '../../core/format';
 import { NotifyService } from '../../core/notify.service';
 import { Paged } from '../../core/paging';
 import { EmptyState } from '../../shared/empty-state';
+import { downloadCsv } from '../../core/csv-export';
 import { PageHeader } from '../../shared/page-header';
 import { PagingBar } from '../../shared/paging-bar';
 import { StatCard } from '../../shared/stat-card';
+import { LayoutService } from '../../core/layout.service';
 
 function dayStart(day: string): string {
   return new Date(day + 'T00:00:00').toISOString();
@@ -58,18 +60,35 @@ export class Supplies implements OnInit {
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
   private readonly auth = inject(AuthService);
+  private readonly transloco = inject(TranslocoService);
   private readonly router = inject(Router);
 
   readonly loading = signal(true);
   readonly busy = signal(false);
   readonly totals = signal<SuppliesTotals | null>(null);
   readonly paged = signal<Paged<Supply> | null>(null);
+  readonly canExport = this.auth.hasPermission('reports.export');
+
+  exportCsv(): void {
+    if (!this.canExport) return;
+    const t = (key: string): string => this.transloco.translate(key);
+    downloadCsv(t('supplies'), this.paged()?.items ?? [], [
+      { header: t('date'), value: (x) => x.supplyDate },
+      { header: t('supplier'), value: (x) => x.supplierName },
+      { header: t('warehouse'), value: (x) => x.warehouseName },
+      { header: t('total'), value: (x) => x.totalAmount },
+      { header: t('user'), value: (x) => x.userName },
+    ]);
+  }
   readonly suppliers = signal<Supplier[]>([]);
   readonly supplierId = signal<number | null>(null);
   readonly page = signal(1);
   readonly pageSize = signal(20);
-  readonly canManage = this.auth.hasPermission('supplies.manage');
-  readonly cols = ['date', 'supplier', 'warehouse', 'total', 'user'];
+  readonly canCreate = this.auth.hasPermission('supplies.create');
+  private readonly layout = inject(LayoutService);
+  readonly cols = computed(() => this.layout.isPhone()
+    ? ['date', 'supplier', 'total']
+    : ['date', 'supplier', 'warehouse', 'total', 'user']);
 
   fromDate = isoDay(new Date(Date.now() - 29 * 86_400_000));
   toDate = isoDay(new Date());
@@ -87,23 +106,24 @@ export class Supplies implements OnInit {
 
   onFilter(): void {
     this.page.set(1);
-    this.load();
+    void this.load();
   }
 
   onSupplier(id: number | null): void {
     this.supplierId.set(id);
     this.page.set(1);
-    this.load();
+    void this.load();
   }
 
   onPage(e: { page: number; pageSize: number }): void {
     this.page.set(e.page);
     this.pageSize.set(e.pageSize);
-    this.load();
+    void this.load();
   }
 
   openCreate(): void {
-    this.router.navigate(['/supplies/new']);
+    if (!this.canCreate) return;
+    void this.router.navigate(['/supplies/new']);
   }
 
   async openDetail(row: Supply): Promise<void> {
@@ -113,7 +133,7 @@ export class Supplies implements OnInit {
       maxWidth: '94vw',
       autoFocus: false,
     });
-    if (await lastValueFrom(ref.afterClosed())) this.load();
+    if (await lastValueFrom(ref.afterClosed())) void this.load();
   }
 
   private async load(): Promise<void> {
@@ -168,12 +188,14 @@ export class SupplyDetailDialog implements OnInit {
   private readonly transloco = inject(TranslocoService);
   private readonly ref = inject(MatDialogRef<SupplyDetailDialog>);
   private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
   private readonly id = inject<number>(MAT_DIALOG_DATA);
 
   readonly loading = signal(true);
   readonly voiding = signal(false);
   readonly detail = signal<SupplyDetail | null>(null);
-  readonly canVoid = this.auth.hasPermission('supplies.manage');
+  readonly canVoid = this.auth.hasPermission('supplies.void');
+  readonly canEdit = this.auth.hasPermission('supplies.edit');
   readonly cols = ['name', 'qty', 'unit', 'price', 'total', 'expiry'];
 
   async ngOnInit(): Promise<void> {
@@ -190,7 +212,14 @@ export class SupplyDetailDialog implements OnInit {
     return Math.max(0, d.totalAmount - d.paidCash - d.paidCard - d.paidTransfer - d.paidBank);
   }
 
+  editSupply(): void {
+    if (!this.canEdit) return;
+    this.ref.close();
+    void this.router.navigate(['/supplies', this.id, 'edit']);
+  }
+
   async voidSupply(): Promise<void> {
+    if (!this.canVoid) return;
     const confirmRef = this.dialog.open(ConfirmDialog, {
       data: { title: this.transloco.translate('supply_void'), message: this.transloco.translate('supply_void_confirm') },
       width: '400px',

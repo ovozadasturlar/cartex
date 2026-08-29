@@ -1,5 +1,5 @@
-using System.Collections.ObjectModel;
-using System.IO;
+﻿using System.Collections.ObjectModel;
+using System.ComponentModel;
 using Avalonia.Input;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -8,7 +8,9 @@ using Cartex.ApiClient.Api;
 using Cartex.ApiClient.Querying;
 using Cartex.ApiClient.Paging;
 using Cartex.Shared.Models.Loyalty;
+using Cartex.Shared.Models.Catalog;
 using Cartex.Shared.Models.Products;
+using Cartex.Shared.Models.Storage;
 using Cartex.Shared.Models.Categories;
 using Cartex.Shared.Models.Barcodes;
 using Cartex.Shared.Models.Units;
@@ -22,34 +24,46 @@ namespace Cartex.UI.ViewModels;
 public partial class ProductsViewModel : ViewModelBase, ILoadable
 {
     private readonly IProductsApi _productsApi;
+    private readonly ICatalogApi _catalogApi;
     private readonly ICategoriesApi _categoriesApi;
     private readonly IUnitsApi _unitsApi;
     private readonly IProductTypesApi _typesApi;
     private readonly IStorageApi _storageApi;
     private readonly IBarcodesApi _barcodesApi;
-    private readonly IBarcodeLabelService _labels;
-    private readonly IPrinterService _printer;
     private readonly IFilePickerService _filePicker;
     private readonly IToastService _toast;
     private readonly IBusyService _busy;
     private readonly IExportService _export;
     private readonly AuthService _auth;
+    private readonly IDialogService _dialog;
 
     private bool _suppressReload;
 
     public PaginationState Paging { get; } = new();
-    [ObservableProperty] private ProductsTotalsDto? _totals;
+    [ObservableProperty] private ProductsTotalsDto _totals = new(0, 0);
 
     [ObservableProperty] private string _searchText = string.Empty;
     [ObservableProperty] private CategoryDto? _filterCategory;
+    [ObservableProperty] private decimal? _filterMinPrice;
+    [ObservableProperty] private decimal? _filterMaxPrice;
     [ObservableProperty] private bool _isEditOpen;
     [ObservableProperty] private bool _isNew;
+    [ObservableProperty] private bool _isSaleCreate;
     [ObservableProperty] private string _editName = string.Empty;
     [ObservableProperty] private CategoryDto? _editCategory;
+    [ObservableProperty] private string _editDimension = "Count";
     [ObservableProperty] private UnitDto? _editUnit;
+    [ObservableProperty] private bool _editAmountEntryEnabled;
     [ObservableProperty] private ProductTypeDto? _editProductType;
     [ObservableProperty] private decimal _editMinStock;
     [ObservableProperty] private ManufacturerDto? _editManufacturer;
+    [ObservableProperty] private string? _editUnitHint;
+    [ObservableProperty] private string? _editCategoryHint;
+    [ObservableProperty] private string? _editManufacturerHint;
+    [ObservableProperty] private bool _hasExistingBarcode;
+    [ObservableProperty] private string _catalogQuery = string.Empty;
+    [ObservableProperty] private bool _isCatalogSearchOpen;
+    [ObservableProperty] private bool _hasNoCatalogMatches;
     [ObservableProperty] private bool _isAddingManufacturer;
     [ObservableProperty] private string _newManufacturerName = string.Empty;
 
@@ -82,12 +96,20 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private decimal? _editSellingPrice;
     [ObservableProperty] private string? _editImageKey;
     [ObservableProperty] private Bitmap? _editImagePreview;
+    [ObservableProperty] private string? _editImageUrl;
+    [ObservableProperty] private bool _isImageViewerOpen;
+    [ObservableProperty] private Bitmap? _imageViewerImage;
+    [ObservableProperty] private string _imageViewerTitle = string.Empty;
+    private bool _imageViewerEditsCurrent;
 
     private long _editId;
+    private string _originalDimension = "Count";
 
     private string? _pendingAttributeValues;
 
+    public ScanIndicator ScanIndicator { get; } = new();
     public ObservableCollection<ProductDto> Products { get; } = [];
+    public ObservableCollection<CatalogProductDto> CatalogMatches { get; } = [];
     public ObservableCollection<ProductAttributeVM> EditAttributes { get; } = [];
     public bool HasAttributes => EditAttributes.Count > 0;
 
@@ -106,24 +128,55 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string _vBarcodes = string.Empty;
     [ObservableProperty] private string? _vImageKey;
     [ObservableProperty] private Bitmap? _vImagePreview;
+    [ObservableProperty] private string? _vImageUrl;
     public ObservableCollection<CategoryDto> Categories { get; } = [];
     public ObservableCollection<CategoryDto> FilterCategories { get; } = [];
     public ObservableCollection<UnitDto> Units { get; } = [];
     private readonly List<UnitDto> _allUnits = [];
+    public string[] DimensionOptions { get; } = ["Count", "Weight", "Volume", "Length"];
     public ObservableCollection<ProductTypeDto> ProductTypes { get; } = [];
     public ObservableCollection<ManufacturerDto> Manufacturers { get; } = [];
 
     public string EditTitle => IsNew ? L["add_product"] : L["edit"];
+    public bool CanSaveAndNew => IsNew && !IsSaleCreate;
+    public bool CanConfigureAmountEntry => EditUnit?.Dimension is not null and not "Count";
+
+    partial void OnEditDimensionChanged(string value) => ApplyUnitFilter(value, EditUnit?.Id);
+
+    partial void OnEditUnitChanged(UnitDto? value)
+    {
+        OnPropertyChanged(nameof(CanConfigureAmountEntry));
+        if (value?.Dimension == "Count") EditAmountEntryEnabled = false;
+        else if (IsNew) EditAmountEntryEnabled = true;
+    }
+
+    private void ApplyUnitFilter(string dimension, long? preferredUnitId = null)
+    {
+        var preferred = _allUnits.FirstOrDefault(unit => unit.Id == preferredUnitId && unit.Dimension == dimension);
+        Units.Clear();
+        foreach (var unit in _allUnits.Where(unit => unit.Dimension == dimension && (unit.IsEnabled || unit.Id == preferredUnitId)))
+            Units.Add(unit);
+        EditUnit = preferred
+            ?? Units.FirstOrDefault(unit => unit.IsDefault)
+            ?? Units.FirstOrDefault();
+    }
+    public bool CanCreate => _auth.HasPermission("products.create");
+    public bool CanEdit => _auth.HasPermission("products.edit");
+    public bool CanEditCurrent => IsNew ? CanCreate : CanEdit;
+    public bool CanDeleteProduct => !IsNew && _auth.HasPermission("products.delete");
     public bool IsEmpty => Products.Count == 0;
     public bool CanExport => _auth.HasPermission("reports.export");
-    public bool CanImport => _auth.HasPermission("products.manage");
+    public bool CanImport => _auth.HasPermission("products.import");
+    public bool CanCreateBarcode => _auth.HasPermission("barcodes.create");
+    public bool CanDeleteBarcode => _auth.HasPermission("barcodes.delete");
+    public bool CanDeleteVariant => _auth.HasPermission("products.delete");
 
     public ProductImportViewModel Import { get; }
 
-    public ProductsViewModel(IProductsApi productsApi, ICategoriesApi categoriesApi, IUnitsApi unitsApi,
+    public ProductsViewModel(IProductsApi productsApi, ICatalogApi catalogApi, ICategoriesApi categoriesApi, IUnitsApi unitsApi,
         IProductTypesApi typesApi, IStorageApi storageApi, IBarcodesApi barcodesApi, IBarcodeLabelService labels,
-        IPrinterService printer, IFilePickerService filePicker, IToastService toast, IBusyService busy, IExportService export, AuthService auth,
-        IBusinessApi businessApi, IRatesApi ratesApi, ISettingsApi settingsApi, ReferenceCache cache, ProductImportViewModel import)
+        IFilePickerService filePicker, IPrinterService printer, IToastService toast, IBusyService busy, IExportService export, AuthService auth, IDialogService dialog,
+        IBusinessApi businessApi, IRatesApi ratesApi, ISettingsApi settingsApi, ReferenceCache cache, ProductImportViewModel import, PrintDispatchService printDispatch)
     {
         _cache = cache;
         Import = import;
@@ -133,21 +186,23 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
             if (e.PropertyName == nameof(ProductImportViewModel.IsOpen)) OnPropertyChanged(nameof(IsModalOpen));
         };
         _productsApi = productsApi;
+        _catalogApi = catalogApi;
         _categoriesApi = categoriesApi;
         _unitsApi = unitsApi;
         _typesApi = typesApi;
         _storageApi = storageApi;
         _barcodesApi = barcodesApi;
-        _labels = labels;
-        _printer = printer;
         _filePicker = filePicker;
         _toast = toast;
         _busy = busy;
         _export = export;
         _auth = auth;
+        _dialog = dialog;
         _businessApi = businessApi;
         _ratesApi = ratesApi;
         _settingsApi = settingsApi;
+        BarcodePrint = new BarcodeLabelSession(barcodesApi, ratesApi, settingsApi, labels, printer, printDispatch, toast);
+        BarcodePrint.PropertyChanged += OnBarcodePrintChanged;
         Paging.Attach(LoadProductsAsync);
         Paging.ConfigureSort([new(L["name"], "Name"), new(L["date"], "CreatedAt")]);
         _auth.LoggedOut += ResetState;
@@ -155,23 +210,37 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
 
     private void ResetState()
     {
-        _searchCts?.Cancel();
+        Debounce.Cancel(ref _searchCts);
         _suppressReload = true;
         SearchText = string.Empty;
         FilterCategory = null;
+        FilterMinPrice = null;
+        FilterMaxPrice = null;
         _suppressReload = false;
         Products.Clear();
         PriceCurrencies.Clear();
-        Totals = null;
+        Totals = new ProductsTotalsDto(0, 0);
         _needsReload = false;
         IsEditOpen = false;
         IsVariantsOpen = false;
         IsVariantEditOpen = false;
-        IsPrintOpen = false;
+        BarcodePrint.CancelCommand.Execute(null);
         IsAddingManufacturer = false;
+        CloseImageViewer();
         Import.IsOpen = false;
         Paging.Page = 1;
         OnPropertyChanged(nameof(IsEmpty));
+    }
+
+    public override void OnNavigatedFrom()
+    {
+        IsEditOpen = false;
+        IsVariantsOpen = false;
+        IsVariantEditOpen = false;
+        BarcodePrint.CancelCommand.Execute(null);
+        IsAddingManufacturer = false;
+        CloseImageViewer();
+        Import.IsOpen = false;
     }
 
     private readonly IBusinessApi _businessApi;
@@ -191,7 +260,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         {
             var business = await _cache.GetAsync(CacheKeys.Business, _businessApi.GetAsync);
             _baseCurrency = business.Currency;
-            IsMulticurrency = business.Multicurrency;
+            IsMulticurrency = business.PricingMulticurrency;
             PriceCurrencies.Add(_baseCurrency);
             if (IsMulticurrency)
                 foreach (var r in (await _cache.GetAsync(CacheKeys.Rates, _ratesApi.GetCurrentAsync)).OrderBy(r => r.Code))
@@ -202,6 +271,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     }
 
     public bool CanPrintBarcode => _auth.HasPermission("products.printBarcode");
+    public bool CanToggleProduct => _auth.HasPermission("products.toggle");
 
     private IReadOnlyList<PageShortcut>? _pageShortcuts;
 
@@ -215,9 +285,9 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     private void HandleEscape()
     {
         if (Import.IsOpen) { Import.IsOpen = false; return; }
-        if (IsPrintOpen) { IsPrintOpen = false; return; }
+        if (IsPrintOpen) { BarcodePrint.CancelCommand.Execute(null); return; }
         if (IsVariantsOpen) { IsVariantsOpen = false; return; }
-        if (IsEditOpen) IsEditOpen = false;
+        if (IsEditOpen) CancelEditCommand.Execute(null);
     }
 
     private long _editDefaultVariantId;
@@ -236,6 +306,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task AddEditBarcode()
     {
+        if (!CanCreateBarcode) return;
         var code = EditBarcodeInput.Trim();
         if (code.Length == 0 || _editDefaultVariantId == 0) return;
         try
@@ -264,6 +335,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task DeleteEditBarcode(BarcodeDto barcode)
     {
+        if (!CanDeleteBarcode) return;
         try
         {
             await _barcodesApi.DeleteAsync(barcode.Id);
@@ -305,6 +377,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task SavePackAsync()
     {
+        if (!(IsNew ? CanCreate : CanEdit)) return;
         var name = PackName.Trim();
         if (_editId == 0 || name.Length == 0 || PackSize <= 0) { _toast.Warning(L["err_fill_all"]); return; }
 
@@ -326,6 +399,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void EditPack(ProductPackDto pack)
     {
+        if (!CanEdit) return;
         _editingPackId = pack.Id;
         PackName = pack.Name;
         PackSize = pack.Size;
@@ -336,6 +410,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task DeletePackAsync(ProductPackDto pack)
     {
+        if (!CanDeleteVariant) return;
         try
         {
             await _productsApi.DeletePackAsync(pack.Id);
@@ -355,22 +430,9 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         PackIsDefault = false;
     }
 
-    [ObservableProperty] private bool _isPrintOpen;
-    [ObservableProperty] private string _printProductName = string.Empty;
-    [ObservableProperty] private string _printUnitName = string.Empty;
-    [ObservableProperty] private string? _printCode;
-    [ObservableProperty] private int _printQuantity = 1;
-    [ObservableProperty] private Bitmap? _printPreview;
-    [ObservableProperty] private string? _printImageUrl;
-
-    [ObservableProperty] private BarcodeChip? _selectedPrintBarcode;
-
-    public ObservableCollection<BarcodeChip> PrintBarcodes { get; } = [];
-    public bool HasManyBarcodes => PrintBarcodes.Count > 1;
-
-    private long _printVariantId;
-
-    public bool IsModalOpen => IsEditOpen || IsVariantsOpen || IsVariantEditOpen || IsPrintOpen || Import.IsOpen;
+    public BarcodeLabelSession BarcodePrint { get; }
+    public bool IsPrintOpen => BarcodePrint.IsOpen;
+    public bool IsModalOpen => IsEditOpen || IsVariantsOpen || IsVariantEditOpen || IsPrintOpen || IsImageViewerOpen || Import.IsOpen;
     partial void OnIsEditOpenChanged(bool value)
     {
         OnPropertyChanged(nameof(IsModalOpen));
@@ -382,78 +444,46 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     }
     partial void OnIsVariantsOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
     partial void OnIsVariantEditOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
-    partial void OnIsPrintOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+    partial void OnIsImageViewerOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+    partial void OnImageViewerImageChanged(Bitmap? value) => OnPropertyChanged(nameof(HasImageViewerImage));
+    public bool HasImageViewerImage => ImageViewerImage is not null;
+    public bool CanEditViewerImage => _imageViewerEditsCurrent && CanEditCurrent;
+    private void OnBarcodePrintChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(BarcodeLabelSession.IsOpen)) return;
+        OnPropertyChanged(nameof(IsPrintOpen));
+        OnPropertyChanged(nameof(IsModalOpen));
+    }
+
+    [RelayCommand]
+    private async Task ToggleEnabled(ProductDto product)
+    {
+        var enabled = product.IsEnabled;
+        try
+        {
+            await _productsApi.SetStateAsync(product.Id, new SetProductStateRequest(!enabled));
+            enabled = !enabled;
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+
+        var index = Products.IndexOf(product);
+        if (index >= 0) Products[index] = product with { IsEnabled = enabled };
+    }
 
     [RelayCommand]
     private async Task OpenPrintBarcode(ProductDto product)
     {
-        PrintBarcodes.Clear();
-        SelectedPrintBarcode = null;
-        PrintPreview = null;
-        PrintCode = null;
-        PrintProductName = product.Name;
-        PrintUnitName = product.UnitName;
-        PrintImageUrl = ImageUrl.Absolute(product.ImageUrl);
-        PrintQuantity = 1;
-        _printVariantId = product.DefaultVariantId;
-        IsPrintOpen = true;
-        try
-        {
-            var codes = await _barcodesApi.GetByVariantAsync(_printVariantId);
-            if (codes.Count == 0)
-            {
-                var generated = await _barcodesApi.GenerateAsync(_printVariantId);
-                codes = [new BarcodeDto(0, generated, 1)];
-            }
-
-            foreach (var b in codes.OrderBy(b => b.PackQty))
-                PrintBarcodes.Add(new BarcodeChip(b.Code, b.PackQty,
-                    b.PackQty > 1 ? $"×{b.PackQty:0.###}" : L["unit_piece"]));
-
-            SelectedPrintBarcode = PrintBarcodes[0];
-        }
-        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
-        finally { OnPropertyChanged(nameof(HasManyBarcodes)); }
-    }
-
-    partial void OnSelectedPrintBarcodeChanged(BarcodeChip? value)
-    {
-        PrintCode = value?.Code;
-        if (value is null) { PrintPreview = null; return; }
-        try
-        {
-            using var stream = new MemoryStream(_labels.RenderPng(value.Code));
-            PrintPreview = new Bitmap(stream);
-        }
-        catch { PrintPreview = null; }
-    }
-
-    public event Action? FocusPrintQuantityRequested;
-
-    [RelayCommand]
-    private void FocusPrintQuantity() => FocusPrintQuantityRequested?.Invoke();
-
-    [RelayCommand]
-    private void PrintQtyDec() => PrintQuantity = Math.Max(1, PrintQuantity - 1);
-
-    [RelayCommand]
-    private void PrintQtyInc() => PrintQuantity++;
-
-    [RelayCommand]
-    private void CancelPrint() => IsPrintOpen = false;
-
-    [RelayCommand]
-    private void DoPrintBarcode()
-    {
-        if (string.IsNullOrWhiteSpace(PrintCode) || PrintQuantity < 1) return;
-        try
-        {
-            var name = SelectedPrintBarcode is { IsPack: true } chip ? $"{PrintProductName} {chip.Label}" : PrintProductName;
-            _labels.PrintLabels(PrintCode, name, PrintQuantity, null);
-            IsPrintOpen = false;
-            _toast.Success(L["success"]);
-        }
-        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+        await BarcodePrint.OpenAsync(new BarcodeLabelTarget(
+            product.DefaultVariantId,
+            product.Name,
+            product.UnitName,
+            ImageUrl.Absolute(product.ImageUrl),
+            product.Code,
+            product.SellingPrice,
+            product.PriceCurrency,
+            product.PriceSymbol,
+            product.PriceSymbolPosition,
+            product.PriceDecimalDigits));
     }
 
     [RelayCommand]
@@ -463,17 +493,25 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         {
             var search = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText.Trim();
             long? categoryId = FilterCategory is { Id: > 0 } ? FilterCategory.Id : null;
-            var all = await _productsApi.GetAllAsync(categoryId, search);
+            var response = await _productsApi.QueryAsync(QueryRequest.Create()
+                .Page(0, 0)
+                .Sort(Paging.SortBy, Paging.Descending)
+                .Search(search)
+                .With("categoryId", categoryId)
+                .With("minPrice", FilterMinPrice)
+                .With("maxPrice", FilterMaxPrice)
+                .Build());
+            var all = response.Content ?? [];
             await _export.ExportAsync(L["products"], all,
             [
-                new(L["name"], p => p.Name),
+                new(L["name"], p => p.Name, 2.0f),
                 new(L["category"], p => p.CategoryName),
-                new(L["unit"], p => p.UnitName),
-                new(L["sku_code"], p => p.Code),
-                new(L["barcode"], p => string.Join(" ", p.Barcodes)),
-                new(L["min_stock"], p => p.MinStock),
+                new(L["unit"], p => p.UnitName, 0.6f),
+                new(L["sku_code"], p => p.Code, 0.7f),
+                new(L["barcode"], p => string.Join(" ", p.Barcodes), 1.4f),
+                new(L["min_stock"], p => p.MinStock, 0.6f),
                 new(L["ikpu_code"], p => p.IkpuCode),
-                new(L["vat_rate"], p => p.VatRate),
+                new(L["vat_rate"], p => p.VatRate, 0.5f),
             ], Enum.Parse<ExportFormat>(format));
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
@@ -493,6 +531,112 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
             return new Bitmap(new MemoryStream(bytes));
         }
         catch { return null; }
+    }
+
+    public async Task OpenImageViewerAsync(string? imageUrl, string title)
+    {
+        if (string.IsNullOrWhiteSpace(imageUrl)) return;
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+            {
+                var bytes = await _imageClient.GetByteArrayAsync(ImageUrl.Absolute(imageUrl));
+                ImageViewerImage = new Bitmap(new MemoryStream(bytes));
+            }
+            ImageViewerTitle = title;
+            _imageViewerEditsCurrent = false;
+            OnPropertyChanged(nameof(CanEditViewerImage));
+            IsImageViewerOpen = true;
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    [RelayCommand]
+    private async Task OpenProductImage(ProductDto product)
+    {
+        if (string.IsNullOrWhiteSpace(product.ImageKey)) return;
+        ImageViewerImage = await LoadBitmapAsync(product.ImageKey);
+        if (ImageViewerImage is null) return;
+        ImageViewerTitle = product.Name;
+        _imageViewerEditsCurrent = false;
+        OnPropertyChanged(nameof(CanEditViewerImage));
+        IsImageViewerOpen = true;
+    }
+
+    [RelayCommand]
+    private void OpenEditImage()
+    {
+        if (EditImagePreview is null) return;
+        ImageViewerImage = EditImagePreview;
+        ImageViewerTitle = EditName;
+        _imageViewerEditsCurrent = true;
+        OnPropertyChanged(nameof(CanEditViewerImage));
+        IsImageViewerOpen = true;
+    }
+
+    [RelayCommand]
+    private void CloseImageViewer()
+    {
+        IsImageViewerOpen = false;
+        ImageViewerImage = null;
+        ImageViewerTitle = string.Empty;
+        _imageViewerEditsCurrent = false;
+        OnPropertyChanged(nameof(CanEditViewerImage));
+    }
+
+    [RelayCommand]
+    private async Task DownloadImageViewerAsync()
+        => await SaveImageAsync(ImageViewerImage, ImageViewerTitle);
+
+    [RelayCommand]
+    private async Task DownloadEditImageAsync()
+        => await SaveImageAsync(EditImagePreview, EditName);
+
+    private async Task SaveImageAsync(Bitmap? image, string title)
+    {
+        if (image is null) return;
+        try
+        {
+            var name = string.Concat(title.Select(character => Path.GetInvalidFileNameChars().Contains(character) ? '_' : character));
+            await using var target = await _filePicker.SaveFileAsync(string.IsNullOrWhiteSpace(name) ? "product" : name, "png");
+            if (target is null) return;
+            image.Save(target);
+            await target.FlushAsync();
+            _toast.Success(L["success"]);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    [RelayCommand]
+    private async Task ReplaceImageViewerAsync()
+    {
+        if (!CanEditViewerImage) return;
+        try
+        {
+            var uploaded = await UploadPickedImageAsync();
+            if (uploaded is null) return;
+            EditImageKey = uploaded.Value.Key;
+            EditImagePreview = uploaded.Value.Preview;
+            ImageViewerImage = uploaded.Value.Preview;
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    [RelayCommand]
+    private void RemoveImageViewer()
+    {
+        if (!CanEditViewerImage) return;
+        EditImageKey = null;
+        EditImagePreview = null;
+        CloseImageViewer();
+    }
+
+    [RelayCommand]
+    private void RemoveEditImage()
+    {
+        if (!CanEditCurrent) return;
+        EditImageKey = null;
+        EditImagePreview = null;
     }
 
     private async Task<(string Key, Bitmap? Preview)?> UploadPickedImageAsync()
@@ -523,11 +667,40 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         }
     }
 
+    [RelayCommand]
+    private async Task FetchImageAsync(string target)
+    {
+        var isVariant = target == "variant";
+        var url = (isVariant ? VImageUrl : EditImageUrl)?.Trim();
+        if (string.IsNullOrEmpty(url)) return;
+
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+            {
+                var result = await _storageApi.UploadFromUrlAsync(new ImageFromUrlRequest(url));
+                var preview = await LoadBitmapAsync(result.Key);
+
+                if (isVariant) { VImageKey = result.Key; VImagePreview = preview; VImageUrl = null; }
+                else { EditImageKey = result.Key; EditImagePreview = preview; EditImageUrl = null; }
+            }
+        }
+        catch (Exception ex)
+        {
+            _toast.Error(ApiErrors.Describe(ex));
+        }
+    }
+
     private void RaisePermissions()
     {
         OnPropertyChanged(nameof(CanExport));
+        OnPropertyChanged(nameof(CanCreate));
+        OnPropertyChanged(nameof(CanEdit));
         OnPropertyChanged(nameof(CanImport));
         OnPropertyChanged(nameof(CanPrintBarcode));
+        OnPropertyChanged(nameof(CanCreateBarcode));
+        OnPropertyChanged(nameof(CanDeleteBarcode));
+        OnPropertyChanged(nameof(CanDeleteVariant));
     }
 
     public async Task LoadAsync()
@@ -537,42 +710,58 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         {
             using (_busy.Begin(L["loading"]))
             {
-                _suppressReload = true;
-
-                var categoriesTask = _cache.GetAsync(CacheKeys.Categories, () => _categoriesApi.GetAllAsync());
-                var unitsTask = _cache.GetAsync(CacheKeys.Units, () => _unitsApi.GetAllAsync());
-                var typesTask = _cache.GetAsync(CacheKeys.ProductTypes, () => _typesApi.GetAllAsync());
-                var manufacturersTask = _cache.GetAsync(CacheKeys.Manufacturers, () => ServiceLocator.Resolve<IManufacturersApi>().GetAllAsync());
-                var currenciesTask = EnsureCurrenciesAsync();
-
-                var categories = await categoriesTask;
-                Categories.Clear();
-                FilterCategories.Clear();
-                FilterCategories.Add(new CategoryDto(0, L["all"], null, null, null));
-                foreach (var c in categories) { Categories.Add(c); FilterCategories.Add(c); }
-                FilterCategory = FilterCategories[0];
-
-                var units = await unitsTask;
-                _allUnits.Clear();
-                _allUnits.AddRange(units);
-                Units.Clear();
-                foreach (var u in units.Where(u => u.IsEnabled)) Units.Add(u);
-
-                var types = await typesTask;
-                ProductTypes.Clear();
-                foreach (var t in types) ProductTypes.Add(t);
-
-                var manufacturers = await manufacturersTask;
-                Manufacturers.Clear();
-                foreach (var m in manufacturers) Manufacturers.Add(m);
-
-                await currenciesTask;
-
-                _suppressReload = false;
+                if (CanCreate || CanEdit)
+                {
+                    _suppressReload = true;
+                    await LoadEditorReferencesAsync();
+                    _suppressReload = false;
+                }
+                else
+                {
+                    FilterCategories.Clear();
+                    FilterCategories.Add(new CategoryDto(0, L["all"], null, null, null, FullPath: L["all"]));
+                    FilterCategory = FilterCategories[0];
+                }
                 await LoadProductsAsync();
             }
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+        finally { _suppressReload = false; }
+    }
+
+    private async Task LoadEditorReferencesAsync()
+    {
+        var categoriesTask = _cache.GetAsync(CacheKeys.Categories, () => _categoriesApi.GetAllAsync());
+        var unitsTask = _cache.GetAsync(CacheKeys.Units, () => _unitsApi.GetAllAsync());
+        var typesTask = _cache.GetAsync(CacheKeys.ProductTypes, () => _typesApi.GetAllAsync());
+        var manufacturersTask = _cache.GetAsync(CacheKeys.Manufacturers, () => ServiceLocator.Resolve<IManufacturersApi>().GetAllAsync());
+        var currenciesTask = EnsureCurrenciesAsync();
+
+        var categories = await categoriesTask;
+        Categories.Clear();
+        FilterCategories.Clear();
+        FilterCategories.Add(new CategoryDto(0, L["all"], null, null, null, FullPath: L["all"]));
+        foreach (var category in categories)
+        {
+            Categories.Add(category);
+            FilterCategories.Add(category);
+        }
+        FilterCategory = FilterCategories.FirstOrDefault(category => category.Id == FilterCategory?.Id) ?? FilterCategories[0];
+
+        var units = await unitsTask;
+        _allUnits.Clear();
+        _allUnits.AddRange(units);
+        ApplyUnitFilter(EditDimension, EditUnit?.Id);
+
+        var types = await typesTask;
+        ProductTypes.Clear();
+        foreach (var type in types) ProductTypes.Add(type);
+
+        var manufacturers = await manufacturersTask;
+        Manufacturers.Clear();
+        foreach (var manufacturer in manufacturers) Manufacturers.Add(manufacturer);
+
+        await currenciesTask;
     }
 
     private async Task LoadProductsAsync()
@@ -586,8 +775,10 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
                 .Sort(Paging.SortBy, Paging.Descending)
                 .Search(search)
                 .With("categoryId", categoryId)
+                .With("minPrice", FilterMinPrice)
+                .With("maxPrice", FilterMaxPrice)
                 .Build());
-            var totalsTask = _productsApi.GetTotalsAsync(search, categoryId);
+            var totalsTask = _productsApi.GetTotalsAsync(search, categoryId, FilterMinPrice, FilterMaxPrice);
             var paged = (await pagedTask).ToPaged();
             Products.Clear();
             foreach (var p in paged.Items) Products.Add(p);
@@ -603,8 +794,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     partial void OnSearchTextChanged(string value)
     {
         if (_suppressReload) return;
-        _searchCts?.Cancel();
-        var cts = _searchCts = new CancellationTokenSource();
+        var cts = Debounce.Restart(ref _searchCts);
         _ = DebouncedSearchAsync(cts.Token);
     }
 
@@ -617,7 +807,24 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     }
 
     partial void OnFilterCategoryChanged(CategoryDto? value) { if (_suppressReload) return; Paging.Page = 1; _ = LoadProductsAsync(); }
-    partial void OnIsNewChanged(bool value) => OnPropertyChanged(nameof(EditTitle));
+    partial void OnFilterMinPriceChanged(decimal? value) => ScheduleFilterReload();
+    partial void OnFilterMaxPriceChanged(decimal? value) => ScheduleFilterReload();
+
+    private void ScheduleFilterReload()
+    {
+        if (_suppressReload) return;
+        var cts = Debounce.Restart(ref _searchCts);
+        _ = DebouncedSearchAsync(cts.Token);
+    }
+    partial void OnIsNewChanged(bool value)
+    {
+        OnPropertyChanged(nameof(EditTitle));
+        OnPropertyChanged(nameof(CanSaveAndNew));
+        OnPropertyChanged(nameof(CanDeleteProduct));
+        OnPropertyChanged(nameof(CanEditCurrent));
+    }
+
+    partial void OnIsSaleCreateChanged(bool value) => OnPropertyChanged(nameof(CanSaveAndNew));
 
     partial void OnEditProductTypeChanged(ProductTypeDto? value)
     {
@@ -629,27 +836,73 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     }
 
     [RelayCommand]
-    private void OpenCreate()
+    private async Task OpenCreateAsync() => await OpenCreateAsync(null, false);
+
+    public async Task OpenCreateForSaleAsync(string? barcode = null) => await OpenCreateAsync(barcode, true);
+
+    public async Task OpenCreateFromReferenceAsync(CatalogProductDto reference)
+    {
+        await OpenCreateAsync(null, true);
+        if (IsEditOpen) ApplyProductReference(reference);
+    }
+
+    private async Task OpenCreateAsync(string? barcode, bool isSaleCreate)
+    {
+        if (!CanCreate) return;
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+            {
+                _suppressReload = true;
+                await LoadEditorReferencesAsync();
+                _suppressReload = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _toast.Error(ApiErrors.Describe(ex));
+            return;
+        }
+        finally { _suppressReload = false; }
+
+        OpenCreateCore(barcode, isSaleCreate);
+        if (!string.IsNullOrWhiteSpace(barcode)) await LookupEditBarcodeAsync();
+    }
+
+    private void OpenCreateCore(string? barcode, bool isSaleCreate)
     {
         IsNew = true;
+        IsSaleCreate = isSaleCreate;
         _editId = 0;
         EditName = string.Empty;
         EditCategory = null;
-        EditUnit = Units.FirstOrDefault(u => u.IsDefault && u.Dimension == "Count") ?? Units.FirstOrDefault(u => u.IsDefault) ?? Units.FirstOrDefault();
+        _originalDimension = "Count";
+        EditDimension = "Count";
+        ApplyUnitFilter(EditDimension);
         _pendingAttributeValues = null;
         EditProductType = null;
         EditManufacturer = null;
+        EditUnitHint = null;
+        EditCategoryHint = null;
+        EditManufacturerHint = null;
+        HasExistingBarcode = false;
+        CatalogQuery = string.Empty;
+        CatalogMatches.Clear();
+        IsCatalogSearchOpen = false;
+        HasNoCatalogMatches = false;
         EditAttributes.Clear();
         OnPropertyChanged(nameof(HasAttributes));
         EditMinStock = _defaultMinStock;
-        EditBarcodes = string.Empty;
+        EditBarcodes = barcode ?? string.Empty;
         EditCode = string.Empty;
         EditIkpuCode = string.Empty;
         EditVatRate = null;
         EditSellingPrice = null;
         EditPriceCurrency = _baseCurrency;
+        EditAmountEntryEnabled = CanConfigureAmountEntry;
         EditImageKey = null;
         EditImagePreview = null;
+        EditImageUrl = null;
         _editDefaultVariantId = 0;
         EditBarcodeList.Clear();
         EditBarcodeInput = string.Empty;
@@ -661,22 +914,173 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     }
 
     [RelayCommand]
-    private void OpenEdit(ProductDto product)
+    private async Task LookupEditBarcodeAsync()
+    {
+        if (!IsNew || ExtractLookupBarcode(EditBarcodes) is not { } code) return;
+        if (await IsBarcodeTakenAsync(code)) return;
+
+        try
+        {
+            if (await ScanIndicator.TrackAsync(_catalogApi.GetByBarcodeAsync(code)) is { } reference)
+                ApplyProductReference(reference);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    private async Task<bool> IsBarcodeTakenAsync(string code)
+    {
+        HasExistingBarcode = false;
+        try
+        {
+            var existing = await _productsApi.GetByBarcodeAsync(code, 0);
+            HasExistingBarcode = true;
+            var useExisting = await _dialog.ConfirmAsync(string.Format(L["barcode_already_used"], existing.ProductName), L["warning"]);
+            if (!useExisting) return true;
+
+            var product = (await _productsApi.GetAllAsync(variantId: existing.VariantId)).FirstOrDefault();
+            if (product is null) return true;
+            if (IsSaleCreate)
+            {
+                CreatedForSale?.Invoke(product);
+                IsEditOpen = false;
+                IsSaleCreate = false;
+            }
+            else if (CanEdit)
+            {
+                OpenEditCore(product);
+            }
+            return true;
+        }
+        catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound) { return false; }
+        catch (Exception ex)
+        {
+            _toast.Error(ApiErrors.Describe(ex));
+            return true;
+        }
+    }
+
+    [RelayCommand]
+    private async Task SearchCatalogAsync()
+    {
+        var query = CatalogQuery.Trim();
+        if (query.Length == 0) return;
+
+        try
+        {
+            var matches = await ScanIndicator.TrackAsync(_catalogApi.SearchAsync(query), found => found.Count > 0);
+            CatalogMatches.Clear();
+            foreach (var match in matches) CatalogMatches.Add(match);
+            IsCatalogSearchOpen = true;
+            HasNoCatalogMatches = CatalogMatches.Count == 0;
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    [RelayCommand]
+    private void CloseCatalogSearch() => IsCatalogSearchOpen = false;
+
+    [RelayCommand]
+    private async Task PickCatalogMatchAsync(CatalogProductDto match)
+    {
+        IsCatalogSearchOpen = false;
+        if (await IsBarcodeTakenAsync(match.Barcode)) return;
+        ApplyProductReference(match);
+    }
+
+    private static string? ExtractLookupBarcode(string value)
+    {
+        var first = value.Split(',', 2, StringSplitOptions.TrimEntries)[0];
+        var code = first.Split('*', 2, StringSplitOptions.TrimEntries)[0];
+        return string.IsNullOrWhiteSpace(code) ? null : code;
+    }
+
+    private void ApplyProductReference(CatalogProductDto reference)
+    {
+        _toast.Info(L["catalog_reference_found"]);
+        if (string.IsNullOrWhiteSpace(EditName)) EditName = reference.Name;
+        EditBarcodes = reference.PackQty is > 0 and not 1
+            ? $"{reference.Barcode}*{reference.PackQty.Value:0.###}"
+            : reference.Barcode;
+
+        if (!string.IsNullOrWhiteSpace(reference.Unit))
+        {
+            var unit = _allUnits.FirstOrDefault(item =>
+                string.Equals(item.Name, reference.Unit, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(item.ShortName, reference.Unit, StringComparison.OrdinalIgnoreCase));
+            if (unit is not null)
+            {
+                EditDimension = unit.Dimension;
+                ApplyUnitFilter(EditDimension, unit.Id);
+                EditUnitHint = null;
+            }
+            else
+            {
+                EditUnit = null;
+                EditUnitHint = reference.Unit;
+            }
+        }
+
+        var category = reference.CategoryChild ?? reference.CategoryParent;
+        if (!string.IsNullOrWhiteSpace(category))
+        {
+            EditCategory = Categories.FirstOrDefault(item =>
+                string.Equals(item.Name, category, StringComparison.OrdinalIgnoreCase));
+            EditCategoryHint = EditCategory is null ? category : null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(reference.Manufacturer))
+        {
+            EditManufacturer = Manufacturers.FirstOrDefault(item =>
+                string.Equals(item.Name, reference.Manufacturer, StringComparison.OrdinalIgnoreCase));
+            EditManufacturerHint = EditManufacturer is null ? reference.Manufacturer : null;
+        }
+    }
+
+    [RelayCommand]
+    private async Task OpenEditAsync(ProductDto product) => await OpenEditForSaleAsync(product);
+
+    public async Task OpenEditForSaleAsync(ProductDto product)
+    {
+        if (!CanEdit) return;
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+            {
+                _suppressReload = true;
+                await LoadEditorReferencesAsync();
+                _suppressReload = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _toast.Error(ApiErrors.Describe(ex));
+            return;
+        }
+        finally { _suppressReload = false; }
+
+        OpenEditCore(product);
+    }
+
+    private void OpenEditCore(ProductDto product)
     {
         IsNew = false;
+        IsSaleCreate = false;
         _editId = product.Id;
         EditName = product.Name;
-        EditCategory = Categories.FirstOrDefault(c => c.Name == product.CategoryName);
-        EditUnit = Units.FirstOrDefault(u => u.Name == product.UnitName);
-        if (EditUnit is null && _allUnits.FirstOrDefault(u => u.Name == product.UnitName) is { } disabledUnit)
-        {
-            Units.Add(disabledUnit);
-            EditUnit = disabledUnit;
-        }
+        EditCategory = Categories.FirstOrDefault(c => (c.FullPath ?? c.Name) == product.CategoryName);
+        var currentUnit = _allUnits.FirstOrDefault(u => u.Id == product.UnitId)
+            ?? _allUnits.FirstOrDefault(u => u.Name == product.UnitName);
+        _originalDimension = currentUnit?.Dimension ?? product.Dimension ?? "Count";
+        EditDimension = _originalDimension;
+        ApplyUnitFilter(EditDimension, currentUnit?.Id);
         _pendingAttributeValues = product.Attributes;
         EditProductType = null;
         EditProductType = ProductTypes.FirstOrDefault(t => t.Id == product.ProductTypeId);
         EditManufacturer = Manufacturers.FirstOrDefault(m => m.Id == product.ManufacturerId);
+        EditUnitHint = null;
+        EditCategoryHint = null;
+        EditManufacturerHint = null;
+        HasExistingBarcode = false;
         EditMinStock = product.MinStock;
         EditBarcodes = string.Join(", ", product.Barcodes);
         EditCode = product.Code ?? string.Empty;
@@ -684,8 +1088,10 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         EditVatRate = product.VatRate;
         EditSellingPrice = product.SellingPrice;
         EditPriceCurrency = product.PriceCurrency ?? _baseCurrency;
+        EditAmountEntryEnabled = product.AllowsAmountEntry;
         EditImageKey = product.ImageKey;
         EditImagePreview = null;
+        EditImageUrl = null;
         _ = SetPreviewAsync(product.ImageKey, b => EditImagePreview = b);
         _editDefaultVariantId = product.DefaultVariantId;
         EditBarcodeInput = string.Empty;
@@ -698,7 +1104,11 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     }
 
     [RelayCommand]
-    private void CancelEdit() => IsEditOpen = false;
+    private void CancelEdit()
+    {
+        IsSaleCreate = false;
+        IsEditOpen = false;
+    }
 
     private bool _needsReload;
     public event Action? EditNameFocusRequested;
@@ -707,7 +1117,10 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     private async Task SaveAsync()
     {
         if (await SaveCoreAsync())
+        {
             IsEditOpen = false;
+            IsSaleCreate = false;
+        }
     }
 
     [RelayCommand]
@@ -727,8 +1140,13 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         EditCode = string.Empty;
         EditIkpuCode = string.Empty;
         EditSellingPrice = null;
+        EditUnitHint = null;
+        EditCategoryHint = null;
+        EditManufacturerHint = null;
+        HasExistingBarcode = false;
         EditImageKey = null;
         EditImagePreview = null;
+        EditImageUrl = null;
         _editDefaultVariantId = 0;
         EditBarcodeList.Clear();
         EditBarcodeInput = string.Empty;
@@ -740,8 +1158,19 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
 
     private async Task<bool> SaveCoreAsync()
     {
+        if (IsNew ? !CanCreate : !CanEdit) return false;
         if (string.IsNullOrWhiteSpace(EditName)) { _toast.Warning(L["name"]); return false; }
         if (EditUnit is null) { _toast.Warning(L["unit"]); return false; }
+        if (IsNew && EditSellingPrice is null) { _toast.Warning(L["selling_price"]); return false; }
+        if (IsNew && ExtractLookupBarcode(EditBarcodes) is not null)
+        {
+            await LookupEditBarcodeAsync();
+            if (HasExistingBarcode || !IsEditOpen || !IsNew) return false;
+        }
+
+        var dimensionChanged = !IsNew && EditDimension != _originalDimension;
+        if (dimensionChanged && !await _dialog.ConfirmDangerAsync(L["unit_dimension_change_confirm"], L["unit_group"]))
+            return false;
 
         var attributes = EditProductType is null ? null : AttributeSchemaCodec.SerializeValues(EditAttributes);
 
@@ -761,8 +1190,16 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
                         ImageKey: EditImageKey,
                         SellingPrice: EditSellingPrice,
                         PriceCurrency: IsMulticurrency ? EditPriceCurrency : null,
-                        ManufacturerId: EditManufacturer?.Id);
-                    await _productsApi.CreateAsync(request);
+                        ManufacturerId: EditManufacturer?.Id,
+                        AmountEntryEnabled: CanConfigureAmountEntry && EditAmountEntryEnabled);
+                    var productId = await _productsApi.CreateAsync(request);
+                    if (IsSaleCreate)
+                    {
+                        var variants = await _productsApi.GetVariantsAsync(productId);
+                        var variantId = variants.FirstOrDefault(variant => variant.IsDefault)?.Id ?? variants.FirstOrDefault()?.Id;
+                        if (variantId is { } id && (await _productsApi.GetAllAsync(variantId: id)).FirstOrDefault() is { } product)
+                            CreatedForSale?.Invoke(product);
+                    }
                 }
                 else
                 {
@@ -774,12 +1211,15 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
                         ImageKey: EditImageKey,
                         SellingPrice: EditSellingPrice,
                         PriceCurrency: IsMulticurrency ? EditPriceCurrency : null,
-                        ManufacturerId: EditManufacturer?.Id);
+                        ManufacturerId: EditManufacturer?.Id,
+                        AmountEntryEnabled: CanConfigureAmountEntry && EditAmountEntryEnabled,
+                        ConfirmUnitDimensionChange: dimensionChanged);
                     await _productsApi.UpdateAsync(_editId, request);
+                    ProductUpdated?.Invoke(_editId);
                 }
             }
 
-            _needsReload = true;
+            _needsReload = !IsSaleCreate;
             _cache.Invalidate(CacheKeys.ProductLookup);
             _toast.Success(L["success"]);
             return true;
@@ -789,6 +1229,33 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
             _toast.Error(ApiErrors.Describe(ex));
             return false;
         }
+    }
+
+    public event Action<ProductDto>? CreatedForSale;
+    public event Action<long>? ProductUpdated;
+    public event Action<long, IReadOnlyCollection<long>>? ProductDeleted;
+
+    [RelayCommand]
+    private async Task DeleteProductAsync()
+    {
+        if (!CanDeleteProduct || _editId == 0) return;
+        if (!await _dialog.ConfirmDangerAsync(string.Format(L["delete_product_confirm"], EditName), L["delete"])) return;
+
+        try
+        {
+            var productId = _editId;
+            var variantIds = (await _productsApi.GetVariantsAsync(productId)).Select(v => v.Id).ToArray();
+            using (_busy.Begin(L["loading"]))
+                await _productsApi.DeleteAsync(productId);
+
+            IsEditOpen = false;
+            IsSaleCreate = false;
+            ProductDeleted?.Invoke(productId, variantIds);
+            _cache.Invalidate(CacheKeys.ProductLookup);
+            _toast.Success(L["success"]);
+            await LoadProductsAsync();
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
     private void BuildVariantAttributes(string? valuesJson)
@@ -826,6 +1293,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void OpenVariantCreate()
     {
+        if (!CanEdit) return;
         IsVariantNew = true;
         _variantEditId = 0;
         VName = string.Empty;
@@ -833,6 +1301,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         VBarcodes = string.Empty;
         VImageKey = null;
         VImagePreview = null;
+        VImageUrl = null;
         BuildVariantAttributes(null);
         IsVariantEditOpen = true;
     }
@@ -840,6 +1309,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void OpenVariantEdit(VariantDto variant)
     {
+        if (!CanEdit) return;
         IsVariantNew = false;
         _variantEditId = variant.Id;
         VName = variant.Name ?? string.Empty;
@@ -847,6 +1317,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
         VBarcodes = BarcodeSyntax.Format(variant.Barcodes);
         VImageKey = variant.ImageKey;
         VImagePreview = null;
+        VImageUrl = null;
         _ = SetPreviewAsync(variant.ImageKey, b => VImagePreview = b);
         BuildVariantAttributes(variant.Attributes);
         IsVariantEditOpen = true;
@@ -905,6 +1376,7 @@ public partial class ProductsViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task DeleteVariant(VariantDto variant)
     {
+        if (!CanDeleteVariant) return;
         if (variant.IsDefault) { _toast.Warning(L["error"]); return; }
         try
         {

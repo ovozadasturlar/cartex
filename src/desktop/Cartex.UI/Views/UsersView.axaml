@@ -14,7 +14,7 @@
             <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[users]}" Margin="0,0,0,16">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <c:ExportButton Command="{Binding ExportCommand}" Text="{Binding L[export]}" IsVisible="{Binding CanExport}" />
-                    <Button Classes="brand" Command="{Binding OpenCreateCommand}">
+                    <Button Classes="brand" Command="{Binding OpenCreateCommand}" IsVisible="{Binding CanCreate}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <mi:MaterialIcon Kind="Plus" Width="18" Height="18" />
                             <TextBlock Text="{Binding L[create_user]}" VerticalAlignment="Center" />
@@ -49,8 +49,27 @@
                                                 Header="{Binding [full_name], Source={x:Static svc:LocalizationManager.Instance}}" />
                             <DataGridTextColumn Width="Auto" Binding="{Binding Username}"
                                                 Header="{Binding [username], Source={x:Static svc:LocalizationManager.Instance}}" />
-                            <DataGridTextColumn Width="*" Binding="{Binding RoleNames, Converter={x:Static conv:StringJoinConverter.Instance}}"
-                                                Header="{Binding [roles], Source={x:Static svc:LocalizationManager.Instance}}" />
+                            <DataGridTemplateColumn Width="*"
+                                                    Header="{Binding [roles], Source={x:Static svc:LocalizationManager.Instance}}">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <ItemsControl ItemsSource="{Binding RoleNames}" Margin="4,2">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="{DynamicResource BrandLightBrush}" CornerRadius="999"
+                                                            Padding="8,3" Margin="0,1,5,1">
+                                                        <TextBlock Text="{Binding}" FontSize="11.5"
+                                                                   Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTextColumn Width="Auto" Binding="{Binding DefaultBranchName}"
                                                 Header="{Binding [default_branch], Source={x:Static svc:LocalizationManager.Instance}}" />
                             <DataGridTemplateColumn Width="Auto"
@@ -65,12 +84,29 @@
                             <DataGridTemplateColumn Width="Auto">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Button Classes="icon" Margin="6,0"
-                                                Command="{Binding $parent[DataGrid].DataContext.OpenEditCommand}"
-                                                CommandParameter="{Binding}" ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[edit]}">
-                                            <mi:MaterialIcon Kind="Pencil" Width="16" Height="16"
-                                                             Foreground="{DynamicResource TextSecondary}" />
-                                        </Button>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button Classes="icon" Margin="6,0"
+                                                    Command="{Binding $parent[DataGrid].DataContext.OpenEditCommand}"
+                                                    IsVisible="{Binding $parent[DataGrid].DataContext.CanEdit}"
+                                                    CommandParameter="{Binding}" ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[edit]}">
+                                                <mi:MaterialIcon Kind="Pencil" Width="16" Height="16"
+                                                                 Foreground="{DynamicResource TextSecondary}" />
+                                            </Button>
+                                            <Button Classes="icon" Margin="0,0,6,0"
+                                                    Command="{Binding $parent[DataGrid].DataContext.OpenChangeUsernameCommand}"
+                                                    IsVisible="{Binding $parent[DataGrid].DataContext.CanChangeUsername}"
+                                                    CommandParameter="{Binding}" ToolTip.Tip="Username o'zgartirish">
+                                                <mi:MaterialIcon Kind="AccountEdit" Width="16" Height="16"
+                                                                 Foreground="{DynamicResource BrandPrimaryBrush}" />
+                                            </Button>
+                                            <Button Classes="icon" Margin="0,0,6,0"
+                                                    Command="{Binding $parent[DataGrid].DataContext.DeleteCommand}"
+                                                    IsVisible="{Binding $parent[DataGrid].DataContext.CanDelete}"
+                                                    CommandParameter="{Binding}" ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[delete]}">
+                                                <mi:MaterialIcon Kind="DeleteOutline" Width="16" Height="16"
+                                                                 Foreground="{DynamicResource DangerBrush}" />
+                                            </Button>
+                                        </StackPanel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
@@ -112,7 +148,18 @@
                             </StackPanel>
                             <StackPanel Spacing="5">
                                 <TextBlock Text="{Binding PasswordLabel}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
-                                <TextBox Text="{Binding EditPassword}" PasswordChar="●" MinHeight="38" />
+                                <TextBox x:Name="UserPasswordBox" Text="{Binding EditPassword}"
+                                         PasswordChar="●" RevealPassword="False" MinHeight="38">
+                                    <TextBox.InnerRightContent>
+                                        <ToggleButton IsChecked="{Binding #UserPasswordBox.RevealPassword, Mode=TwoWay}"
+                                                      Background="Transparent" BorderThickness="0" Padding="8,0"
+                                                      Cursor="Hand" VerticalAlignment="Center"
+                                                      ToolTip.Tip="Parolni ko‘rsatish/yashirish">
+                                            <mi:MaterialIcon Kind="EyeOutline" Width="18" Height="18"
+                                                             Foreground="{DynamicResource TextMuted}" />
+                                        </ToggleButton>
+                                    </TextBox.InnerRightContent>
+                                </TextBox>
                             </StackPanel>
                             <StackPanel Spacing="5">
                                 <TextBlock Text="{Binding L[default_branch]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
@@ -159,7 +206,8 @@
                                         <ItemsControl ItemsSource="{Binding EditRoles}">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate>
-                                                    <CheckBox IsChecked="{Binding IsSelected}" Content="{Binding Label}" Margin="4,1" />
+                                                    <CheckBox IsChecked="{Binding IsSelected}" Content="{Binding Label}"
+                                                              IsEnabled="{Binding IsEnabled}" Margin="4,1" />
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
@@ -186,6 +234,33 @@
                         </Grid>
                     </Grid>
                 </DockPanel>
+            </Border>
+        </Border>
+
+        <!-- ===== CHANGE USERNAME DIALOG (developer only) ===== -->
+        <Border IsVisible="{Binding IsChangeUsernameOpen}" c:FormBehaviors.AutoFocus="True" Background="#30000000"
+                c:OverlayBehaviors.DismissCommand="{Binding CancelChangeUsernameCommand}">
+            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="400"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    BoxShadow="0 16 60 0 #44000000">
+                <StackPanel Margin="28" Spacing="16">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Username o'zgartirish" FontSize="17" FontWeight="Bold"
+                                   Foreground="{DynamicResource TextPrimary}" />
+                        <TextBlock Text="{Binding ChangeUsernameTarget}" FontSize="12"
+                                   Foreground="{DynamicResource TextMuted}" />
+                    </StackPanel>
+                    <StackPanel Spacing="5">
+                        <c:FieldLabel Text="Yangi username" Required="True" />
+                        <TextBox Text="{Binding NewUsername}" MinHeight="38"
+                                 PlaceholderText="yangi_username" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+                        <Button Classes="outline" Command="{Binding CancelChangeUsernameCommand}" Content="{Binding L[cancel]}" />
+                        <Button Classes="brand" Command="{Binding ConfirmChangeUsernameCommand}" Content="{Binding L[save]}" />
+                    </StackPanel>
+                </StackPanel>
             </Border>
         </Border>
     </Panel>

@@ -1,5 +1,4 @@
 using System.Globalization;
-using Avalonia.Controls;
 using Avalonia.Data.Converters;
 using Avalonia.Layout;
 using Cartex.UI.Models;
@@ -49,6 +48,34 @@ public sealed class DecimalPositiveConverter : IValueConverter
         var positive = value is decimal d && d > 0;
         return parameter is "inverse" ? !positive : positive;
     }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
+public sealed class NullToBoolConverter : IValueConverter
+{
+    public static readonly NullToBoolConverter Instance = new();
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        value is string s ? !string.IsNullOrWhiteSpace(s) : value is not null;
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
+public sealed class NonZeroConverter : IValueConverter
+{
+    public static readonly NonZeroConverter Instance = new();
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        value switch
+        {
+            decimal d => d != 0,
+            int i => i != 0,
+            double db => db != 0,
+            _ => false
+        };
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         throw new NotSupportedException();

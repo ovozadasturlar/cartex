@@ -1,0 +1,27 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Cartex.UI.Controls"
+             xmlns:vm="using:Cartex.UI.ViewModels"
+             x:Class="Cartex.UI.Views.PromptDialog"
+             x:DataType="vm:PromptViewModel"
+             x:CompileBindings="True">
+    <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="440"
+            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+            HorizontalAlignment="Center" VerticalAlignment="Center"
+            BoxShadow="0 18 50 0 #33000000"
+            c:FormBehaviors.AutoFocus="True"
+            c:FormBehaviors.EnterSubmits="{Binding SubmitCommand}">
+        <StackPanel Margin="22" Spacing="14">
+            <TextBlock Text="{Binding Title}" Classes="h2" />
+            <TextBlock Text="{Binding Message}" IsVisible="{Binding HasMessage}" TextWrapping="Wrap"
+                       Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
+            <TextBox Text="{Binding Text, Mode=TwoWay}" PlaceholderText="{Binding Placeholder}"
+                     MinHeight="40" AcceptsReturn="False" />
+            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+                <Button Classes="outline" Command="{Binding CancelCommand}" Content="{Binding L[cancel]}" />
+                <Button Classes="brand" Command="{Binding SubmitCommand}" IsEnabled="{Binding CanSubmit}"
+                        Content="{Binding L[confirm]}" />
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</UserControl>

@@ -19,7 +19,7 @@ public sealed class StoreTokenBuilder(IApplicationDbContext db, IJwtTokenGenerat
         var now = DateTime.UtcNow;
         var refreshToken = CreateSession(customer.Id, deviceName, now, out _);
         await db.SaveChangesAsync(cancellationToken);
-        return new StoreLoginResponse(jwtTokenGenerator.GenerateCustomerToken(customer.Id, customer.FullName), refreshToken, customer.FullName);
+        return new StoreLoginResponse(jwtTokenGenerator.GenerateCustomerToken(customer.Id, customer.Party.FullName), refreshToken, customer.Party.FullName);
     }
 
     public async Task<StoreLoginResponse?> RotateAsync(string rawRefresh, string? deviceName, CancellationToken cancellationToken)
@@ -43,7 +43,7 @@ public sealed class StoreTokenBuilder(IApplicationDbContext db, IJwtTokenGenerat
 
         if (session.ExpiresAt <= now) return null;
 
-        var customer = await db.Customers.FirstOrDefaultAsync(c => c.Id == session.CustomerId, cancellationToken);
+        var customer = await db.Customers.Include(c => c.Party).FirstOrDefaultAsync(c => c.Id == session.CustomerId, cancellationToken);
         if (customer is null) return null;
 
         var newRaw = RefreshTokens.Generate();
@@ -58,7 +58,7 @@ public sealed class StoreTokenBuilder(IApplicationDbContext db, IJwtTokenGenerat
 
         AddSession(customer.Id, deviceName ?? session.DeviceName, newRaw, newHash, now, session.FamilyCreatedAt);
         await db.SaveChangesAsync(cancellationToken);
-        return new StoreLoginResponse(jwtTokenGenerator.GenerateCustomerToken(customer.Id, customer.FullName), newRaw, customer.FullName);
+        return new StoreLoginResponse(jwtTokenGenerator.GenerateCustomerToken(customer.Id, customer.Party.FullName), newRaw, customer.Party.FullName);
     }
 
     private string CreateSession(long customerId, string? deviceName, DateTime now, out string hash)

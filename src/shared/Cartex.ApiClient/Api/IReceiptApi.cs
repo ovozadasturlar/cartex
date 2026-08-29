@@ -10,4 +10,12 @@ public interface IReceiptApi
 
     [Get("/r/{token}/pdf")]
     Task<HttpContent> GetPdfAsync(string token, [Query] string size);
+
+    [Get("/r/{token}/print-pages")]
+    Task<HttpContent> GetPrintImagesAsync(
+        string token,
+        [Query] string size,
+        [Query] string orientation,
+        [Query] long? printJobId = null,
+        [Query] bool monochrome = false);
 }

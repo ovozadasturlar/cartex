@@ -3,12 +3,15 @@ import { Customer } from '../../core/models';
 
 export interface CartLine {
   variantId: number;
+  prepackId?: number;
   name: string;
   unitName: string;
   price: number;
   originalPrice: number;
   qty: number;
   available: number;
+  allowsAmountEntry: boolean;
+  allowsFractional: boolean;
 }
 
 export interface HeldSale {
@@ -28,6 +31,8 @@ export class PosCartState {
   readonly discountPercent = signal(0);
   readonly discountManual = signal(0);
   readonly discountByPercent = signal(true);
+  readonly payments = signal<PaymentRow[]>([]);
+  readonly note = signal('');
   readonly dueDate = signal('');
   readonly held = signal<HeldSale[]>(JSON.parse(localStorage.getItem('cartex.heldSales') ?? '[]'));
 
@@ -58,7 +63,35 @@ export class PosCartState {
     this.discountPercent.set(0);
     this.discountManual.set(0);
     this.discountByPercent.set(true);
+    this.payments.set([]);
+    this.note.set('');
     this.dueDate.set('');
+  }
+
+  // Savdoni tuzatish: bekor qilingan savdoning savati, narxlari, mijozi, to'lovi va
+  // chegirmasi qaytariladi - kassir xatoni tuzatib qayta yakunlaydi.
+  restoreCorrection(state: {
+    cart: CartLine[];
+    customer: Customer | null;
+    cash: number;
+    card: number;
+    bonus: number;
+    discount: number;
+    note: string;
+    dueDate: string;
+    payments: PaymentRow[];
+  }): void {
+    this.cart.set(state.cart);
+    this.customer.set(state.customer);
+    this.cash.set(state.cash);
+    this.card.set(state.card);
+    this.bonus.set(state.bonus);
+    this.discountByPercent.set(false);
+    this.discountPercent.set(0);
+    this.discountManual.set(state.discount);
+    this.note.set(state.note);
+    this.dueDate.set(state.dueDate);
+    this.payments.set(state.payments);
   }
 
   clearAll(): void {
@@ -66,4 +99,18 @@ export class PosCartState {
     this.customer.set(null);
     this.resetPayments();
   }
+}
+
+// CHEG-10: mijoz kelishilgan summani beradi va yetmagan qismi chegirmaga aylanadi. Natija joriy
+// chegirmadan hisoblanmaydi, shuning uchun tugmani ikki marta bosish summani ikkilantirmaydi.
+// Ko'p valyutali savdoda bitta "naqd" maydoni yetmaydi: mijoz bir qismini dollarda, bir qismini
+// so'mda berishi mumkin va har qatorning o'z kursi bor.
+export interface PaymentRow {
+  method: string;
+  currency: string;
+  amount: number;
+}
+
+export function shortfallDiscount(subTotal: number, autoDiscount: number, tendered: number): number {
+  return Math.max(0, subTotal - autoDiscount - tendered);
 }

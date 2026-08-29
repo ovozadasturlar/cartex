@@ -4,14 +4,18 @@ using Cartex.Mobile.Core;
 using Cartex.Mobile.Store.Services;
 using Cartex.Mobile.Store.ViewModels;
 using Cartex.Mobile.Store.Views;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Cartex.Mobile.Store;
 
 public static class MauiProgram
 {
+    private static int _handlingUnauthorized;
+
+    internal static Task LocInit { get; private set; } = Task.CompletedTask;
+
     public static MauiApp CreateMauiApp()
     {
+        LocInit = Loc.Instance.InitAsync();
         var builder = MauiApp.CreateBuilder();
         builder
             .UseMauiApp<App>()
@@ -27,22 +31,50 @@ public static class MauiProgram
         Microsoft.Maui.Handlers.EntryHandler.Mapper.AppendToMapping("NoUnderline", (handler, _) =>
             handler.PlatformView.BackgroundTintList =
                 Android.Content.Res.ColorStateList.ValueOf(Android.Graphics.Color.Transparent));
+        Platforms.Android.HubForegroundBootstrap.Register();
+        Platforms.Android.SmsForegroundBootstrap.Register();
 #endif
 
         var session = new SessionStore();
+        _ = session.LoadAsync();
         builder.Services.AddSingleton(session);
         builder.Services.AddApiClients(
             () => session.ServerUrl,
             () => session.AccessToken,
             ct => Resolve<MobileAuthService>().EnsureFreshTokenAsync(ct),
+            ct => Resolve<MobileAuthService>().ForceRefreshAsync(ct),
             OnUnauthorized,
-            "store");
+            "store",
+            TimeSpan.FromSeconds(20),
+            () => MobileDeviceIdentity.DeviceId,
+            () => MobileDeviceIdentity.DeviceName);
 
         builder.Services.AddSingleton<MobileAuthService>();
         builder.Services.AddSingleton<MobilePermissions>();
+        builder.Services.AddSingleton<MobileFeaturesCache>();
+        builder.Services.AddSingleton<SalesPolicyCache>();
+        builder.Services.AddSingleton<MobileAccessStateLoader>();
+        builder.Services.AddSingleton<IAccessStateLoader>(services => services.GetRequiredService<MobileAccessStateLoader>());
+        builder.Services.AddSingleton<AccessState>();
+        builder.Services.AddSingleton<ImageUrlBuilder>();
         builder.Services.AddSingleton<CartStore>();
+        builder.Services.AddSingleton<SupplyCartStore>();
         builder.Services.AddSingleton<WarehouseContext>();
+        builder.Services.AddSingleton<OrderingHubService>();
+        builder.Services.AddSingleton<MobilePrintDispatcher>();
+        builder.Services.AddSingleton<BarcodeLabelSettingsCache>();
+        builder.Services.AddSingleton<MobileOfflineStore>();
+        builder.Services.AddSingleton<HubIdentityService>();
+        builder.Services.AddSingleton<HubLinkService>();
+        builder.Services.AddSingleton<MobileOfflineService>();
+        builder.Services.AddSingleton<MobileHubHostService>();
+        builder.Services.AddSingleton<StoreSignOut>();
         builder.Services.AddSingleton<IBiometricAuth, BiometricAuth>();
+        builder.Services.AddSingleton<StartupService>();
+#if ANDROID
+        builder.Services.AddSingleton<ISmsGatewayPlatform, Platforms.Android.AndroidSmsGatewayPlatform>();
+#endif
+        builder.Services.AddSingleton<SmsGatewayHostService>();
 
         builder.Services.AddTransient<LoginViewModel>();
         builder.Services.AddTransient<PinViewModel>();
@@ -50,37 +82,107 @@ public static class MauiProgram
         builder.Services.AddTransient<ChangePasswordViewModel>();
         builder.Services.AddTransient<DevicesViewModel>();
         builder.Services.AddTransient<ProfileViewModel>();
+        builder.Services.AddTransient<OfflineSettingsViewModel>();
+        builder.Services.AddTransient<OfflineImportViewModel>();
         builder.Services.AddTransient<HomeViewModel>();
         builder.Services.AddTransient<ScanViewModel>();
         builder.Services.AddTransient<CartViewModel>();
         builder.Services.AddTransient<HandoffViewModel>();
+        builder.Services.AddTransient<SaleDetailViewModel>();
+        builder.Services.AddTransient<CartEditViewModel>();
+        builder.Services.AddTransient<CustomerDetailViewModel>();
+        builder.Services.AddTransient<CustomerStatementViewModel>();
+        builder.Services.AddTransient<CustomerRefundViewModel>();
+        builder.Services.AddTransient<SaleReturnViewModel>();
         builder.Services.AddTransient<CheckoutViewModel>();
-        builder.Services.AddTransient<QueueViewModel>();
-        builder.Services.AddTransient<SalesViewModel>();
+        builder.Services.AddTransient<TradeViewModel>();
+        builder.Services.AddTransient<CustomersViewModel>();
+        builder.Services.AddTransient<ReceiveCartViewModel>();
+        builder.Services.AddTransient<ProductEditViewModel>();
+        builder.Services.AddTransient<BarcodeAttachViewModel>();
+        builder.Services.AddTransient<SmsGatewayViewModel>();
 
         builder.Services.AddTransient<LoginPage>();
+        builder.Services.AddTransient<ServerScanPage>();
         builder.Services.AddTransient<PinPage>();
         builder.Services.AddTransient<SecurityPage>();
         builder.Services.AddTransient<ChangePasswordPage>();
         builder.Services.AddTransient<DevicesPage>();
-        builder.Services.AddTransient<ProfilePage>();
-        builder.Services.AddTransient<HomePage>();
-        builder.Services.AddTransient<ScanPage>();
+        builder.Services.AddTransient<OfflineSettingsPage>();
+        builder.Services.AddTransient<OfflineImportPage>();
+        builder.Services.AddSingleton<MainPage>();
+        builder.Services.AddSingleton<HomeView>();
+        builder.Services.AddSingleton<TradeView>();
+        builder.Services.AddSingleton<ScanView>();
+        builder.Services.AddSingleton<CustomersView>();
+        builder.Services.AddSingleton<ProfileView>();
         builder.Services.AddTransient<CartPage>();
         builder.Services.AddTransient<HandoffPage>();
+        builder.Services.AddTransient<SaleDetailPage>();
+        builder.Services.AddTransient<CartEditPage>();
+        builder.Services.AddTransient<CustomerDetailPage>();
+        builder.Services.AddTransient<CustomerStatementPage>();
+        builder.Services.AddTransient<CustomerRefundPage>();
+        builder.Services.AddTransient<SaleReturnPage>();
         builder.Services.AddTransient<CheckoutPage>();
-        builder.Services.AddTransient<QueuePage>();
-        builder.Services.AddTransient<SalesPage>();
+        builder.Services.AddTransient<ReceiveCartPage>();
+        builder.Services.AddTransient<ProductEditPage>();
+        builder.Services.AddTransient<BarcodeAttachPage>();
+        builder.Services.AddTransient<SmsGatewayPage>();
+        builder.Services.AddTransient<SmsGatewaySettingsPage>();
 
-        return builder.Build();
+        var app = builder.Build();
+        app.Services.GetRequiredService<MobileAccessStateLoader>().StartConnectivityWatch();
+        Cartex.Mobile.Core.Controls.Thumb.UrlBuilder = app.Services.GetRequiredService<ImageUrlBuilder>();
+        Warm(app.Services);
+        return app;
     }
+
+    // Birinchi ekran shu servislarni so'raganda ular saqlangan JSON'ni ochadi. UI thread'da
+    // bu ~200 ms turib qolish, shuning uchun fonda oldindan tayyorlanadi.
+    private static void Warm(IServiceProvider services) => _ = Task.Run(() =>
+    {
+        services.GetRequiredService<CartStore>();
+        services.GetRequiredService<SupplyCartStore>();
+        services.GetRequiredService<AccessState>();
+        services.GetRequiredService<WarehouseContext>();
+    });
 
     private static T Resolve<T>() where T : notnull =>
         IPlatformApplication.Current!.Services.GetRequiredService<T>();
 
     private static void OnUnauthorized()
     {
+        if (Interlocked.Exchange(ref _handlingUnauthorized, 1) != 0) return;
+        if (!SessionStore.HasSession)
+        {
+            Volatile.Write(ref _handlingUnauthorized, 0);
+            return;
+        }
         Resolve<SessionStore>().Clear();
-        MainThread.BeginInvokeOnMainThread(() => _ = Shell.Current.GoToAsync("//login"));
+        Resolve<AccessState>().Clear();
+        // Savat va kirim savati Preferences'da saqlanadi va konstruktordan tiklanadi —
+        // shu yerda tozalanmasa keyingi operator oldingisining savatini meros qilib olardi.
+        Resolve<CartStore>().Clear();
+        Resolve<SupplyCartStore>().Clear();
+        MainThread.BeginInvokeOnMainThread(() => _ = NavigateToLoginAsync());
+    }
+
+    private static async Task NavigateToLoginAsync()
+    {
+        try
+        {
+            if (Shell.Current is { } shell
+                && !shell.CurrentState.Location.OriginalString.Contains("login", StringComparison.Ordinal))
+                await shell.GoToAsync("//login");
+        }
+        catch (Exception exception)
+        {
+            System.Diagnostics.Debug.WriteLine(exception);
+        }
+        finally
+        {
+            Volatile.Write(ref _handlingUnauthorized, 0);
+        }
     }
 }

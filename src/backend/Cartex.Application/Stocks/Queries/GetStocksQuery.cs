@@ -1,15 +1,13 @@
-using Cartex.Application.Common.Extensions;
+﻿using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
+using Cartex.Application.Common.Catalog;
 using Cartex.Persistence;
-using Cartex.Application.Common.Messaging;
-using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Stocks;
 
 namespace Cartex.Application.Stocks.Queries;
 
 public record GetStocksQuery : FilteringRequest, IRequest<IReadOnlyCollection<StockDto>>;
-
-public record StockDto(long Id, long VariantId, string ProductName, string? CategoryName, string UnitName, decimal Quantity, decimal PurchasePrice, decimal SellingPrice, DateOnly? ExpiredAt);
 
 public sealed class GetStocksQueryHandler(
     IApplicationDbContext db,
@@ -17,19 +15,32 @@ public sealed class GetStocksQueryHandler(
 {
     public async Task<IReadOnlyCollection<StockDto>> Handle(GetStocksQuery request, CancellationToken cancellationToken)
     {
-        return await db.Stocks
+        var rows = await db.Stocks
             .ToPagedListAsync(request,
-                s => new StockDto(
+                s => new
+                {
                     s.Id,
                     s.VariantId,
-                    s.Variant.Product.Name,
-                    s.Variant.Product.Category != null ? s.Variant.Product.Category.Name : null,
-                    s.Variant.Product.Unit.Name,
+                    ProductName = s.Variant.Product.Name,
+                    s.Variant.Product.CategoryId,
+                    UnitName = s.Variant.Product.Unit.Name,
                     s.Quantity,
                     s.PurchasePrice,
-                    (s.Variant.Prices.Where(pp => pp.WarehouseId == s.WarehouseId).Select(pp => (decimal?)pp.SellingPrice).FirstOrDefault()
+                    SellingPrice = (s.Variant.Prices.Where(pp => pp.WarehouseId == s.WarehouseId).Select(pp => (decimal?)pp.SellingPrice).FirstOrDefault()
                         ?? s.Variant.Prices.Where(pp => pp.WarehouseId == null).Select(pp => (decimal?)pp.SellingPrice).FirstOrDefault()) ?? 0,
-                    s.ExpiredAt),
+                    s.ExpiredAt
+                },
                 writer, cancellationToken);
+        var paths = await CategoryPathLookup.LoadAsync(db, cancellationToken);
+        return rows.Select(x => new StockDto(
+            x.Id,
+            x.VariantId,
+            x.ProductName,
+            x.CategoryId is { } categoryId ? paths.GetValueOrDefault(categoryId) : null,
+            x.UnitName,
+            x.Quantity,
+            x.PurchasePrice,
+            x.SellingPrice,
+            x.ExpiredAt)).ToList();
     }
 }

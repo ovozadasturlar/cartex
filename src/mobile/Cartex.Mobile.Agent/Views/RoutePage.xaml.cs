@@ -115,7 +115,9 @@ map.fitBounds(L.latLngBounds(coords).pad(0.2));
         double lat = startLat, lng = startLng;
         while (remaining.Count > 0)
         {
-            var next = remaining.MinBy(s => Dist(lat, lng, s.Customer.Latitude!.Value, s.Customer.Longitude!.Value));
+            var currentLat = lat;
+            var currentLng = lng;
+            var next = remaining.MinBy(s => Dist(currentLat, currentLng, s.Customer.Latitude!.Value, s.Customer.Longitude!.Value));
             route.Add(next);
             remaining.Remove(next);
             lat = next.Customer.Latitude!.Value;

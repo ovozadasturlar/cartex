@@ -1,11 +1,9 @@
-using Cartex.Application.Common.Messaging;
-using Cartex.Domain.Enums;
+﻿using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Loyalty;
 
 namespace Cartex.Application.Loyalty.Queries;
-
-public record LoyaltyStatsDto(int SalesCount, int DiscountedSales, decimal DiscountTotal, decimal GrossTotal, decimal BonusOutstanding);
 
 public record GetLoyaltyStatsQuery(DateTime FromDate, DateTime ToDate) : IRequest<LoyaltyStatsDto>;
 
@@ -17,7 +15,7 @@ public sealed class GetLoyaltyStatsQueryHandler(IApplicationDbContext db) : IReq
         var to = DateTime.SpecifyKind(request.ToDate, DateTimeKind.Utc);
 
         var agg = await db.Sales
-            .Where(s => s.CreatedAt >= from && s.CreatedAt < to)
+            .Where(s => s.Status != SaleStatus.Voided && s.CreatedAt >= from && s.CreatedAt < to)
             .GroupBy(_ => 1)
             .Select(g => new
             {

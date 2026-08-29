@@ -2,6 +2,10 @@
 **/obj/
 **/node_modules/
 **/dist/
+**/publish-ready/
+**/logs/
+**/backups/
+**/*.log
 **/.angular/
 **/.vs/
 **/.idea/
@@ -9,6 +13,8 @@
 .github/
 deploy/agent-data/
 deploy/data/
+deploy/installer/output/
+deploy/installer/publish/
 **/*.user
 **/*.env
 **/appsettings.Production.json

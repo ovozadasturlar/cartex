@@ -1,4 +1,3 @@
-using Cartex.Application.Common.Messaging;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Settings;
 using FluentValidation;
@@ -7,6 +6,7 @@ using Cartex.Domain.Common;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Cartex.Application.Common.Finance;
+using Cartex.Application.Common.Shifts;
 
 using Unit = Cartex.Application.Common.Messaging.Unit;
 
@@ -20,6 +20,7 @@ public sealed class PaySupplierDebtCommandHandler(
     ILedgerService ledger,
     ICurrencyService currency,
     ISettingsService settingsService,
+    IShiftLock shiftLock,
     IAuditService audit) : IRequestHandler<PaySupplierDebtCommand, Unit>
 {
     public async Task<Unit> Handle(PaySupplierDebtCommand request, CancellationToken cancellationToken)
@@ -45,11 +46,17 @@ public sealed class PaySupplierDebtCommandHandler(
         var debtCurrency = request.DebtCurrency ?? baseCode;
         var payCurrency = request.PayCurrency ?? debtCurrency;
 
-        if ((debtCurrency != baseCode || payCurrency != baseCode) && !await currency.IsMulticurrencyAsync(cancellationToken))
-            throw new BusinessRuleException("Ko'p valyuta rejimi o'chirilgan.");
+        await currency.EnsurePricingAllowedAsync(debtCurrency, cancellationToken);
+        await currency.EnsurePricingAllowedAsync(payCurrency, cancellationToken);
 
         if (request.Method != AccountType.Cash && payCurrency != baseCode)
             throw new BusinessRuleException("Naqd bo'lmagan to'lov faqat bazaviy valyutada.");
+
+        var shiftId = (await shiftLock.OpenAsync(userId, branchId, cancellationToken))?.Id;
+
+        var policy = await settingsService.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken) ?? new SalesPolicySettings();
+        if (request.Method == AccountType.Cash && shiftId is null && policy.ShiftPolicy != "Off")
+            throw new BusinessRuleException("Naqd to'lov uchun ochiq smena talab qilinadi.");
 
         var debt = await ledger.SupplierAccountAsync(request.SupplierId, AccountType.Debt, cancellationToken, debtCurrency);
 
@@ -59,31 +66,24 @@ public sealed class PaySupplierDebtCommandHandler(
             ? request.Amount
             : Math.Round(request.Amount * payRate / debtRate, 2);
 
-        var shiftId = await db.Shifts
-            .Where(s => s.UserId == userId && s.BranchId == branchId && s.Status == ShiftStatus.Open)
-            .Select(s => (long?)s.Id)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        var policy = await settingsService.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken) ?? new SalesPolicySettings();
-        if (request.Method == AccountType.Cash && shiftId is null && policy.ShiftPolicy != "Off")
-            throw new BusinessRuleException("Naqd to'lov uchun ochiq smena talab qilinadi.");
-
-        var branchAccount = await ledger.BranchAccountAsync(branchId, request.Method, cancellationToken, payCurrency);
+        var branchAccount = request.Method == AccountType.Cash
+            ? await CashPayout.AccountAsync(ledger, branchId, request.Amount, cancellationToken, payCurrency)
+            : await ledger.BranchAccountAsync(branchId, request.Method, cancellationToken, payCurrency);
 
         var opType = request.SupplyId is null ? OperationType.DebtPay : OperationType.SupplyPay;
 
         if (payCurrency == debtCurrency)
         {
-            var tx = ledger.Post(opType, request.Amount, branchAccount, debt, userId, shiftId, debtRate);
+            var tx = await ledger.PostAsync(opType, request.Amount, branchAccount, debt, userId, cancellationToken, shiftId, debtRate);
             tx.SupplyId = request.SupplyId;
             tx.IdempotencyKey = idempotencyKey;
         }
         else
         {
-            var tx = ledger.Post(opType, request.Amount, branchAccount, null, userId, shiftId, payRate);
+            var tx = await ledger.PostAsync(opType, request.Amount, branchAccount, null, userId, cancellationToken, shiftId, payRate);
             tx.SupplyId = request.SupplyId;
             tx.IdempotencyKey = idempotencyKey;
-            ledger.Post(opType, debtReduce, null, debt, userId, shiftId, debtRate).SupplyId = request.SupplyId;
+            (await ledger.PostAsync(opType, debtReduce, null, debt, userId, cancellationToken, shiftId, debtRate)).SupplyId = request.SupplyId;
         }
 
         audit.Add("supplierpay", "suppliers", request.SupplierId, new { request.Amount });

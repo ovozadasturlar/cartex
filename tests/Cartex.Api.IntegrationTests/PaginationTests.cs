@@ -35,10 +35,10 @@ public class PaginationTests(CartexApiFactory factory)
         response.EnsureSuccessStatusCode();
 
         Assert.True(response.Headers.TryGetValues("X-Paging", out var values));
-        var meta = JsonSerializer.Deserialize<Meta>(values!.First(),
+        var meta = JsonSerializer.Deserialize<Meta>(values.First(),
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         Assert.NotNull(meta);
-        Assert.Equal(2, meta!.PageSize);
+        Assert.Equal(2, meta.PageSize);
         Assert.True(meta.TotalCount >= 5);
         Assert.True(meta.TotalPages >= 3);
 

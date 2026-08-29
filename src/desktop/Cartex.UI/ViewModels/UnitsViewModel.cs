@@ -26,12 +26,16 @@ public partial class UnitsViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string _editShortName = "";
     [ObservableProperty] private string _editDimension = "Count";
     [ObservableProperty] private decimal _editFactor = 1;
+    [ObservableProperty] private bool _editAllowFractional;
     [ObservableProperty] private string? _searchText;
 
     public string[] DimensionOptions { get; } = ["Count", "Weight", "Volume", "Length"];
 
     public bool IsEmpty => Units.Count == 0;
     public bool CanExport => _auth.HasPermission("reports.export");
+    public bool CanCreate => _auth.HasPermission("units.create");
+    public bool CanEdit => _auth.HasPermission("units.edit");
+    public bool CanToggle => _auth.HasPermission("units.toggle");
 
     private IReadOnlyList<PageShortcut>? _shortcuts;
 
@@ -91,18 +95,21 @@ public partial class UnitsViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void OpenCreate()
     {
+        if (!CanCreate) return;
         IsNew = true;
         _editId = 0;
         EditName = "";
         EditShortName = "";
         EditDimension = "Count";
         EditFactor = 1;
+        EditAllowFractional = false;
         IsEditOpen = true;
     }
 
     [RelayCommand]
     private void OpenEdit(UnitDto unit)
     {
+        if (!CanEdit) return;
         if (unit.IsSystem) return;
         IsNew = false;
         _editId = unit.Id;
@@ -110,12 +117,14 @@ public partial class UnitsViewModel : ViewModelBase, ILoadable
         EditShortName = unit.ShortName;
         EditDimension = unit.Dimension;
         EditFactor = unit.Factor;
+        EditAllowFractional = unit.AllowFractional;
         IsEditOpen = true;
     }
 
     [RelayCommand]
     private async Task ToggleEnabled(UnitDto unit)
     {
+        if (!CanToggle) return;
         try
         {
             await _api.SetStateAsync(unit.Id, new SetUnitStateRequest(!unit.IsEnabled, unit.IsDefault));
@@ -142,15 +151,16 @@ public partial class UnitsViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task SaveAsync()
     {
+        if (IsNew ? !CanCreate : !CanEdit) return;
         if (string.IsNullOrWhiteSpace(EditName) || string.IsNullOrWhiteSpace(EditShortName)) { _toast.Error(L["error"]); return; }
         try
         {
             using (_busy.Begin(L["loading"]))
             {
                 if (IsNew)
-                    await _api.CreateAsync(new CreateUnitRequest(EditName.Trim(), EditShortName.Trim(), EditDimension, EditFactor));
+                    await _api.CreateAsync(new CreateUnitRequest(EditName.Trim(), EditShortName.Trim(), EditDimension, EditFactor, AllowFractional: EditAllowFractional));
                 else
-                    await _api.UpdateAsync(_editId, new UpdateUnitRequest(EditName.Trim(), EditShortName.Trim(), EditDimension, EditFactor));
+                    await _api.UpdateAsync(_editId, new UpdateUnitRequest(EditName.Trim(), EditShortName.Trim(), EditDimension, EditFactor, AllowFractional: EditAllowFractional));
             }
             IsEditOpen = false;
             ServiceLocator.Resolve<ReferenceCache>().Invalidate(CacheKeys.Units);

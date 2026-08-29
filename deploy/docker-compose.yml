@@ -15,7 +15,7 @@ services:
       retries: 10
 
   api:
-    image: muqimjon/cartex-api
+    image: muqimjon/cartex-api:${CARTEX_VERSION:-0.0.2}
     build:
       context: ..
       dockerfile: src/backend/Cartex.Api/Dockerfile
@@ -32,28 +32,50 @@ services:
       Barcode__Prefix: ${BARCODE_PREFIX:-CTX}
       Storage__LocalPath: /data/storage
       DataProtection__KeysPath: /data/keys
+      Catalog__PackPath: /data/catalog
+      TZ: ${TZ:-Asia/Tashkent}
+      ForwardedHeaders__Enabled: "true"
+      ForwardedHeaders__ForwardLimit: "2"
+      # Traefik konteyneri docker tarmog'ida — uning tarmog'ini ishonchli deb belgilaymiz.
+      # Bo'sh qoldirilsa API klientning X-Forwarded-For'iga ishonib qoladi (rate-limit chetlab o'tiladi).
+      ForwardedHeaders__KnownNetworks__0: ${TRUSTED_PROXY_NETWORK:-172.16.0.0/12}
     volumes:
       - cartex-storage:/data/storage
       - cartex-keys:/data/keys
+      - cartex-catalog:/data/catalog
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:5015/health || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 60s
+    # Faqat loopback: web (nginx) api'ga ichki docker tarmog'i orqali (api:5015) ulanadi.
+    # Internetga to'g'ridan-to'g'ri ochilsa, TLS chetlab o'tilib login/token ochiq HTTP'da ketardi.
     ports:
-      - "5015:5015"
+      - "127.0.0.1:5015:5015"
 
   web:
-    image: muqimjon/cartex-web
+    image: muqimjon/cartex-web:${CARTEX_VERSION:-0.0.2}
     build:
       context: ..
       dockerfile: src/web/Cartex.Web.Angular/Dockerfile
     restart: unless-stopped
     depends_on:
       - api
+    # Loopback: TLS profillarida (traefik/caddy) reverse-proxy web:80 ga ichki tarmoq orqali yetadi.
+    # Ochiq HTTP portini internetga chiqarmaslik uchun 127.0.0.1 ga bog'landi.
     ports:
-      - "${WEB_PORT:-8080}:80"
+      - "127.0.0.1:${WEB_PORT:-8080}:80"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.cartex-web.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.cartex-web.entrypoints=websecure
+      - traefik.http.routers.cartex-web.tls.certresolver=le
+      - traefik.http.services.cartex-web.loadbalancer.server.port=80
+      - traefik.http.routers.cartex-web.middlewares=cartex-hsts
+      - traefik.http.middlewares.cartex-hsts.headers.stsSeconds=31536000
+      - traefik.http.middlewares.cartex-hsts.headers.stsIncludeSubdomains=true
+      - traefik.http.middlewares.cartex-hsts.headers.stsPreload=true
 
   minio:
     image: minio/minio:latest
@@ -62,7 +84,7 @@ services:
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_USER:-cartex}
-      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:-}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:?MINIO_PASSWORD .env faylida majburiy}
     volumes:
       - cartex-minio:/data
     healthcheck:
@@ -74,6 +96,9 @@ services:
       - "127.0.0.1:${MINIO_PORT:-9002}:9000"
       - "127.0.0.1:${MINIO_CONSOLE_PORT:-9003}:9001"
 
+  # caddy va traefik bir vaqtda ishga tushirilmasin — ikkalasi ham 80/443 portini so'raydi.
+  # Bitta domen/bitta backend uchun caddy soddaroq; bir nechta domen/servisni markazlashtirib
+  # boshqarish kerak bo'lsa traefik tanlansin.
   caddy:
     image: caddy:2-alpine
     profiles: ["tls"]
@@ -86,6 +111,54 @@ services:
       - "443:443"
     volumes:
       - caddy-data:/data
+
+  traefik:
+    image: traefik:v3.6
+    profiles: ["traefik"]
+    restart: unless-stopped
+    environment:
+      DOCKER_API_VERSION: "1.44"
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --certificatesresolvers.le.acme.httpchallenge=true
+      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
+      - --certificatesresolvers.le.acme.email=${ACME_EMAIL:?ACME_EMAIL .env faylida majburiy}
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - cartex-traefik-certs:/letsencrypt
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    profiles: ["traefik"]
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:?PGADMIN_EMAIL .env faylida majburiy}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:?PGADMIN_PASSWORD .env faylida majburiy}
+      SCRIPT_NAME: /pgadmin
+    volumes:
+      - cartex-pgadmin:/var/lib/pgadmin
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.cartex-pgadmin.rule=Host(`${DOMAIN}`) && PathPrefix(`/pgadmin`)
+      - traefik.http.routers.cartex-pgadmin.entrypoints=websecure
+      - traefik.http.routers.cartex-pgadmin.tls.certresolver=le
+      - traefik.http.services.cartex-pgadmin.loadbalancer.server.port=80
+      # DB-admin konsoli faqat ruxsat berilgan IP'lardan. Ochiq internetga chiqarmaslik uchun majburiy.
+      # Ataylab hammaga ochish kerak bo'lsa PGADMIN_ALLOW_CIDR=0.0.0.0/0 qo'ying.
+      - traefik.http.routers.cartex-pgadmin.middlewares=cartex-pgadmin-allow
+      - traefik.http.middlewares.cartex-pgadmin-allow.ipallowlist.sourcerange=${PGADMIN_ALLOW_CIDR:?PGADMIN_ALLOW_CIDR .env faylida majburiy (masalan 203.0.113.0/24 yoki ofis/VPN CIDR)}
 
   # backup:
   #   image: muqimjon/zaxira
@@ -122,6 +195,9 @@ volumes:
   cartex-db:
   cartex-storage:
   cartex-keys:
+  cartex-catalog:
   cartex-minio:
   caddy-data:
+  cartex-traefik-certs:
+  cartex-pgadmin:
   # cartex-backup:

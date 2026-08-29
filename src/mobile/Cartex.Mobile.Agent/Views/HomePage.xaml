@@ -28,7 +28,7 @@
             <Border BackgroundColor="{AppThemeBinding Light={StaticResource WarnBg}, Dark={StaticResource WarnBgDark}}"
                     StrokeThickness="0" StrokeShape="RoundRectangle 12" Padding="12,10"
                     IsVisible="{Binding IsOffline}">
-                <Label Text="{svc:T offline_banner}" FontSize="13"
+                <Label Text="{Binding OfflineText}" FontSize="13"
                        TextColor="{AppThemeBinding Light={StaticResource Warn}, Dark={StaticResource WarnDark}}" />
             </Border>
             <Border BackgroundColor="{AppThemeBinding Light={StaticResource DangerBg}, Dark={StaticResource DangerBgDark}}"

@@ -1,7 +1,6 @@
 using Cartex.Application.Common.Interfaces;
-using Cartex.Application.Common.Messaging;
 using Cartex.Application.Common.Settings;
-using Cartex.Domain.Common.Exceptions;
+using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -27,7 +26,7 @@ public sealed class ResendReceiptCommandHandler(
 
         var customer = await db.Customers
             .Where(c => c.Id == sale.CustomerId)
-            .Select(c => new { c.Phone, c.Email, c.TelegramChatId, c.NotificationsOptOut, c.PreferredLanguage })
+            .Select(c => new { c.Party.Phone, c.Party.Email, c.TelegramChatId, c.NotificationsOptOut, c.PreferredLanguage })
             .FirstAsync(cancellationToken);
 
         if (customer.NotificationsOptOut)
@@ -45,24 +44,23 @@ public sealed class ResendReceiptCommandHandler(
         if (customer.PreferredLanguage is { } lang)
             payload["lang"] = lang;
 
-        var sent = 0;
-        foreach (var channel in config.Channels.Distinct())
-        {
-            var recipient = channel switch
+        var deliveries = config.Channels.Distinct()
+            .Select(channel => (Channel: channel, Recipient: channel switch
             {
                 NotificationChannel.Telegram => customer.TelegramChatId,
                 NotificationChannel.Email => customer.Email,
                 NotificationChannel.Sms => customer.Phone,
                 _ => null
-            };
-            if (string.IsNullOrWhiteSpace(recipient))
-                continue;
-            await notifications.SendAsync(new NotificationMessage(channel, recipient, "sale_receipt", payload), cancellationToken);
-            sent++;
-        }
+            }))
+            .Where(x => !string.IsNullOrWhiteSpace(x.Recipient))
+            .ToList();
 
-        if (sent == 0)
+        if (deliveries.Count == 0)
             throw new BusinessRuleException("Mijozda birorta kanal manzili yo'q (Telegram/email/telefon).");
+
+        foreach (var (channel, recipient) in deliveries)
+            await db.RunAfterCommitAsync(() => notifications.SendAsync(
+                new NotificationMessage(channel, recipient!, "sale_receipt", payload, sale.CustomerId), cancellationToken));
 
         return Unit.Value;
     }

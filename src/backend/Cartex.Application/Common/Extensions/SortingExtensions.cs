@@ -1,7 +1,6 @@
 namespace Cartex.Application.Common.Extensions;
 
 using Cartex.Application.Common.Models;
-using Microsoft.EntityFrameworkCore;
 
 public static class SortingExtensions
 {
@@ -16,8 +15,10 @@ public static class SortingExtensions
                     ? query.OrderByDescendingDynamic(request.SortBy)
                     : query.OrderByDynamic(request.SortBy);
         }
+        // A'zoga to'g'ridan-to'g'ri murojaat: `EF.Property` faqat entity ustida ishlaydi, ro'yxat
+        // so'rovi esa filtrni yassi proyeksiyaga qo'llashi mumkin (navigatsiya ortidagi maydonlar).
         return query
-            .OrderByDescending(x => EF.Property<DateTime>(x!, "CreatedAt"))
-            .ThenByDescending(x => EF.Property<long>(x!, "Id"));
+            .OrderByDescendingDynamic("CreatedAt")
+            .ThenByDescendingDynamic("Id");
     }
 }

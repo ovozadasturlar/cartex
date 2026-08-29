@@ -8,13 +8,15 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTableModule } from '@angular/material/table';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
-import { AdminApi, Permission, Role, START_PAGES } from '../../core/api/admin.api';
+import { AdminApi, Permission, PermissionBundle, Role, START_PAGES } from '../../core/api/admin.api';
 import { AuthService } from '../../core/auth.service';
 import { NotifyService } from '../../core/notify.service';
 import { EmptyState } from '../../shared/empty-state';
+import { downloadCsv } from '../../core/csv-export';
 import { PageHeader } from '../../shared/page-header';
 
 @Component({
@@ -24,6 +26,7 @@ import { PageHeader } from '../../shared/page-header';
     MatIconModule,
     MatProgressBarModule,
     MatTableModule,
+    MatSlideToggleModule,
     TranslocoModule,
     PageHeader,
     EmptyState,
@@ -35,22 +38,42 @@ export class Roles implements OnInit {
   private readonly api = inject(AdminApi);
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
+  private readonly transloco = inject(TranslocoService);
 
-  readonly canManage = inject(AuthService).hasPermission('roles.manage');
+  private readonly auth = inject(AuthService);
+  readonly canCreate = this.auth.hasPermission('roles.create');
+  readonly canEdit = this.auth.hasPermission('roles.edit');
+  readonly canAssign = this.auth.hasPermission('roles.assignPermissions');
+  readonly canDelete = this.auth.hasPermission('roles.delete');
   readonly loading = signal(true);
   readonly roles = signal<Role[]>([]);
-  readonly cols = ['name', 'description', 'priority', 'permissions'];
+  readonly canExport = inject(AuthService).hasPermission('reports.export');
+
+  exportCsv(): void {
+    if (!this.canExport) return;
+    const t = (key: string): string => this.transloco.translate(key);
+    downloadCsv(t('roles'), this.roles(), [
+      { header: t('name'), value: (r) => r.name },
+      { header: t('priority'), value: (r) => r.priority },
+      { header: t('permissions'), value: (r) => r.permissions.length },
+      { header: t('active'), value: (r) => r.isActive },
+    ]);
+  }
+  readonly cols = ['name', 'description', 'priority', 'status', 'permissions', ...(this.canDelete ? ['actions'] : [])];
 
   private permissions: Permission[] = [];
+  private bundles: PermissionBundle[] = [];
 
   async ngOnInit(): Promise<void> {
     try {
-      const [roles, permissions] = await Promise.all([
+      const [roles, permissions, bundles] = await Promise.all([
         lastValueFrom(this.api.roles()),
         lastValueFrom(this.api.permissions()),
+        lastValueFrom(this.api.permissionBundles()),
       ]);
       this.roles.set(roles);
       this.permissions = permissions;
+      this.bundles = bundles;
     } catch (e) {
       this.notify.error(e);
     } finally {
@@ -59,16 +82,49 @@ export class Roles implements OnInit {
   }
 
   open(role: Role | null): void {
-    if (!this.canManage || role?.accessAll) return;
+    if (role?.accessAll || (role ? !this.canEdit && !this.canAssign : !this.canCreate)) return;
     this.dialog
       .open(RoleDialog, {
-        data: { role, permissions: this.permissions },
+        data: {
+          role,
+          permissions: this.permissions,
+          bundles: this.bundles,
+          canEdit: this.canEdit,
+          canAssign: this.canAssign,
+        },
         width: '640px',
         maxWidth: '94vw',
-        autoFocus: false,
+        autoFocus: 'first-tabbable',
       })
       .afterClosed()
-      .subscribe((saved) => saved && this.reload());
+      .subscribe((saved) => {
+        if (saved) void this.reload();
+      });
+  }
+
+  async setActive(role: Role, isActive: boolean): Promise<void> {
+    if (!this.canEdit || role.accessAll || role.isActive === isActive) return;
+    try {
+      await lastValueFrom(this.api.setRoleActive(role.id, isActive));
+      this.roles.update((roles) =>
+        roles.map((candidate) => candidate.id === role.id ? { ...candidate, isActive } : candidate));
+      this.notify.success(this.transloco.translate('success'));
+    } catch (e) {
+      this.roles.set([...this.roles()]);
+      this.notify.error(e);
+    }
+  }
+
+  async remove(role: Role): Promise<void> {
+    if (!this.canDelete || role.accessAll) return;
+    if (!window.confirm(this.transloco.translate('delete_confirm'))) return;
+    try {
+      await lastValueFrom(this.api.deleteRole(role.id));
+      await this.reload();
+      this.notify.success(this.transloco.translate('success'));
+    } catch (error) {
+      this.notify.error(error);
+    }
   }
 
   private async reload(): Promise<void> {
@@ -116,37 +172,52 @@ interface PermGroup {
         <div class="row">
           <mat-form-field appearance="outline" subscriptSizing="dynamic" class="grow">
             <mat-label>{{ t('name') }}</mat-label>
-            <input matInput [(ngModel)]="name" />
+            <input matInput cdkFocusInitial [(ngModel)]="name" [disabled]="!canEditMetadata" />
           </mat-form-field>
           <mat-form-field appearance="outline" subscriptSizing="dynamic" class="prio">
             <mat-label>{{ t('priority') }}</mat-label>
-            <input matInput type="number" [(ngModel)]="priority" />
+            <input matInput type="number" [(ngModel)]="priority" [disabled]="!canEditMetadata" />
           </mat-form-field>
         </div>
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('description') }}</mat-label>
-          <input matInput [(ngModel)]="description" />
+          <input matInput [(ngModel)]="description" [disabled]="!canEditMetadata" />
         </mat-form-field>
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('start_page') }}</mat-label>
-          <mat-select [(ngModel)]="startPage">
+          <mat-select [(ngModel)]="startPage" [disabled]="!canEditMetadata">
             <mat-option [value]="null">{{ t('none') }}</mat-option>
             @for (p of startPages; track p) {
               <mat-option [value]="p">{{ t(p) }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
-        <h3>{{ t('permissions') }}</h3>
-        <div class="perm-groups">
-          @for (g of groups; track g.title) {
+        @if (data.canAssign) {
+          <h3>{{ t('permission_presets') }}</h3>
+          <div class="perm-groups">
             <div class="perm-group">
-              <div class="perm-title">{{ g.title }}</div>
-              @for (p of g.items; track p.id) {
-                <mat-checkbox [ngModel]="p.checked" (ngModelChange)="toggle(p, $event)">{{ p.label }}</mat-checkbox>
+              @for (bundle of data.bundles; track bundle.key) {
+                <mat-checkbox
+                  [ngModel]="bundleState(bundle.permissions) === true"
+                  [indeterminate]="bundleState(bundle.permissions) === null"
+                  (ngModelChange)="toggleBundle(bundle.permissions, $event)">
+                  {{ label('bundle_' + bundle.key, bundle.description) }}
+                </mat-checkbox>
               }
             </div>
-          }
-        </div>
+          </div>
+          <h3>{{ t('permissions') }}</h3>
+          <div class="perm-groups">
+            @for (g of groups; track g.title) {
+              <div class="perm-group">
+                <div class="perm-title">{{ g.title }}</div>
+                @for (p of g.items; track p.id) {
+                  <mat-checkbox [ngModel]="p.checked" (ngModelChange)="toggle(p, $event)">{{ p.label }}</mat-checkbox>
+                }
+              </div>
+            }
+          </div>
+        }
       </div>
       <div mat-dialog-actions align="end">
         <button mat-stroked-button mat-dialog-close>{{ t('cancel') }}</button>
@@ -161,8 +232,15 @@ export class RoleDialog {
   private readonly transloco = inject(TranslocoService);
   private readonly ref = inject(MatDialogRef<RoleDialog>);
 
-  readonly data = inject<{ role: Role | null; permissions: Permission[] }>(MAT_DIALOG_DATA);
+  readonly data = inject<{
+    role: Role | null;
+    permissions: Permission[];
+    bundles: PermissionBundle[];
+    canEdit: boolean;
+    canAssign: boolean;
+  }>(MAT_DIALOG_DATA);
   readonly role = this.data.role;
+  readonly canEditMetadata = !this.role || this.data.canEdit;
   readonly startPages = START_PAGES;
   readonly busy = signal(false);
 
@@ -188,7 +266,7 @@ export class RoleDialog {
       .map(([prefix, items]) => ({ title: this.label(`perm_group_${prefix}`, prefix), items }));
   }
 
-  private label(key: string, fallback: string): string {
+  label(key: string, fallback: string): string {
     const value = this.transloco.translate(key);
     return value === key ? fallback : value;
   }
@@ -205,6 +283,34 @@ export class RoleDialog {
       for (const other of all) {
         if (other.checked && this.required(other.name).has(item.name)) other.checked = false;
       }
+    }
+  }
+
+  bundleState(names: string[]): boolean | null {
+    const selected = this.groups.flatMap((g) => g.items)
+      .filter((item) => names.includes(item.name))
+      .map((item) => item.checked);
+    return selected.length > 0 && selected.every(Boolean)
+      ? true
+      : selected.some(Boolean) ? null : false;
+  }
+
+  toggleBundle(names: string[], checked: boolean): void {
+    const all = this.groups.flatMap((g) => g.items);
+    for (const name of names) {
+      const item = all.find((candidate) => candidate.name === name);
+      if (item) item.checked = checked;
+    }
+    if (checked) {
+      for (const name of names)
+        for (const dependency of this.required(name)) {
+          const item = all.find((candidate) => candidate.name === dependency);
+          if (item) item.checked = true;
+        }
+    } else {
+      for (const item of all)
+        if (item.checked && [...this.required(item.name)].some((dependency) => names.includes(dependency)))
+          item.checked = false;
     }
   }
 
@@ -238,14 +344,18 @@ export class RoleDialog {
     this.busy.set(true);
     try {
       let id: number;
-      if (this.role) {
+      if (this.role && this.data.canEdit) {
         id = this.role.id;
         await lastValueFrom(this.api.updateRole(id, body));
+      } else if (this.role) {
+        id = this.role.id;
       } else {
         id = await lastValueFrom(this.api.createRole(body));
       }
-      const permissionIds = this.groups.flatMap((g) => g.items).filter((i) => i.checked).map((i) => i.id);
-      await lastValueFrom(this.api.assignPermissions(id, permissionIds));
+      if (this.data.canAssign) {
+        const permissionIds = this.groups.flatMap((g) => g.items).filter((i) => i.checked).map((i) => i.id);
+        await lastValueFrom(this.api.assignPermissions(id, permissionIds));
+      }
       this.notify.success(this.transloco.translate('success'));
       this.ref.close(true);
     } catch (e) {

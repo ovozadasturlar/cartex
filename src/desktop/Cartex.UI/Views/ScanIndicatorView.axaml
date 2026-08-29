@@ -1,0 +1,17 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mi="using:Material.Icons.Avalonia"
+             xmlns:svc="using:Cartex.UI.Services"
+             x:Class="Cartex.UI.Views.ScanIndicatorView"
+             x:DataType="svc:ScanIndicator"
+             IsHitTestVisible="False"
+             IsVisible="{Binding IsVisible}">
+    <Panel Width="24" Height="24" Margin="4,0,8,0">
+        <ProgressBar IsVisible="{Binding IsBusy}" IsIndeterminate="True" Width="20" Height="3"
+                     HorizontalAlignment="Center" VerticalAlignment="Center" />
+        <mi:MaterialIcon Kind="Check" Width="18" Height="18" IsVisible="{Binding IsFound}"
+                         Foreground="{DynamicResource SuccessBrush}" />
+        <mi:MaterialIcon Kind="Close" Width="18" Height="18" IsVisible="{Binding IsMissing}"
+                         Foreground="{DynamicResource TextMuted}" />
+    </Panel>
+</UserControl>

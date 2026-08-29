@@ -52,7 +52,35 @@ internet qaytganda o'z-o'zidan davom etadi (outbox eksponensial kutish bilan 12 
 
 ---
 
-## 2. Server (Docker)
+## 2. Faqat Desktop mijozini o'rnatish
+
+Bu paket API, PostgreSQL yoki servislarni o'rnatmaydi. U do'kondagi mavjud lokal serverga yoki
+VPS'dagi API'ga ulanadigan qo'shimcha kassa kompyuterlari uchun mo'ljallangan.
+
+Release yaratish:
+
+```powershell
+.\deploy\installer\build-desktop-client.ps1
+```
+
+Skript Desktop'ni `win-x64`, self-contained holatda publish qiladi va Inno Setup orqali quyidagi
+faylni yaratadi:
+
+```
+deploy\installer\output\cartex-desktop-setup-0.0.1.exe
+```
+
+Mijoz kompyuterida faqat shu `.exe`ni ishga tushiring. Birinchi ishga tushgach,
+Sozlamalar → Server manzili orqali API manzilini kiriting: lokal tarmoq uchun
+`http://<server-IP>:5015`, VPS uchun esa HTTPS manzil. Inno Setup 6 build kompyuterida
+o'rnatilgan va `ISCC.exe` PATH'da bo'lishi kerak.
+
+> Installer bir nechta faylni bitta `setup.exe` ichiga joylaydi. Bu .NET'ning single-file
+> publishidan ishonchliroq: yangilanish, native kutubxonalar va fayl resurslari bir xil ishlaydi.
+
+---
+
+## 3. Server (Docker)
 
 Ikki image: **`muqimjon/cartex-api`** (API, port 5015) va **`muqimjon/cartex-web`**
 (nginx + Angular; `/api`, `/hubs`, `/health`ni API'ga proxy qiladi).
@@ -67,12 +95,20 @@ Ochiladi: web UI — **`http://<server>:8080`** (`WEB_PORT` bilan o'zgaradi), AP
 `http://<server>:5015`. Desktop ilova LAN'da `http://<server>:5015`ga, internet orqali
 esa `https://DOMAIN`ga ulanadi (nginx proxy orqali).
 
-Profillar (birga ishlatish mumkin):
+Profillar (`tls` va `traefik` bir vaqtda ishlatilmasin — ikkalasi ham 80/443 portini so'raydi,
+qolganlari birga ishlatish mumkin):
 ```
 docker compose --profile tls up -d      # + Caddy avto-HTTPS: DOMAIN -> web (DOMAIN kerak)
+docker compose --profile traefik up -d  # + Traefik HTTPS va /pgadmin (bir nechta domen/servis bo'lsa)
 docker compose --profile minio up -d    # + MinIO obyekt saqlash (MINIO_USER/PASSWORD kerak)
 docker compose --profile backup up -d   # + Zaxira agenti (pastdagi bo'lim)
 ```
+
+`traefik` profili: yagona domen/backend uchun odatda `tls` (Caddy) yetarli va soddaroq;
+bir nechta loyiha/domenni bitta serverda markazlashtirib boshqarish kerak bo'lsa `traefik`
+tanlansin (`DOMAIN`, `ACME_EMAIL` kerak). Shu profil bilan `https://DOMAIN/pgadmin` orqali
+pgAdmin ham ko'tariladi (`PGADMIN_EMAIL`/`PGADMIN_PASSWORD` kerak) — bazani brauzerdan
+boshqarish uchun.
 
 MinIO yoqilgach: Sozlamalar → Integratsiyalar → Saqlash → `minio`, Endpoint `minio:9000`,
 Bucket nomi, Access/Secret kalit.
@@ -97,7 +133,7 @@ manzil bo'lganda to'ldiriladi — shunda chek havolalari mijoz telefonida ochila
 
 ---
 
-## 3. Zaxira (MAJBURIY — ikkala ssenariyda ham)
+## 4. Zaxira (MAJBURIY — ikkala ssenariyda ham)
 
 Zaxiraga **ikki narsa** kirishi shart, aks holda tiklash to'liq bo'lmaydi:
 

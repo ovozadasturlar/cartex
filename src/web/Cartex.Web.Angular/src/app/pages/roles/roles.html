@@ -1,6 +1,11 @@
 <ng-container *transloco="let t">
   <cx-page-header [title]="t('roles')" [subtitle]="t('roles_subtitle')">
-    @if (canManage) {
+    @if (canExport) {
+      <button matButton="outlined" (click)="exportCsv()">
+        <mat-icon>download</mat-icon>{{ t('export') }}
+      </button>
+    }
+    @if (canCreate) {
       <button mat-flat-button (click)="open(null)">
         <mat-icon>add</mat-icon>{{ t('add') }}
       </button>
@@ -34,6 +39,17 @@
               <td mat-cell *matCellDef="let r" class="num">{{ r.priority }}</td>
             </ng-container>
 
+            <ng-container matColumnDef="status">
+              <th mat-header-cell *matHeaderCellDef>{{ t('status') }}</th>
+              <td mat-cell *matCellDef="let r" (click)="$event.stopPropagation()">
+                <mat-slide-toggle
+                  [checked]="r.isActive"
+                  [disabled]="!canEdit || r.accessAll"
+                  (change)="setActive(r, $event.checked)">
+                </mat-slide-toggle>
+              </td>
+            </ng-container>
+
             <ng-container matColumnDef="permissions">
               <th mat-header-cell *matHeaderCellDef class="num">{{ t('permissions') }}</th>
               <td mat-cell *matCellDef="let r" class="num">
@@ -41,13 +57,56 @@
               </td>
             </ng-container>
 
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef></th>
+              <td mat-cell *matCellDef="let r" (click)="$event.stopPropagation()">
+                @if (!r.accessAll) {
+                  <button matIconButton class="danger" [title]="t('delete')" (click)="remove(r)">
+                    <mat-icon>delete_outline</mat-icon>
+                  </button>
+                }
+              </td>
+            </ng-container>
+
             <tr mat-header-row *matHeaderRowDef="cols"></tr>
             <tr
               mat-row
               *matRowDef="let r; columns: cols"
-              [class.clickable]="canManage && !r.accessAll"
+              [class.clickable]="(canEdit || canAssign) && !r.accessAll"
               (click)="open(r)"></tr>
           </table>
+        </div>
+        <div class="mobile-role-list">
+          @for (r of roles(); track r.id) {
+            <article class="mobile-role"
+                     [class.clickable]="(canEdit || canAssign) && !r.accessAll"
+                     (click)="open(r)">
+              <div class="mobile-role-head">
+                <div>
+                  <strong>{{ r.name }}</strong>
+                  @if (r.accessAll) {
+                    <span class="cx-chip warn">{{ t('system') }}</span>
+                  }
+                </div>
+                <mat-slide-toggle
+                  [checked]="r.isActive"
+                  [disabled]="!canEdit || r.accessAll"
+                  (click)="$event.stopPropagation()"
+                  (change)="setActive(r, $event.checked)" />
+              </div>
+              <p>{{ r.description || '—' }}</p>
+              <footer>
+                <span>{{ t('priority') }} <b>{{ r.priority }}</b></span>
+                <span>{{ t('permissions') }} <b>{{ r.accessAll ? t('all') : r.permissions.length }}</b></span>
+                @if (canDelete && !r.accessAll) {
+                  <button matIconButton class="danger" [title]="t('delete')"
+                          (click)="$event.stopPropagation(); remove(r)">
+                    <mat-icon>delete_outline</mat-icon>
+                  </button>
+                }
+              </footer>
+            </article>
+          }
         </div>
       } @else {
         <cx-empty-state icon="shield_person" [message]="t('no_data')" />

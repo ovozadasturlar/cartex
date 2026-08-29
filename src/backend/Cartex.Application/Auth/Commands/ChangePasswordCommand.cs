@@ -1,4 +1,3 @@
-using Cartex.Application.Common.Messaging;
 using Cartex.Auth.Services;
 using Cartex.Domain.Common;
 using Cartex.Persistence;
@@ -12,7 +11,8 @@ public record ChangePasswordCommand(string CurrentPassword, string NewPassword) 
 public sealed class ChangePasswordCommandHandler(
     IApplicationDbContext db,
     ICurrentUser currentUser,
-    IPasswordHasher passwordHasher) : IRequestHandler<ChangePasswordCommand, Unit>
+    IPasswordHasher passwordHasher,
+    IAuditService audit) : IRequestHandler<ChangePasswordCommand, Unit>
 {
     public async Task<Unit> Handle(ChangePasswordCommand request, CancellationToken cancellationToken)
     {
@@ -23,6 +23,11 @@ public sealed class ChangePasswordCommandHandler(
             throw new UnauthorizedAccessException("Invalid current password.");
 
         user.PasswordHash = passwordHasher.Hash(request.NewPassword);
+        var now = DateTime.UtcNow;
+        var revoked = await db.RefreshSessions
+            .Where(s => s.UserId == userId && s.RevokedAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.RevokedAt, now), cancellationToken);
+        audit.Add("passwordChange", "users", userId, new { user.Username, RevokedSessions = revoked }, asUserId: userId);
         await db.SaveChangesAsync(cancellationToken);
         return Unit.Value;
     }

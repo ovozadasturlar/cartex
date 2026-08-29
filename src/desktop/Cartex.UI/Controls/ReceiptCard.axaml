@@ -158,9 +158,12 @@
                                     <Run Text="×" />
                                     <Run Text="{Binding UnitPrice, StringFormat='{}{0:N0}'}" />
                                 </TextBlock>
+                                <TextBlock FontSize="11.5" IsVisible="{Binding HasDiscount}"
+                                           Foreground="{DynamicResource SuccessBrush}"
+                                           Text="{Binding DiscountAmount, StringFormat='−{0:N0}'}" />
                             </StackPanel>
                             <TextBlock Grid.Column="1" VerticalAlignment="Center" FontWeight="SemiBold" Margin="10,0,0,0"
-                                       Text="{Binding LineTotal, StringFormat='{}{0:N0}'}"
+                                       Text="{Binding NetTotal, StringFormat='{}{0:N0}'}"
                                        Foreground="{DynamicResource TextPrimary}" />
                         </Grid>
                     </DataTemplate>

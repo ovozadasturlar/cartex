@@ -1,47 +1,35 @@
-using Cartex.Application.Common.Messaging;
-using Cartex.Application.Common.Interfaces;
-using Cartex.Application.Common.Settings;
 using FluentValidation;
-using Microsoft.EntityFrameworkCore;
+using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Cartex.Domain.Enums;
-using Cartex.Persistence;
 using Cartex.Application.Common.Finance;
+using Cartex.Application.CustomerPayments.Commands;
+using Cartex.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Customers.Commands;
 
-public record RepayCustomerDebtCommand(long CustomerId, decimal Amount, bool ViaCard, string? DebtCurrency = null, string? PayCurrency = null, string? IdempotencyKey = null) : ICommand<Unit>;
+public record RepayCustomerDebtCommand(long CustomerId, decimal Amount, bool ViaCard, string? DebtCurrency = null, string? PayCurrency = null, string? IdempotencyKey = null, decimal WriteOff = 0, string? WriteOffReason = null) : ICommand<Unit>;
 
 public sealed class RepayCustomerDebtCommandHandler(
     IApplicationDbContext db,
-    ICurrentUser currentUser,
-    ILedgerService ledger,
     ICurrencyService currency,
-    ISettingsService settingsService,
-    IAuditService audit) : IRequestHandler<RepayCustomerDebtCommand, Unit>
+    ICurrentUser currentUser,
+    ISender sender) : IRequestHandler<RepayCustomerDebtCommand, Unit>
 {
     public async Task<Unit> Handle(RepayCustomerDebtCommand request, CancellationToken cancellationToken)
     {
-        var userId = currentUser.UserId ?? throw new UnauthorizedAccessException("Not authenticated.");
-        var branchId = currentUser.DefaultBranchId ?? throw new BusinessRuleException("Foydalanuvchi filiali aniqlanmadi.");
-
-        var idempotencyKey = string.IsNullOrWhiteSpace(request.IdempotencyKey) ? null : request.IdempotencyKey.Trim();
-        if (idempotencyKey is not null
-            && await db.Transactions.AnyAsync(t => t.UserId == userId && t.IdempotencyKey == idempotencyKey, cancellationToken))
-            return Unit.Value;
+        if (request.WriteOff > 0 && !currentUser.HasPermission(AppPermissions.CustomerPayments.WriteOffDebt))
+            throw new ForbiddenException("Mijoz qarzini kechirishga ruxsat yo'q.");
 
         var baseCode = await currency.BaseAsync(cancellationToken);
-        var debtCurrency = request.DebtCurrency ?? baseCode;
-        var payCurrency = request.PayCurrency ?? debtCurrency;
+        var debtCurrency = (request.DebtCurrency ?? baseCode).Trim().ToUpperInvariant();
+        var payCurrency = (request.PayCurrency ?? debtCurrency).Trim().ToUpperInvariant();
+        if (request.WriteOff > 0 && debtCurrency != baseCode)
+            throw new BusinessRuleException("Kechirim faqat bazaviy valyutada.", "write_off_base_currency_only");
 
-        if ((debtCurrency != baseCode || payCurrency != baseCode) && !await currency.IsMulticurrencyAsync(cancellationToken))
-            throw new BusinessRuleException("Ko'p valyuta rejimi o'chirilgan.");
-
-        if (request.ViaCard && payCurrency != baseCode)
-            throw new BusinessRuleException("Karta to'lovi faqat bazaviy valyutada.");
-
-        var debt = await ledger.FindCustomerAccountAsync(request.CustomerId, AccountType.Debt, cancellationToken, debtCurrency)
-            ?? throw new BusinessRuleException("Mijozda qarz mavjud emas.");
+        await currency.EnsureSalesAllowedAsync(debtCurrency, cancellationToken);
+        await currency.EnsureSalesAllowedAsync(payCurrency, cancellationToken);
 
         var payRate = payCurrency == baseCode ? 1m : await currency.RateAsync(payCurrency, cancellationToken);
         var debtRate = debtCurrency == baseCode ? 1m : await currency.RateAsync(debtCurrency, cancellationToken);
@@ -49,39 +37,24 @@ public sealed class RepayCustomerDebtCommandHandler(
             ? request.Amount
             : Math.Round(request.Amount * payRate / debtRate, 2);
 
-        if (debt.Balance <= 0)
-            throw new BusinessRuleException("Mijozda qarz yo'q.");
+        // QARZ-03: taqsimot mavjud qarzdan oshmaydi — ortiqcha summa avansga tushadi.
+        var debtBalance = await db.Accounts
+            .Where(x => x.CustomerId == request.CustomerId && x.Type == AccountType.Debt
+                && x.Currency == debtCurrency && x.Balance > 0)
+            .SumAsync(x => x.Balance, cancellationToken);
+        var allocated = Math.Min(debtReduce, debtBalance);
 
-        if (debtReduce > debt.Balance)
-            throw new BusinessRuleException("To'lov summasi qarzdan oshib ketdi.");
-
-        var shiftId = await db.Shifts
-            .Where(s => s.UserId == userId && s.BranchId == branchId && s.Status == ShiftStatus.Open)
-            .Select(s => (long?)s.Id)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        var policy = await settingsService.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken) ?? new SalesPolicySettings();
-        if (!request.ViaCard && shiftId is null && policy.ShiftPolicy != "Off"
-            && !await db.Warehouses.AnyAsync(w => w.AssignedUserId == userId, cancellationToken))
-            throw new BusinessRuleException("Naqd to'lov uchun ochiq smena talab qilinadi.");
-
-        var branchAccount = await ledger.BranchAccountAsync(branchId, request.ViaCard ? AccountType.Card : AccountType.Cash, cancellationToken, payCurrency);
-
-        if (payCurrency == debtCurrency)
-        {
-            var tx = ledger.Post(OperationType.DebtPay, request.Amount, debt, branchAccount, userId, shiftId, debtRate);
-            tx.IdempotencyKey = idempotencyKey;
-        }
-        else
-        {
-            var tx = ledger.Post(OperationType.DebtPay, request.Amount, null, branchAccount, userId, shiftId, payRate);
-            tx.IdempotencyKey = idempotencyKey;
-            ledger.Post(OperationType.DebtPay, debtReduce, debt, null, userId, shiftId, debtRate);
-        }
-
-        audit.Add("debtpay", "customers", request.CustomerId, new { request.Amount, payCurrency, debtCurrency });
-
-        await db.SaveChangesAsync(cancellationToken);
+        await sender.Send(new CreateCustomerPaymentCommand(
+            request.CustomerId,
+            null,
+            request.Amount > 0
+                ? [new CustomerPaymentTenderInput(request.ViaCard ? PaymentMethod.Card : PaymentMethod.Cash, payCurrency, request.Amount)]
+                : [],
+            allocated > 0 ? [new CustomerPaymentAllocationInput(debtCurrency, allocated)] : [],
+            AutoAllocateDebt: false,
+            IdempotencyKey: request.IdempotencyKey,
+            WriteOffAmount: request.WriteOff,
+            WriteOffReason: request.WriteOffReason), cancellationToken);
         return Unit.Value;
     }
 }
@@ -90,6 +63,10 @@ public sealed class RepayCustomerDebtCommandValidator : AbstractValidator<RepayC
 {
     public RepayCustomerDebtCommandValidator()
     {
-        RuleFor(x => x.Amount).GreaterThan(0);
+        RuleFor(x => x.Amount).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.WriteOff).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.Amount).Must((cmd, amount) => amount + cmd.WriteOff > 0)
+            .WithMessage("To'lov yoki kechirim summasi bo'lishi kerak.");
+        RuleFor(x => x.WriteOffReason).NotEmpty().When(x => x.WriteOff > 0);
     }
 }

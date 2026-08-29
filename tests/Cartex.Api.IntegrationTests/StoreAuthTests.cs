@@ -20,6 +20,7 @@ public class StoreAuthTests(CartexApiFactory factory)
     {
         var dev = await AuthHelper.LoginAsync(factory, "developer", "developer123");
         (await dev.PutAsJsonAsync("/api/features/ordering", new { isEnabled = true })).EnsureSuccessStatusCode();
+        (await dev.PutAsJsonAsync("/api/features/modules/ordering", new { isEnabled = true })).EnsureSuccessStatusCode();
 
         var admin = await AuthHelper.LoginAsync(factory, "admin", "admin123");
         var resp = await admin.PostAsJsonAsync("/api/customers",
@@ -52,7 +53,7 @@ public class StoreAuthTests(CartexApiFactory factory)
     [Fact]
     public async Task OtpVerify_IssuesCustomerToken_AndMeWorks()
     {
-        var phone = "+998901112201";
+        var phone = "+998907777001";
         var customerId = await SetupCustomerAsync(phone);
         await SeedChallengeAsync(customerId, "111222");
 
@@ -68,7 +69,7 @@ public class StoreAuthTests(CartexApiFactory factory)
     [Fact]
     public async Task WrongCode_Rejected_AndAttemptsExhausted()
     {
-        var phone = "+998901112202";
+        var phone = "+998907777002";
         var customerId = await SetupCustomerAsync(phone);
         await SeedChallengeAsync(customerId, "333444");
 
@@ -86,7 +87,7 @@ public class StoreAuthTests(CartexApiFactory factory)
     [Fact]
     public async Task StoreRefresh_Rotates_ReuseWithinGrace_Rejected_FamilySurvives()
     {
-        var phone = "+998901112203";
+        var phone = "+998907777003";
         var customerId = await SetupCustomerAsync(phone);
         await SeedChallengeAsync(customerId, "555666");
 
@@ -108,7 +109,7 @@ public class StoreAuthTests(CartexApiFactory factory)
     [Fact]
     public async Task StoreRefresh_ReuseAfterGrace_RevokesFamily()
     {
-        var phone = "+998901112213";
+        var phone = "+998907777013";
         var customerId = await SetupCustomerAsync(phone);
         await SeedChallengeAsync(customerId, "556677");
 
@@ -140,7 +141,7 @@ public class StoreAuthTests(CartexApiFactory factory)
     [Fact]
     public async Task CustomerToken_Is401_OnStaffEndpoint()
     {
-        var phone = "+998901112204";
+        var phone = "+998907777004";
         var customerId = await SetupCustomerAsync(phone);
         await SeedChallengeAsync(customerId, "777888");
 
@@ -155,7 +156,7 @@ public class StoreAuthTests(CartexApiFactory factory)
     [Fact]
     public async Task StaffToken_Is401_OnStoreEndpoint()
     {
-        await SetupCustomerAsync("+998901112205");
+        await SetupCustomerAsync("+998907777005");
         var admin = await AuthHelper.LoginAsync(factory, "admin", "admin123");
         var me = await admin.GetAsync("/api/store/me");
         Assert.Equal(HttpStatusCode.Unauthorized, me.StatusCode);
@@ -164,10 +165,10 @@ public class StoreAuthTests(CartexApiFactory factory)
     [Fact]
     public async Task RequestOtp_IsUniform200_ForKnownAndUnknownPhones()
     {
-        await SetupCustomerAsync("+998901112206");
+        await SetupCustomerAsync("+998907777006");
 
         var client = factory.CreateClient();
-        var known = await client.PostAsJsonAsync("/api/store/auth/request-otp", new { phone = "+998901112206" });
+        var known = await client.PostAsJsonAsync("/api/store/auth/request-otp", new { phone = "+998907777006" });
         var unknown = await client.PostAsJsonAsync("/api/store/auth/request-otp", new { phone = "+998900000000" });
 
         Assert.Equal(HttpStatusCode.OK, known.StatusCode);

@@ -1,8 +1,8 @@
-using Cartex.Application.Common.Extensions;
+﻿using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Models;
 using Cartex.Persistence;
-using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.StockTransfers;
 
 namespace Cartex.Application.StockTransfers.Queries;
 
@@ -12,8 +12,6 @@ public record GetStockTransfersTotalsQuery : FilteringRequest, IRequest<StockTra
     public DateTime? ToDate { get; set; }
     public long? WarehouseId { get; set; }
 }
-
-public record StockTransfersTotalsDto(int Count, decimal TotalQuantity);
 
 public sealed class GetStockTransfersTotalsQueryHandler(IApplicationDbContext db) : IRequestHandler<GetStockTransfersTotalsQuery, StockTransfersTotalsDto>
 {

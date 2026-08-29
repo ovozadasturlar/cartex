@@ -9,7 +9,8 @@ namespace Cartex.Auth.Services;
 public interface IJwtTokenGenerator
 {
     string GenerateToken(long userId, string username, string fullName, IEnumerable<string> roles,
-        string? startPage, IEnumerable<string> permissions, long businessId, IEnumerable<long> branchIds, long? defaultBranchId);
+        string? startPage, IEnumerable<string> permissions, string authorizationStamp,
+        long businessId, IEnumerable<long> branchIds, long? defaultBranchId, string? deviceId);
 
     string GenerateCustomerToken(long customerId, string fullName);
 }
@@ -17,7 +18,8 @@ public interface IJwtTokenGenerator
 public class JwtTokenGenerator(JwtSettings settings) : IJwtTokenGenerator
 {
     public string GenerateToken(long userId, string username, string fullName, IEnumerable<string> roles,
-        string? startPage, IEnumerable<string> permissions, long businessId, IEnumerable<long> branchIds, long? defaultBranchId)
+        string? startPage, IEnumerable<string> permissions, string authorizationStamp,
+        long businessId, IEnumerable<long> branchIds, long? defaultBranchId, string? deviceId)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.Key));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -28,6 +30,7 @@ public class JwtTokenGenerator(JwtSettings settings) : IJwtTokenGenerator
             new("username", username),
             new("fullName", fullName),
             new("businessId", businessId.ToString()),
+            new("authorizationStamp", authorizationStamp),
         };
 
         if (startPage is not null)
@@ -35,6 +38,9 @@ public class JwtTokenGenerator(JwtSettings settings) : IJwtTokenGenerator
 
         if (defaultBranchId is not null)
             claims.Add(new Claim("defaultBranchId", defaultBranchId.Value.ToString()));
+
+        if (!string.IsNullOrWhiteSpace(deviceId))
+            claims.Add(new Claim("deviceId", deviceId.Trim()));
 
         claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
         claims.AddRange(branchIds.Select(b => new Claim("branchId", b.ToString())));

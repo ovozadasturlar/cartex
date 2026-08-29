@@ -15,17 +15,17 @@ namespace Cartex.Api.Controllers;
 public class LicenseController(ISender sender) : ControllerBase
 {
     [HttpGet]
-    [HasPermission(AppPermissions.Features.Manage)]
+    [HasPermission(AppPermissions.Features.View)]
     public async Task<ActionResult<LicenseStatus>> GetStatus() =>
         Ok(await sender.Send(new GetLicenseStatusQuery()));
 
     [HttpGet("options")]
-    [HasPermission(AppPermissions.Features.Manage)]
+    [HasPermission(AppPermissions.Features.View)]
     public async Task<ActionResult<LicenseOptions>> GetOptions() =>
         Ok(await sender.Send(new GetLicenseOptionsQuery()));
 
     [HttpPut]
-    [HasPermission(AppPermissions.Features.Manage)]
+    [HasPermission(AppPermissions.Features.Edit)]
     public async Task<IActionResult> Update(UpdateLicenseCommand command)
     {
         await sender.Send(command);

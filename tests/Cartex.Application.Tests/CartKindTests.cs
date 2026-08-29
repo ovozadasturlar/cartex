@@ -18,8 +18,8 @@ public class CartKindTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     {
         using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var branch = (await db.Branches.FirstAsync(b => b.Name == "Filial 1")).Id;
-        var warehouse = (await db.Warehouses.FirstAsync(w => w.Name == "Filial 1 ombori")).Id;
+        var branch = (await db.Branches.FirstAsync(b => b.Name == "Asosiy filial")).Id;
+        var warehouse = (await db.Warehouses.FirstAsync(w => w.Name == "Asosiy ombor")).Id;
         var businessId = (await db.Businesses.FirstAsync()).Id;
         var adminId = (await db.Users.FirstAsync(u => u.Username == "admin")).Id;
 
@@ -32,8 +32,24 @@ public class CartKindTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         var variantId = await db.ProductVariants.Select(v => v.Id).FirstAsync();
-        return await sender.Send(new SubmitCartCommand(warehouseId, null,
-            [new SubmitCartItemDto(variantId, 1m)], Kind: kind));
+        return await sender.Send(new SubmitCartCommand(warehouseId, null, [new SubmitCartItemDto(variantId, 1m)])
+        {
+            Kind = kind
+        });
+    }
+
+    /// NAVBAT-08: navbat signali savatning filialiga boradi, hamma klientga emas.
+    [Fact]
+    public async Task NAVBAT_08_Queue_signal_carries_the_carts_branch()
+    {
+        var warehouseId = await LoginAsync();
+        using var scope = Fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var branchId = await db.Warehouses.Where(x => x.Id == warehouseId).Select(x => x.BranchId).SingleAsync();
+
+        await SubmitAsync(scope, warehouseId);
+
+        Assert.Equal(branchId, Assert.Single(Fixture.CartNotifier.Sent).BranchId);
     }
 
     [Fact]

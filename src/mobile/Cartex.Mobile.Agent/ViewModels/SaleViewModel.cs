@@ -114,7 +114,7 @@ public partial class SaleViewModel(AgentDb db, SyncService sync) : ObservableObj
         var paid = ParsePaid();
         var debt = total - paid;
         DebtInfo = debt > 0 ? string.Format(Loc.Instance["debt_info_fmt"], debt, _currency) : null;
-        CreditWarning = debt > 0 && _customer is { CreditLimit: > 0 } c && c.DebtBalance + debt > c.CreditLimit
+        CreditWarning = debt > 0 && _customer?.CreditLimit is { } limit && _customer.DebtBalance + debt > limit
             ? Loc.Instance["credit_warning"]
             : null;
         foreach (var line in Lines)
@@ -122,7 +122,7 @@ public partial class SaleViewModel(AgentDb db, SyncService sync) : ObservableObj
     }
 
     private decimal ParsePaid() =>
-        decimal.TryParse(PaidCashText?.Replace(" ", ""), out var v) && v >= 0 ? v : 0;
+        decimal.TryParse(PaidCashText.Replace(" ", ""), out var v) && v >= 0 ? v : 0;
 
     [RelayCommand]
     private void FullCash()

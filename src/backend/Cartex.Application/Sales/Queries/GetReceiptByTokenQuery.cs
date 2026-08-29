@@ -1,48 +1,19 @@
+﻿using Cartex.Application.Common.Interfaces;
+using Cartex.Application.Common.Settings;
 using Cartex.Persistence;
-using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json.Serialization;
+using Cartex.Shared.Models.Sales;
 
 namespace Cartex.Application.Sales.Queries;
 
 public record GetReceiptByTokenQuery(string Token) : IRequest<ReceiptDto?>;
 
-public record ReceiptItemDto(string ProductName, decimal Quantity, string UnitName, decimal UnitPrice, decimal LineTotal);
-
-public record ReceiptPaymentDto(string Method, string Currency, decimal Amount, decimal Rate = 1m, decimal AmountBase = 0, bool IsForeign = false);
-
-public record ReceiptDto(
-    string ReceiptToken,
-    string BusinessName,
-    string BranchName,
-    string? BranchAddress,
-    string? BranchPhone,
-    DateTime SaleDate,
-    decimal TotalAmount,
-    decimal DiscountAmount,
-    decimal PaidCash,
-    decimal PaidCard,
-    decimal PaidBonus,
-    decimal DebtAmount,
-    decimal ChangeAmount,
-    decimal CashbackEarned,
-    string UserName,
-    List<ReceiptItemDto> Items,
-    List<ReceiptPaymentDto> Payments,
-    long SaleId = 0,
-    string? CustomerName = null,
-    string? Language = null,
-    string? BusinessPhone = null,
-    string? BusinessTelegram = null,
-    string? BusinessWebsite = null,
-    string? LogoImageKey = null,
-    decimal CreditAmount = 0,
-    string? BaseCurrency = null);
-
-public sealed class GetReceiptByTokenQueryHandler(IApplicationDbContext db) : IRequestHandler<GetReceiptByTokenQuery, ReceiptDto?>
+public sealed class GetReceiptByTokenQueryHandler(IApplicationDbContext db, ISettingsService settings) : IRequestHandler<GetReceiptByTokenQuery, ReceiptDto?>
 {
     public async Task<ReceiptDto?> Handle(GetReceiptByTokenQuery request, CancellationToken cancellationToken)
     {
-        return await (
+        var receipt = await (
             from sale in db.Sales
             where sale.ReceiptToken == request.Token
             join branch in db.Branches on sale.BranchId equals branch.Id
@@ -63,17 +34,39 @@ public sealed class GetReceiptByTokenQueryHandler(IApplicationDbContext db) : IR
                 sale.ChangeAmount,
                 sale.CashbackEarned,
                 sale.User.FullName,
-                sale.Items.Select(i => new ReceiptItemDto(i.Variant.Product.Name, i.Quantity, i.Variant.Product.Unit.ShortName, i.UnitPrice, i.Quantity * i.UnitPrice)).ToList(),
+                sale.Items.Select(i => new ReceiptItemDto(i.Variant.Product.Name, i.Quantity, i.Variant.Product.Unit.ShortName, i.UnitPrice, i.Quantity * i.UnitPrice, i.DiscountAmount)).ToList(),
                 sale.Payments.Select(p => new ReceiptPaymentDto(p.Method.ToString(), p.Currency, p.Amount, p.Rate, p.AmountBase, p.Currency != business.Currency)).ToList(),
                 sale.Id,
-                sale.Customer != null ? sale.Customer.FullName : null,
+                sale.Customer != null ? sale.Customer.Party.FullName : null,
+                sale.Customer != null ? sale.Customer.Party.Phone : null,
+                sale.Customer != null ? sale.Customer.Party.Email : null,
                 sale.Customer != null ? sale.Customer.PreferredLanguage : null,
                 business.Phone,
                 business.Telegram,
                 business.Website,
                 business.LogoImageKey,
                 sale.CreditAmount,
-                business.Currency))
+                business.Currency,
+                sale.PaidAdvance,
+                business.MonochromeLogoImageKey,
+                sale.CustomerId,
+                sale.Note,
+                sale.Status.ToString()))
             .FirstOrDefaultAsync(cancellationToken);
+
+        if (receipt is null) return null;
+        // Mijozning o'z tili birinchi; tanlanmagan bo'lsa do'konning chek tili ishlatiladi.
+        var configured = await settings.GetAsync<ReceiptSettings>(SettingKeys.Receipt, cancellationToken);
+
+        // A line can be filled from several stock batches, but the customer should still see
+        // one row per product with everything that came off it in a single figure.
+        return receipt with
+            {
+                Language = receipt.Language ?? configured?.Language ?? "uz-latn",
+                Items = [.. receipt.Items
+                    .GroupBy(i => (i.ProductName, i.UnitName, i.UnitPrice))
+                    .Select(g => new ReceiptItemDto(g.Key.ProductName, g.Sum(i => i.Quantity), g.Key.UnitName,
+                        g.Key.UnitPrice, g.Sum(i => i.LineTotal), g.Sum(i => i.DiscountAmount)))]
+            };
     }
 }

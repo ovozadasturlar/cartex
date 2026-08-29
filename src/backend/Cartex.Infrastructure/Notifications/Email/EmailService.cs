@@ -11,29 +11,29 @@ public sealed class EmailService(
     ISecretProtector protector,
     ILogger<EmailService> logger) : IEmailService
 {
-    public async Task SendAsync(string to, string subject, string body, CancellationToken cancellationToken = default, EmailAttachment? attachment = null)
+    public async Task<NotificationProviderResult?> SendAsync(string to, string subject, string body, CancellationToken cancellationToken = default, EmailAttachment? attachment = null)
     {
         var cfg = await settings.GetAsync<EmailSettings>(SettingKeys.Email, cancellationToken);
         if (cfg is null || !cfg.Enabled || string.IsNullOrWhiteSpace(cfg.Host) || string.IsNullOrWhiteSpace(cfg.FromAddress) || string.IsNullOrWhiteSpace(to))
         {
             logger.LogInformation("Email not configured; skipped");
-            return;
+            return null;
         }
 
-        using var message = new MailMessage
-        {
-            From = new MailAddress(cfg.FromAddress, cfg.FromName ?? cfg.FromAddress),
-            Subject = subject,
-            Body = body
-        };
+        using var message = new MailMessage();
+        message.From = new MailAddress(cfg.FromAddress, cfg.FromName ?? cfg.FromAddress);
+        message.Subject = subject;
+        message.Body = body;
         message.To.Add(to);
         if (attachment is not null)
             message.Attachments.Add(new Attachment(new MemoryStream(attachment.Content), attachment.FileName));
 
-        using var client = new SmtpClient(cfg.Host, cfg.Port) { EnableSsl = cfg.UseSsl };
+        using var client = new SmtpClient(cfg.Host, cfg.Port);
+        client.EnableSsl = cfg.UseSsl;
         if (!string.IsNullOrWhiteSpace(cfg.Username))
             client.Credentials = new NetworkCredential(cfg.Username, string.IsNullOrWhiteSpace(cfg.Password) ? "" : protector.Unprotect(cfg.Password));
 
         await client.SendMailAsync(message, cancellationToken);
+        return new NotificationProviderResult(cfg.Host);
     }
 }

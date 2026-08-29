@@ -17,8 +17,10 @@ public partial class RolesViewModel : ViewModelBase, ILoadable
     private readonly IBusyService _busy;
     private readonly AuthService _auth;
     private readonly IExportService _export;
+    private readonly IDialogService _dialog;
 
     private List<PermissionDto> _allPermissions = [];
+    private List<PermissionBundleDto> _allBundles = [];
     private List<RoleDto> _all = [];
     private long _editId;
 
@@ -29,6 +31,7 @@ public partial class RolesViewModel : ViewModelBase, ILoadable
     public ObservableCollection<StartPageOption> StartPages { get; } = [];
     public ObservableCollection<StartPageOption> CartDestinations { get; } = [];
     public ObservableCollection<PermissionGroup> PermissionGroups { get; } = [];
+    public ObservableCollection<PermissionBundleItem> PermissionBundles { get; } = [];
     public ObservableCollection<PermissionGroup> GrantablePermissionGroups { get; } = [];
     public ObservableCollection<PermissionItem> AssignableRoleItems { get; } = [];
 
@@ -41,8 +44,10 @@ public partial class RolesViewModel : ViewModelBase, ILoadable
 
     private void RefreshDynamicTabs()
     {
-        HasRolesManageSelected = _permIndex.TryGetValue("roles.manage", out var rm) && rm.IsSelected;
-        HasUsersManageSelected = _permIndex.TryGetValue("users.manage", out var um) && um.IsSelected;
+        HasRolesManageSelected = _permIndex.TryGetValue("roles.assignPermissions", out var assign) && assign.IsSelected;
+        HasUsersManageSelected =
+            (_permIndex.TryGetValue("users.create", out var create) && create.IsSelected)
+            || (_permIndex.TryGetValue("users.edit", out var edit) && edit.IsSelected);
     }
 
     private void BuildAssignableRoles(IReadOnlyCollection<string> selected)
@@ -57,9 +62,16 @@ public partial class RolesViewModel : ViewModelBase, ILoadable
     }
 
     public bool CanGovern => _auth.HasPermission("permissions.govern");
+    public bool CanCreate => _auth.HasPermission("roles.create");
+    public bool CanEdit => _auth.HasPermission("roles.edit");
+    public bool CanDelete => _auth.HasPermission("roles.delete");
+    public bool CanAssignPermissions => _auth.HasPermission("roles.assignPermissions");
+    public bool CanOpenEditor => CanEdit || CanAssignPermissions;
+    public bool CanEditMetadata => IsNew ? CanCreate : CanEdit;
 
     [ObservableProperty] private bool _isEditOpen;
     [ObservableProperty] private bool _isNew;
+    partial void OnIsNewChanged(bool value) => OnPropertyChanged(nameof(CanEditMetadata));
     [ObservableProperty] private string _editName = "";
     [ObservableProperty] private string _editDescription = "";
     [ObservableProperty] private int _editPriority;
@@ -74,7 +86,7 @@ public partial class RolesViewModel : ViewModelBase, ILoadable
     private IReadOnlyList<PageShortcut>? _shortcuts;
     public IReadOnlyList<PageShortcut> Shortcuts => _shortcuts ??= CrudShortcuts(OpenCreateCommand, SaveCommand, () => IsEditOpen = false, () => IsEditOpen);
 
-    public RolesViewModel(IRolesApi rolesApi, IPermissionsApi permissionsApi, IToastService toast, IBusyService busy, AuthService auth, IExportService export)
+    public RolesViewModel(IRolesApi rolesApi, IPermissionsApi permissionsApi, IToastService toast, IBusyService busy, AuthService auth, IExportService export, IDialogService dialog)
     {
         _rolesApi = rolesApi;
         _permissionsApi = permissionsApi;
@@ -82,6 +94,7 @@ public partial class RolesViewModel : ViewModelBase, ILoadable
         _busy = busy;
         _auth = auth;
         _export = export;
+        _dialog = dialog;
     }
 
     public async Task LoadAsync()
@@ -90,7 +103,10 @@ public partial class RolesViewModel : ViewModelBase, ILoadable
         {
             using (_busy.Begin(L["loading"]))
             {
-                _allPermissions = await _permissionsApi.GetAllAsync();
+                var permissionsTask = _permissionsApi.GetAllAsync();
+                var bundlesTask = _permissionsApi.GetBundlesAsync();
+                _allPermissions = await permissionsTask;
+                _allBundles = await bundlesTask;
                 _deps = _allPermissions.ToDictionary(p => p.Name, p => p.DependsOn.ToArray());
                 _all = (await _rolesApi.GetAllAsync()).ToList();
                 ApplyFilter();
@@ -115,6 +131,20 @@ public partial class RolesViewModel : ViewModelBase, ILoadable
     }
 
     [RelayCommand]
+    private async Task ToggleActive(RoleDto role)
+    {
+        if (!CanEdit || role.AccessAll) return;
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+                await _rolesApi.SetActiveAsync(role.Id, new SetRoleActiveRequest(!role.IsActive));
+            _toast.Success(L["success"]);
+            await LoadAsync();
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    [RelayCommand]
     private async Task Export(string format)
     {
         try
@@ -133,7 +163,9 @@ public partial class RolesViewModel : ViewModelBase, ILoadable
     {
         StartPages.Clear();
         StartPages.Add(new StartPageOption(null, L["none"]));
-        foreach (var p in NavRegistry.SidebarPages)
+        // RUXSAT-04: moduli o'chiq sahifa boshlang'ich sahifa sifatida taklif qilinmaydi — aks holda
+        // foydalanuvchi kirgan zahoti ko'rinmaydigan bo'limga tushirilardi.
+        foreach (var p in NavRegistry.SidebarPages.Where(x => x.Feature is null || NavRegistry.IsFeatureOn(x.Feature)))
             StartPages.Add(new StartPageOption(p.Key, L[p.Key]));
     }
 
@@ -176,6 +208,7 @@ public partial class RolesViewModel : ViewModelBase, ILoadable
                 if (_permIndex.TryGetValue(dependent, out var it) && it.IsSelected) it.SetSelected(false);
         }
         RefreshDynamicTabs();
+        RefreshBundleStates();
     }
 
     private HashSet<string> RequiredNames(string name)
@@ -201,9 +234,65 @@ public partial class RolesViewModel : ViewModelBase, ILoadable
                 if (_permIndex.TryGetValue(required, out var dep)) dep.SetSelected(true);
     }
 
+    private void BuildPermissionBundles()
+    {
+        PermissionBundles.Clear();
+        foreach (var bundle in _allBundles)
+        {
+            var item = new PermissionBundleItem
+            {
+                Key = bundle.Key,
+                Label = LocalizationManager.Instance.Find($"bundle_{bundle.Key}") ?? bundle.Description,
+                PermissionNames = bundle.Permissions
+            };
+            item.Configure(OnBundleToggled);
+            PermissionBundles.Add(item);
+        }
+        RefreshBundleStates();
+    }
+
+    private void OnBundleToggled(PermissionBundleItem bundle, bool selected)
+    {
+        if (selected)
+        {
+            foreach (var name in bundle.PermissionNames)
+                if (_permIndex.TryGetValue(name, out var item))
+                    item.SetSelected(true);
+            NormalizeDependencies();
+        }
+        else
+        {
+            var removed = bundle.PermissionNames.ToHashSet();
+            foreach (var name in removed)
+                if (_permIndex.TryGetValue(name, out var item))
+                    item.SetSelected(false);
+            foreach (var dependent in _deps.Keys.Where(name => RequiredNames(name).Overlaps(removed)).ToList())
+                if (_permIndex.TryGetValue(dependent, out var item))
+                    item.SetSelected(false);
+        }
+
+        RefreshDynamicTabs();
+        RefreshBundleStates();
+    }
+
+    private void RefreshBundleStates()
+    {
+        foreach (var bundle in PermissionBundles)
+        {
+            var available = bundle.PermissionNames
+                .Where(_permIndex.ContainsKey)
+                .Select(name => _permIndex[name].IsSelected)
+                .ToList();
+            bundle.SetState(available.Count > 0 && available.All(x => x)
+                ? true
+                : available.Any(x => x) ? null : false);
+        }
+    }
+
     [RelayCommand]
     private void OpenCreate()
     {
+        if (!CanCreate) return;
         IsNew = true;
         _editId = 0;
         EditName = "";
@@ -212,6 +301,7 @@ public partial class RolesViewModel : ViewModelBase, ILoadable
         SelectedStartPage = StartPages.FirstOrDefault();
         SelectedCartDestination = CartDestinations.FirstOrDefault();
         BuildPermissionGroups(PermissionGroups, [], true);
+        BuildPermissionBundles();
         BuildPermissionGroups(GrantablePermissionGroups, [], false);
         BuildAssignableRoles([]);
         RefreshDynamicTabs();
@@ -222,6 +312,7 @@ public partial class RolesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void OpenEdit(RoleDto role)
     {
+        if (!CanOpenEditor) return;
         IsNew = false;
         _editId = role.Id;
         EditName = role.Name;
@@ -231,6 +322,7 @@ public partial class RolesViewModel : ViewModelBase, ILoadable
         SelectedCartDestination = CartDestinations.FirstOrDefault(s => s.Key == role.CartDestination) ?? CartDestinations.FirstOrDefault();
         BuildPermissionGroups(PermissionGroups, role.Permissions, true);
         NormalizeDependencies();
+        BuildPermissionBundles();
         BuildPermissionGroups(GrantablePermissionGroups, role.GrantablePermissions, false);
         BuildAssignableRoles(role.AssignableRoles);
         RefreshDynamicTabs();
@@ -240,6 +332,22 @@ public partial class RolesViewModel : ViewModelBase, ILoadable
 
     [RelayCommand]
     private void CancelEdit() => IsEditOpen = false;
+
+    [RelayCommand]
+    private async Task DeleteAsync(RoleDto role)
+    {
+        if (!CanDelete) return;
+        if (!await _dialog.ConfirmDangerAsync(string.Format(L["delete_role_confirm"], role.Name), L["delete"]))
+            return;
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+                await _rolesApi.DeleteAsync(role.Id);
+            _toast.Success(L["success"]);
+            await LoadAsync();
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
 
     [RelayCommand]
     private async Task SaveAsync()
@@ -267,9 +375,11 @@ public partial class RolesViewModel : ViewModelBase, ILoadable
                 else
                 {
                     id = _editId;
-                    await _rolesApi.UpdateAsync(id, new UpdateRoleRequest(EditName.Trim(), description, startPage, EditPriority, grantable, assignableRoles, CartDestination: cartDestination));
+                    if (CanEdit)
+                        await _rolesApi.UpdateAsync(id, new UpdateRoleRequest(EditName.Trim(), description, startPage, EditPriority, grantable, assignableRoles, CartDestination: cartDestination));
                 }
-                await _rolesApi.AssignPermissionsAsync(id, new AssignPermissionsRequest(permissionIds));
+                if (CanAssignPermissions)
+                    await _rolesApi.AssignPermissionsAsync(id, new AssignPermissionsRequest(permissionIds));
             }
             IsEditOpen = false;
             _toast.Success(L["success"]);
@@ -315,4 +425,31 @@ public class PermissionGroup
 {
     public string Title { get; init; } = "";
     public ObservableCollection<PermissionItem> Items { get; } = [];
+}
+
+public partial class PermissionBundleItem : ObservableObject
+{
+    public string Key { get; init; } = "";
+    public string Label { get; init; } = "";
+    public IReadOnlyList<string> PermissionNames { get; init; } = [];
+
+    private Action<PermissionBundleItem, bool>? _onToggled;
+    private bool _suppress;
+
+    [ObservableProperty] private bool? _isSelected;
+
+    public void Configure(Action<PermissionBundleItem, bool> onToggled) => _onToggled = onToggled;
+
+    public void SetState(bool? state)
+    {
+        _suppress = true;
+        IsSelected = state;
+        _suppress = false;
+    }
+
+    partial void OnIsSelectedChanged(bool? value)
+    {
+        if (!_suppress && value is { } selected)
+            _onToggled?.Invoke(this, selected);
+    }
 }

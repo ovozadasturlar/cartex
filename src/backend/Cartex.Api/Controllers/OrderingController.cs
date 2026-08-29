@@ -1,21 +1,22 @@
-using Cartex.Application.Ordering.Commands;
+﻿using Cartex.Application.Ordering.Commands;
 using Cartex.Application.Ordering.Queries;
 using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
 using Cartex.Shared.Models.Ordering;
+using Cartex.Shared.Models.Sales;
 using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using CartDto = Cartex.Application.Ordering.Queries.CartDto;
-using CartListDto = Cartex.Application.Ordering.Queries.CartListDto;
-using CartLoadItemDto = Cartex.Application.Ordering.Queries.CartLoadItemDto;
+using Cartex.Application.Sales.Commands;
+using Cartex.Domain.Common.Exceptions;
+using Cartex.Domain.Enums;
+using Cartex.Application.Common.Participants;
 
 namespace Cartex.Api.Controllers;
 
 [ApiController]
 [Route("api/ordering")]
 [Authorize]
-[RequiresFeature(FeatureCatalog.Ordering, FeatureCatalog.Store)]
 public class OrderingController(ISender sender) : ControllerBase
 {
     [HttpGet("carts")]
@@ -40,7 +41,40 @@ public class OrderingController(ISender sender) : ControllerBase
     {
         if (!Enum.TryParse<Cartex.Domain.Enums.CartStatus>(request.Status, true, out var status))
             return BadRequest();
-        await sender.Send(new UpdateCartStatusCommand(code, status));
+        await sender.Send(new UpdateCartStatusCommand(code, status, request.Reason));
+        return NoContent();
+    }
+
+    [HttpPut("carts/{code}/items")]
+    [HasPermission(AppPermissions.Sales.Create)]
+    public async Task<IActionResult> UpdateItems(string code, UpdateCartItemsRequest request)
+    {
+        await sender.Send(new UpdateCartItemsCommand(code,
+            request.Items.Select(x => new SubmitCartItemDto(x.VariantId, x.Quantity, x.UnitPrice, x.PrepackId)).ToList(),
+            request.ExpectedVersion));
+        return NoContent();
+    }
+
+    [HttpPut("carts/{code}")]
+    [HasPermission(AppPermissions.Sales.Create)]
+    public async Task<IActionResult> Update(string code, UpdateCartRequest request)
+    {
+        await sender.Send(new UpdateCartCommand(
+            code,
+            request.CustomerId,
+            request.Items.Select(x => new SubmitCartItemDto(x.VariantId, x.Quantity, x.UnitPrice, x.PrepackId)).ToList())
+        {
+            Note = request.Note,
+            Participants = request.Participants?.Select(x => new ParticipantInput(x.RoleDefinitionId, x.PartyId)).ToList(),
+            Payments = request.Payments?.Select(x => new SalePaymentDto(
+                ParsePaymentMethod(x.Method), x.Currency, x.Amount)).ToList(),
+            DebtCurrency = request.DebtCurrency,
+            DebtDueDate = request.DebtDueDate,
+            CreditAmount = request.CreditAmount,
+            UseCustomerAdvance = request.UseCustomerAdvance,
+            ExpectedVersion = request.ExpectedVersion,
+            DiscountAmount = request.DiscountAmount
+        });
         return NoContent();
     }
 
@@ -53,7 +87,7 @@ public class OrderingController(ISender sender) : ControllerBase
     }
 
     [HttpGet("carts/{code}")]
-    [HasPermission(AppPermissions.Sales.Pick, AppPermissions.Sales.Create)]
+    [HasPermission(AppPermissions.Sales.Pick, AppPermissions.Sales.Create, AppPermissions.Sales.View)]
     public async Task<ActionResult<CartDto>> GetByCode(string code)
     {
         var cart = await sender.Send(new GetCartByCodeQuery(code));
@@ -61,10 +95,36 @@ public class OrderingController(ISender sender) : ControllerBase
     }
 
     [HttpPost("carts/{code}/checkout")]
-    [HasPermission(AppPermissions.Sales.Create)]
-    public async Task<ActionResult<long>> Checkout(string code, CheckoutCartRequest request)
+    [HasPermission(AppPermissions.Sales.Checkout)]
+    public async Task<ActionResult<CreateSaleResult>> Checkout(string code, CheckoutCartRequest request)
     {
-        var saleId = await sender.Send(new CheckoutCartCommand(code, request.PaidCash, request.PaidCard, request.PaidBonus, request.IdempotencyKey));
-        return Ok(saleId);
+        var items = request.Items?.Select(x => new CheckoutCartItemDto(x.VariantId, x.Quantity, x.UnitPrice, x.PrepackId)
+            { ExpectedUnitPrice = x.ExpectedUnitPrice }).ToList();
+        var payments = request.Payments?.Select(x => new SalePaymentDto(
+            ParsePaymentMethod(x.Method), x.Currency, x.Amount)).ToList();
+        var sale = await sender.Send(new CheckoutCartCommand(code, request.PaidCash, request.PaidCard, request.PaidBonus)
+        {
+            IdempotencyKey = request.IdempotencyKey,
+            Items = items,
+            Payments = payments,
+            DebtCurrency = request.DebtCurrency,
+            DebtDueDate = request.DebtDueDate,
+            CreditAmount = request.CreditAmount,
+            UseCustomerAdvance = request.UseCustomerAdvance,
+            CustomerId = request.CustomerId,
+            DiscountAmount = request.DiscountAmount,
+            Note = request.Note
+        });
+        return Ok(sale);
     }
+
+    [HttpPost("carts/{code}/requeue")]
+    [HasPermission(AppPermissions.Sales.Pick, AppPermissions.Sales.Create)]
+    public async Task<ActionResult<RequeueCartResult>> Requeue(string code, RequeueCartRequest request) =>
+        Ok(await sender.Send(new RequeueCartCommand(code, request.Note, request.IdempotencyKey)));
+
+    private static PaymentMethod ParsePaymentMethod(string value) =>
+        Enum.TryParse<PaymentMethod>(value, true, out var method)
+            ? method
+            : throw new BusinessRuleException($"To'lov turi noto'g'ri: {value}", "invalid_payment_method");
 }

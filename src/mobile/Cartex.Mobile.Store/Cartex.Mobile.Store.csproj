@@ -11,9 +11,23 @@
 		<MauiXamlInflator>SourceGen</MauiXamlInflator>
 		<ApplicationTitle>Cartex Do'kon</ApplicationTitle>
 		<ApplicationId>uz.cartex.store</ApplicationId>
-		<ApplicationDisplayVersion>0.0.1</ApplicationDisplayVersion>
-		<ApplicationVersion>1</ApplicationVersion>
+		<ApplicationDisplayVersion>0.0.2</ApplicationDisplayVersion>
+		<ApplicationVersion>2</ApplicationVersion>
 		<SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
+		<NoWarn>$(NoWarn);XA4301</NoWarn>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+		<RuntimeIdentifiers Condition="'$(Configuration)' != 'Debug'">android-arm;android-arm64;android-x86;android-x64</RuntimeIdentifiers>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android' and '$(Configuration)' == 'Release'">
+		<RunAOTCompilation>true</RunAOTCompilation>
+		<AndroidEnableProfiledAot>true</AndroidEnableProfiledAot>
+		<AndroidStripILAfterAOT>true</AndroidStripILAfterAOT>
+		<AndroidEnableMarshalMethods>true</AndroidEnableMarshalMethods>
+		<AndroidLinkTool>r8</AndroidLinkTool>
+		<AndroidLinkResources>true</AndroidLinkResources>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -27,13 +41,16 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
-		<PackageReference Include="BarcodeScanning.Native.Maui" Version="3.0.4" />
+		<PackageReference Include="BarcodeScanning.Native.Maui" Version="3.0.6" />
 		<PackageReference Include="QRCoder" Version="1.8.0" />
+		<PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.11" />
+		<PackageReference Include="sqlite-net-pcl" Version="1.11.285" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\Cartex.Mobile.Core\Cartex.Mobile.Core.csproj" />
 		<ProjectReference Include="..\..\shared\Cartex.ApiClient\Cartex.ApiClient.csproj" />
+		<ProjectReference Include="..\..\shared\Cartex.Hub\Cartex.Hub.csproj" />
 		<ProjectReference Include="..\..\shared\Cartex.Shared\Cartex.Shared.csproj" />
 	</ItemGroup>
 

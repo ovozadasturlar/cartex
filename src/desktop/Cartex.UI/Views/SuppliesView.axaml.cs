@@ -22,8 +22,6 @@ public partial class SuppliesView : UserControl
         if (_vm is not null)
         {
             _vm.FocusProductRequested -= FocusProduct;
-            _vm.FocusPrintQuantityRequested -= FocusPrintQuantity;
-            _vm.PropertyChanged -= OnViewModelPropertyChanged;
         }
 
         _vm = DataContext as SuppliesViewModel;
@@ -31,26 +29,10 @@ public partial class SuppliesView : UserControl
         if (_vm is not null)
         {
             _vm.FocusProductRequested += FocusProduct;
-            _vm.FocusPrintQuantityRequested += FocusPrintQuantity;
-            _vm.PropertyChanged += OnViewModelPropertyChanged;
         }
     }
 
-    private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName != nameof(SuppliesViewModel.IsPrintOpen) || _vm?.IsPrintOpen != true) return;
-
-        Dispatcher.UIThread.Post(() =>
-        {
-            if (_vm?.HasManyBarcodes == true) PrintChips.Focus();
-            else FocusPrintQuantity();
-        }, DispatcherPriority.Background);
-    }
-
     private void FocusProduct() => Dispatcher.UIThread.Post(() => Select(ProductBox));
-
-    private void FocusPrintQuantity() =>
-        Dispatcher.UIThread.Post(() => Select(PrintQuantityBox), DispatcherPriority.Background);
 
     private static void Select(Control control)
     {

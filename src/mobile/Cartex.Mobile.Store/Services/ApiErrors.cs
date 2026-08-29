@@ -13,7 +13,8 @@ public static class ApiErrors
             using var doc = JsonDocument.Parse(ex.Content ?? "");
             var root = doc.RootElement;
             if (root.TryGetProperty("detail", out var detail) && detail.GetString() is { Length: > 0 } d) return d;
-            if (root.TryGetProperty("title", out var title) && title.GetString() is { Length: > 0 } t) return t;
+            if (root.TryGetProperty("title", out var title) && title.GetString() is { Length: > 0 } t)
+                return t == "feature_locked" ? Loc.Instance["feature_locked"] : t;
         }
         catch { }
         return (int)ex.StatusCode switch

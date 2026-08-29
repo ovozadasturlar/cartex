@@ -1,13 +1,11 @@
-using Cartex.Domain.Enums;
+﻿using Cartex.Domain.Enums;
 using Cartex.Persistence;
-using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Reports;
 
 namespace Cartex.Application.Reports.Queries;
 
 public record GetTopCustomersReportQuery(DateTime From, DateTime To, long? WarehouseId) : IRequest<List<CustomerSalesDto>>;
-
-public record CustomerSalesDto(long CustomerId, string CustomerName, decimal Revenue, decimal Profit, int SalesCount, DateTime LastPurchase);
 
 public sealed class GetTopCustomersReportQueryHandler(IApplicationDbContext db) : IRequestHandler<GetTopCustomersReportQuery, List<CustomerSalesDto>>
 {
@@ -23,7 +21,7 @@ public sealed class GetTopCustomersReportQueryHandler(IApplicationDbContext db) 
             salesQuery = salesQuery.Where(s => s.WarehouseId == warehouseId);
 
         var sales = await salesQuery
-            .Select(s => new { s.Id, CustomerId = s.CustomerId!.Value, CustomerName = s.Customer!.FullName, s.CreatedAt, s.DiscountAmount })
+            .Select(s => new { s.Id, CustomerId = s.CustomerId!.Value, CustomerName = s.Customer!.Party.FullName, s.CreatedAt, s.DiscountAmount })
             .ToListAsync(cancellationToken);
 
         var itemsQuery = db.SaleItems.Where(i =>

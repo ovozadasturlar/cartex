@@ -17,7 +17,7 @@
 
                 <controls:CxLogo Width="76" Height="76" HorizontalAlignment="Center" />
 
-                <StackPanel Spacing="18" IsVisible="{Binding !IsQrOpen}">
+                <StackPanel Spacing="18" IsVisible="{Binding !IsQrOpen}" controls:FormBehaviors.AutoFocus="True">
                     <StackPanel Spacing="4">
                         <TextBlock Text="Cartex POS" Classes="h1" HorizontalAlignment="Center" />
                         <TextBlock Text="{Binding L[login]}" Classes="caption"
@@ -65,7 +65,7 @@
                                IsVisible="{Binding ServerStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                                TextWrapping="Wrap" HorizontalAlignment="Center" />
 
-                    <StackPanel Spacing="6" IsVisible="{Binding IsServerEditOpen}">
+                    <StackPanel Spacing="6" IsVisible="{Binding IsServerEditOpen}" controls:FormBehaviors.AutoFocus="True">
                         <TextBlock Text="{Binding L[api_url]}" FontSize="12.5" Foreground="{DynamicResource TextSecondary}" />
                         <Grid ColumnDefinitions="*,8,Auto">
                             <TextBox Text="{Binding ServerUrl}" MinHeight="40"
@@ -150,7 +150,7 @@
                     </Button>
                 </StackPanel>
 
-                <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" Height="4" />
+                <ProgressBar IsIndeterminate="{Binding IsLoading}" IsVisible="{Binding IsLoading}" Height="4" />
 
             </StackPanel>
         </Border>

@@ -1,10 +1,11 @@
-using Cartex.Application.Permissions.Commands;
+﻿using Cartex.Application.Permissions.Commands;
 using Cartex.Application.Permissions.Queries;
 using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
 using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Cartex.Shared.Models.Permissions;
 
 namespace Cartex.Api.Controllers;
 
@@ -20,6 +21,11 @@ public class PermissionsController(ISender sender) : ControllerBase
         var result = await sender.Send(query);
         return Ok(result);
     }
+
+    [HttpGet("bundles")]
+    [HasPermission(AppPermissions.Roles.View)]
+    public async Task<ActionResult<IReadOnlyList<PermissionBundleDto>>> GetBundles() =>
+        Ok(await sender.Send(new GetPermissionBundlesQuery()));
 
     [HttpPut("{id:long}/toggle")]
     [HasPermission(AppPermissions.Permissions.Govern)]

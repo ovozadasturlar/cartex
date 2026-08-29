@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
@@ -6,7 +6,6 @@ using Cartex.Shared.Models.Customers;
 using Cartex.Shared.Models.Reports;
 using Cartex.UI.Services;
 using LiveChartsCore;
-using LiveChartsCore.Drawing;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
 using SkiaSharp;
@@ -46,6 +45,8 @@ public partial class ReportsViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private decimal _payCard;
     [ObservableProperty] private decimal _payBonus;
     [ObservableProperty] private decimal _payDebt;
+    [ObservableProperty] private decimal _payAdvance;
+    [ObservableProperty] private decimal _payReturned;
 
     public ObservableCollection<TopProductReportDto> TopProducts { get; } = [];
     public ObservableCollection<DebtAgingRowDto> DebtRows { get; } = [];
@@ -59,8 +60,14 @@ public partial class ReportsViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private decimal _bonusAmount;
     [ObservableProperty] private string _bonusNote = "";
     [ObservableProperty] private CustomerSalesDto? _bonusCustomer;
+    private static readonly CustomerSalesDto EmptyBonusCustomer = new(0, "", 0, 0, 0, DateTime.MinValue);
+    public CustomerSalesDto BonusCustomerDisplay => BonusCustomer ?? EmptyBonusCustomer;
 
-    public bool CanGiveBonus => _auth.HasPermission("loyalty.manage");
+    partial void OnBonusCustomerChanged(CustomerSalesDto? value) => OnPropertyChanged(nameof(BonusCustomerDisplay));
+
+    public bool CanGiveBonus => _auth.HasPermission("loyalty.grantBonus");
+
+    public override void OnNavigatedFrom() => IsBonusOpen = false;
 
     public ObservableCollection<ISeries> SalesChartSeries { get; } = [];
     [ObservableProperty] private Axis[] _salesXAxes = [new Axis()];
@@ -225,6 +232,8 @@ public partial class ReportsViewModel : ViewModelBase, ILoadable
             PayCard = report.Card;
             PayBonus = report.Bonus;
             PayDebt = report.Debt;
+            PayAdvance = report.Advance;
+            PayReturned = report.Returned;
             SalesByCashier.Clear();
             foreach (var c in report.ByCashier) SalesByCashier.Add(c);
             SalesByCategory.Clear();

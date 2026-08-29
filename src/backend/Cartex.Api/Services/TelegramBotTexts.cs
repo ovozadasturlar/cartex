@@ -36,6 +36,13 @@ public static class TelegramBotTexts
             ["ru"] = "📱 Отправить номер",
             ["en"] = "📱 Share number"
         },
+        ["share_button_required"] = new()
+        {
+            ["uz-latn"] = "Iltimos, pastdagi «📱 Raqamni ulashish» tugmasidan foydalaning. Qo'lda biriktirilgan kontakt qabul qilinmaydi.",
+            ["uz-cyrl"] = "Илтимос, пастдаги «📱 Рақамни улашиш» тугмасидан фойдаланинг. Қўлда бириктирилган контакт қабул қилинмайди.",
+            ["ru"] = "Пожалуйста, используйте кнопку «📱 Отправить номер» ниже. Вручную прикреплённый контакт не принимается.",
+            ["en"] = "Please use the «📱 Share number» button below. A manually attached contact is not accepted."
+        },
         ["linked"] = new()
         {
             ["uz-latn"] = "✅ Telegram ulandi! Cheklaringiz endi shu yerga keladi.",

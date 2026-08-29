@@ -1,6 +1,6 @@
 <div class="page" *transloco="let t">
   <cx-page-header [title]="t('manufacturers')" [subtitle]="t('manufacturers_subtitle')">
-    @if (canManage) {
+    @if (canCreate) {
       <button mat-flat-button (click)="openCreate()"><mat-icon>add</mat-icon>{{ t('add') }}</button>
     }
   </cx-page-header>
@@ -25,7 +25,7 @@
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef class="num"></th>
             <td mat-cell *matCellDef="let m" class="num">
-              @if (canManage) {
+              @if (canDelete) {
                 <button mat-icon-button [title]="t('delete')" (click)="remove(m, $event)">
                   <mat-icon>delete</mat-icon>
                 </button>
@@ -34,7 +34,7 @@
           </ng-container>
 
           <tr mat-header-row *matHeaderRowDef="columns"></tr>
-          <tr mat-row *matRowDef="let row; columns: columns" [class.clickable]="canManage" (click)="openEdit(row)"></tr>
+          <tr mat-row *matRowDef="let row; columns: columns" [class.clickable]="canEdit" (click)="openEdit(row)"></tr>
         </table>
       </div>
     } @else if (!loading()) {

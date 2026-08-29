@@ -1,10 +1,9 @@
-using Cartex.Application.Common.Messaging;
+﻿using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Reports;
 
 namespace Cartex.Application.Reports.Queries;
-
-public record DailyCashFlowDto(DateTime Date, decimal Income, decimal Expense, decimal Sales);
 
 public record GetCashFlowQuery(DateTime From, DateTime To, int? TzOffsetMinutes = null) : IRequest<IReadOnlyCollection<DailyCashFlowDto>>;
 
@@ -27,7 +26,7 @@ public sealed class GetCashFlowQueryHandler(IApplicationDbContext db) : IRequest
             .ToListAsync(cancellationToken);
 
         var sales = await db.Sales
-            .Where(s => s.CreatedAt >= from && s.CreatedAt < to)
+            .Where(s => s.Status != SaleStatus.Voided && s.CreatedAt >= from && s.CreatedAt < to)
             .Select(s => new { s.CreatedAt, s.TotalAmount })
             .ToListAsync(cancellationToken);
 

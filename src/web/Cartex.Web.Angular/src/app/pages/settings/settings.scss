@@ -121,13 +121,58 @@
   padding: 24px 0;
 }
 
-@media (max-width: 900px) {
+@media (width >= 700px) and (width < 1200px) {
   .settings {
-    flex-direction: column;
+    margin: -20px 0 -20px -20px;
+    height: calc(100% + 40px);
+    gap: 18px;
+  }
+}
+
+.settings-mobile-nav {
+  position: sticky;
+  z-index: 5;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--cx-border);
+  background: var(--cx-card);
+
+  .mobile-title {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    white-space: nowrap;
+
+    mat-icon { width: 19px; height: 19px; font-size: 19px; color: var(--cx-brand); }
   }
 
-  .settings-nav {
-    width: 100%;
-    position: static;
+  select {
+    min-width: 0;
+    flex: 1;
+    height: 38px;
+    padding: 0 10px;
+    border: 1px solid var(--cx-border);
+    border-radius: 8px;
+    background: var(--cx-app-bg);
+    color: var(--cx-text-1);
+    font: inherit;
+  }
+}
+
+@media (max-width: 699px) {
+  .settings {
+    flex-direction: column;
+    gap: 0;
+    height: auto;
+    min-height: calc(100vh - 130px);
+    margin: -16px -14px 0;
+  }
+
+  .settings-content {
+    padding: 16px 14px 24px;
+    overflow: visible;
   }
 }

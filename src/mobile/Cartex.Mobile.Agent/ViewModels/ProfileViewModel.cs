@@ -1,12 +1,11 @@
 using Cartex.Mobile.Agent.Data;
-using Cartex.Mobile.Agent.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.Mobile.Core;
 
 namespace Cartex.Mobile.Agent.ViewModels;
 
-public partial class ProfileViewModel(MobileAuthService auth, AgentDb db, SessionStore session) : ObservableObject
+public partial class ProfileViewModel(MobileAuthService auth, AccessState access, AgentDb db, SessionStore session) : ObservableObject
 {
     [ObservableProperty] private string _fullName = "";
     [ObservableProperty] private string _initials = "";
@@ -39,6 +38,15 @@ public partial class ProfileViewModel(MobileAuthService auth, AgentDb db, Sessio
     private Task OpenDevicesAsync() => Shell.Current.GoToAsync("devices");
 
     [RelayCommand]
+    private Task OpenHomeAsync() => Shell.Current.GoToAsync("home");
+
+    [RelayCommand]
+    private Task OpenVanStockAsync() => Shell.Current.GoToAsync("vanstock");
+
+    [RelayCommand]
+    private Task OpenTransfersAsync() => Shell.Current.GoToAsync("transfers");
+
+    [RelayCommand]
     private Task OpenOutboxAsync() => Shell.Current.GoToAsync("outbox");
 
     [RelayCommand]
@@ -49,7 +57,7 @@ public partial class ProfileViewModel(MobileAuthService auth, AgentDb db, Sessio
     {
         string[] keys = ["system", "light", "dark"];
         var names = keys.Select(k => Loc.Instance["theme_" + k]).ToArray();
-        var choice = await Shell.Current.CurrentPage.DisplayActionSheet(
+        var choice = await Shell.Current.CurrentPage.DisplayActionSheetAsync(
             Loc.Instance["theme"], Loc.Instance["cancel"], null, names);
         var index = Array.IndexOf(names, choice);
         if (index < 0) return;
@@ -69,7 +77,7 @@ public partial class ProfileViewModel(MobileAuthService auth, AgentDb db, Sessio
     [RelayCommand]
     private async Task ChooseLanguageAsync()
     {
-        var choice = await Shell.Current.CurrentPage.DisplayActionSheet(
+        var choice = await Shell.Current.CurrentPage.DisplayActionSheetAsync(
             Loc.Instance["language"], Loc.Instance["cancel"], null, LangNames);
         var index = Array.IndexOf(LangNames, choice);
         if (index < 0) return;
@@ -83,15 +91,18 @@ public partial class ProfileViewModel(MobileAuthService auth, AgentDb db, Sessio
     private async Task LogoutAsync()
     {
         var page = Shell.Current.CurrentPage;
-        if (await db.CountOutboxAsync("pending") > 0)
+        // "error" holatidagilar ham yuborilmagan — ClearCacheAsync ularni ham o'chirib
+        // tashlaydi, shuning uchun faqat "pending"ni tekshirish pul yo'qotardi.
+        if (await db.CountOutboxAsync("pending") + await db.CountOutboxAsync("error") > 0)
         {
-            await page.DisplayAlert(Loc.Instance["logout_blocked_title"], Loc.Instance["logout_blocked_msg"], Loc.Instance["ok"]);
+            await page.DisplayAlertAsync(Loc.Instance["logout_blocked_title"], Loc.Instance["logout_blocked_msg"], Loc.Instance["ok"]);
             return;
         }
-        if (!await page.DisplayAlert(Loc.Instance["logout"], Loc.Instance["logout_confirm"], Loc.Instance["logout"], Loc.Instance["cancel"]))
+        if (!await page.DisplayAlertAsync(Loc.Instance["logout"], Loc.Instance["logout_confirm"], Loc.Instance["logout"], Loc.Instance["cancel"]))
             return;
         AppLock.Disable();
         await auth.LogoutAsync();
+        access.Clear();
         await db.ClearCacheAsync();
         await Shell.Current.GoToAsync("//login");
     }

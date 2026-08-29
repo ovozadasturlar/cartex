@@ -22,6 +22,7 @@ public partial class UsersViewModel : ViewModelBase, ILoadable
     private readonly IBusyService _busy;
     private readonly IExportService _export;
     private readonly AuthService _auth;
+    private readonly IDialogService _dialog;
 
     private List<RoleDto> _allRoles = [];
     private List<BranchDto> _allBranches = [];
@@ -48,13 +49,22 @@ public partial class UsersViewModel : ViewModelBase, ILoadable
 
     public bool IsEmpty => Users.Count == 0;
     public bool CanExport => _auth.HasPermission("reports.export");
+    public bool CanCreate => _auth.HasPermission("users.create");
+    public bool CanEdit => _auth.HasPermission("users.edit");
+    public bool CanDelete => _auth.HasPermission("users.delete");
+    public bool CanChangeUsername => _auth.HasPermission("*");
     public string EditTitle => IsNew ? L["create_user"] : L["edit_user"];
     public string PasswordLabel => IsNew ? L["password"] : L["new_password"];
+
+    [ObservableProperty] private bool _isChangeUsernameOpen;
+    [ObservableProperty] private string _changeUsernameTarget = "";
+    [ObservableProperty] private string _newUsername = "";
+    private long _changeUsernameId;
 
     private IReadOnlyList<PageShortcut>? _shortcuts;
     public IReadOnlyList<PageShortcut> Shortcuts => _shortcuts ??= CrudShortcuts(OpenCreateCommand, SaveCommand, () => IsEditOpen = false, () => IsEditOpen);
 
-    public UsersViewModel(IUsersApi usersApi, IRolesApi rolesApi, IBranchesApi branchesApi, IToastService toast, IBusyService busy, IExportService export, AuthService auth)
+    public UsersViewModel(IUsersApi usersApi, IRolesApi rolesApi, IBranchesApi branchesApi, IToastService toast, IBusyService busy, IExportService export, AuthService auth, IDialogService dialog)
     {
         _usersApi = usersApi;
         _rolesApi = rolesApi;
@@ -63,6 +73,7 @@ public partial class UsersViewModel : ViewModelBase, ILoadable
         _busy = busy;
         _export = export;
         _auth = auth;
+        _dialog = dialog;
         Paging.Attach(LoadUsersAsync);
         Paging.ConfigureSort([new(L["full_name"], "FullName"), new(L["username"], "Username"), new(L["date"], "CreatedAt")]);
     }
@@ -126,7 +137,9 @@ public partial class UsersViewModel : ViewModelBase, ILoadable
     {
         StartPages.Clear();
         StartPages.Add(new StartPageOption(null, L["none"]));
-        foreach (var p in NavRegistry.SidebarPages)
+        // RUXSAT-04: moduli o'chiq sahifa boshlang'ich sahifa sifatida taklif qilinmaydi — aks holda
+        // foydalanuvchi kirgan zahoti ko'rinmaydigan bo'limga tushirilardi.
+        foreach (var p in NavRegistry.SidebarPages.Where(x => x.Feature is null || NavRegistry.IsFeatureOn(x.Feature)))
             StartPages.Add(new StartPageOption(p.Key, L[p.Key]));
     }
 
@@ -150,7 +163,16 @@ public partial class UsersViewModel : ViewModelBase, ILoadable
     {
         EditRoles.Clear();
         foreach (var r in _allRoles)
-            EditRoles.Add(new SelectItem { Id = r.Id, Label = r.Name, IsSelected = selected.Contains(r.Id) });
+        {
+            var isSelected = selected.Contains(r.Id);
+            EditRoles.Add(new SelectItem
+            {
+                Id = r.Id,
+                Label = r.IsActive ? r.Name : $"{r.Name} · {L["inactive"]}",
+                IsSelected = isSelected,
+                IsEnabled = r.IsActive || isSelected
+            });
+        }
     }
 
     private void BuildBranchItems(IReadOnlyCollection<long> selected)
@@ -163,6 +185,7 @@ public partial class UsersViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void OpenCreate()
     {
+        if (!CanCreate) return;
         IsNew = true;
         _editId = 0;
         EditFullName = "";
@@ -183,6 +206,7 @@ public partial class UsersViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private void OpenEdit(UserDto user)
     {
+        if (!CanEdit) return;
         IsNew = false;
         _editId = user.Id;
         EditFullName = user.FullName;
@@ -204,6 +228,50 @@ public partial class UsersViewModel : ViewModelBase, ILoadable
     private void CancelEdit() => IsEditOpen = false;
 
     [RelayCommand]
+    private void OpenChangeUsername(UserDto user)
+    {
+        if (!CanChangeUsername) return;
+        _changeUsernameId = user.Id;
+        ChangeUsernameTarget = $"Joriy username: {user.Username}";
+        NewUsername = user.Username;
+        IsChangeUsernameOpen = true;
+    }
+
+    [RelayCommand]
+    private void CancelChangeUsername() => IsChangeUsernameOpen = false;
+
+    [RelayCommand]
+    private async Task ConfirmChangeUsernameAsync()
+    {
+        if (string.IsNullOrWhiteSpace(NewUsername)) { _toast.Error(L["error"]); return; }
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+                await _usersApi.ChangeUsernameAsync(_changeUsernameId, new ChangeUsernameRequest(NewUsername.Trim()));
+            _toast.Success(L["success"]);
+            IsChangeUsernameOpen = false;
+            await LoadAsync();
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    [RelayCommand]
+    private async Task DeleteAsync(UserDto user)
+    {
+        if (!CanDelete) return;
+        if (!await _dialog.ConfirmDangerAsync(string.Format(L["delete_user_confirm"], user.Username), L["delete"]))
+            return;
+        try
+        {
+            using (_busy.Begin(L["loading"]))
+                await _usersApi.DeleteAsync(user.Id);
+            _toast.Success(L["success"]);
+            await LoadAsync();
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    [RelayCommand]
     private async Task SaveAsync()
     {
         var roleIds = EditRoles.Where(r => r.IsSelected).Select(r => r.Id).ToList();
@@ -215,6 +283,27 @@ public partial class UsersViewModel : ViewModelBase, ILoadable
 
         var branchIds = EditBranches.Where(b => b.IsSelected).Select(b => b.Id).ToList();
         var defaultBranchId = SelectedDefaultBranch?.Id;
+        var selectedRoles = _allRoles.Where(role => roleIds.Contains(role.Id)).ToList();
+        var requiresBranch = selectedRoles.Any(role => role.RequiresBranch);
+        var canAccessAllBranches = selectedRoles.Any(role =>
+            role.AccessAll || role.Permissions.Contains("branch.viewAll"));
+        if (requiresBranch && branchIds.Count == 0 && !canAccessAllBranches)
+        {
+            _toast.Error(L["branch_required_for_role"]);
+            return;
+        }
+        if (branchIds.Count == 1 && defaultBranchId is null)
+            defaultBranchId = branchIds[0];
+        if (requiresBranch && branchIds.Count > 1 && defaultBranchId is null)
+        {
+            _toast.Error(L["default_branch_required"]);
+            return;
+        }
+        if (defaultBranchId is not null && !canAccessAllBranches && !branchIds.Contains(defaultBranchId.Value))
+        {
+            _toast.Error(L["default_branch_must_be_accessible"]);
+            return;
+        }
         var startPage = SelectedStartPage?.Key;
         var cartDestination = SelectedCartDestination?.Key;
 
@@ -247,6 +336,7 @@ public partial class SelectItem : ObservableObject
 {
     public long Id { get; init; }
     public string Label { get; init; } = "";
+    public bool IsEnabled { get; init; } = true;
     [ObservableProperty] private bool _isSelected;
 }
 

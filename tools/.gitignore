@@ -1,0 +1,5 @@
+*.pem
+catalog.csv
+issues.csv
+catalog-*.db
+catalog-*.json

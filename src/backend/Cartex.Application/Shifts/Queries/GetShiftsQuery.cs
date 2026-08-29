@@ -1,11 +1,11 @@
-using Cartex.Application.Common.Extensions;
+﻿using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
-using Cartex.Domain.Enums;
 using Cartex.Persistence;
-using Cartex.Application.Common.Messaging;
+using Cartex.Shared.Models.Shifts;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Shifts.Queries;
 
@@ -13,8 +13,6 @@ public record GetShiftsQuery : FilteringRequest, IRequest<IReadOnlyCollection<Sh
 {
     public long? UserId { get; set; }
 }
-
-public record ShiftHistoryDto(long Id, long UserId, string UserName, DateTime OpenedAt, DateTime? ClosedAt, decimal OpeningFloat, decimal? CountedCash, string Status);
 
 public sealed class GetShiftsQueryHandler(
     IApplicationDbContext db,
@@ -33,6 +31,7 @@ public sealed class GetShiftsQueryHandler(
             request.Descending = true;
         }
 
+        var baseCode = await db.Businesses.Select(b => b.Currency).FirstAsync(cancellationToken);
         var query = db.Shifts.Where(s => s.BranchId == branchId);
         if (!currentUser.HasPermission(AppPermissions.Shifts.ViewAll))
             query = query.Where(s => s.UserId == currentUser.UserId);
@@ -41,7 +40,10 @@ public sealed class GetShiftsQueryHandler(
 
         return await query
             .ToPagedListAsync(request,
-                s => new ShiftHistoryDto(s.Id, s.UserId, s.User.FullName, s.OpenedAt, s.ClosedAt, s.OpeningFloat, s.CountedCash, s.Status.ToString()),
+                s => new ShiftHistoryDto(s.Id, s.UserId, s.User.FullName, s.OpenedAt, s.ClosedAt,
+                    s.CashRows.Where(c => c.Currency == baseCode).Select(c => c.OpeningFloat).FirstOrDefault(),
+                    s.CashRows.Where(c => c.Currency == baseCode).Select(c => c.CountedCash).FirstOrDefault(),
+                    s.Status.ToString()),
                 writer, cancellationToken);
     }
 }

@@ -36,7 +36,10 @@ export class Manufacturers implements OnInit {
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
 
-  readonly canManage = inject(AuthService).hasPermission('products.manage');
+  private readonly auth = inject(AuthService);
+  readonly canCreate = this.auth.hasPermission('manufacturers.create');
+  readonly canEdit = this.auth.hasPermission('manufacturers.edit');
+  readonly canDelete = this.auth.hasPermission('manufacturers.delete');
   readonly loading = signal(true);
   readonly all = signal<Manufacturer[]>([]);
   readonly search = signal('');
@@ -47,21 +50,23 @@ export class Manufacturers implements OnInit {
   readonly columns = ['name', 'actions'];
 
   ngOnInit(): void {
-    this.load();
+    void this.load();
   }
 
   openCreate(): void {
+    if (!this.canCreate) return;
     this.openDialog(null);
   }
 
   openEdit(manufacturer: Manufacturer): void {
-    if (this.canManage) this.openDialog(manufacturer);
+    if (this.canEdit) this.openDialog(manufacturer);
   }
 
   remove(manufacturer: Manufacturer, event: Event): void {
     event.stopPropagation();
+    if (!this.canDelete) return;
     this.dialog
-      .open(ConfirmDialog, { data: manufacturer.name, width: '360px', maxWidth: '94vw', autoFocus: false })
+      .open(ConfirmDialog, { data: manufacturer.name, width: '360px', maxWidth: '94vw', autoFocus: 'first-tabbable' })
       .afterClosed()
       .subscribe(async (confirmed) => {
         if (!confirmed) return;
@@ -76,10 +81,10 @@ export class Manufacturers implements OnInit {
 
   private openDialog(manufacturer: Manufacturer | null): void {
     this.dialog
-      .open(ManufacturerDialog, { data: manufacturer, width: '400px', maxWidth: '94vw', autoFocus: false })
+      .open(ManufacturerDialog, { data: manufacturer, width: '400px', maxWidth: '94vw', autoFocus: 'first-tabbable' })
       .afterClosed()
       .subscribe((saved) => {
-        if (saved) this.load();
+        if (saved) void this.load();
       });
   }
 
@@ -108,7 +113,7 @@ export class Manufacturers implements OnInit {
       <div mat-dialog-content class="dlg-body">
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('name') }}</mat-label>
-          <input matInput [(ngModel)]="name" (keydown.enter)="save()" />
+          <input matInput cdkFocusInitial [(ngModel)]="name" (keydown.enter)="save()" />
         </mat-form-field>
       </div>
       <div mat-dialog-actions align="end">

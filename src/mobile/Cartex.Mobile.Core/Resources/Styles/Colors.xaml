@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    x:Class="Cartex.Mobile.Core.Resources.Styles.CoreColors">
+
+    <Color x:Key="Brand">#255D3A</Color>
+    <Color x:Key="BrandDark">#4ADE80</Color>
+    <Color x:Key="OnBrand">#FFFFFF</Color>
+    <Color x:Key="OnBrandDark">#052E16</Color>
+    <Color x:Key="BrandSoft">#DCFCE7</Color>
+    <Color x:Key="BrandSoftDark">#12301F</Color>
+
+    <Color x:Key="Bg">#F6F7F9</Color>
+    <Color x:Key="BgDark">#0C0F0D</Color>
+    <Color x:Key="Surface">#FFFFFF</Color>
+    <Color x:Key="SurfaceDark">#161A17</Color>
+    <Color x:Key="SurfaceAlt">#F1F3F5</Color>
+    <Color x:Key="SurfaceAltDark">#1E231F</Color>
+    <Color x:Key="SurfaceRaised">#FFFFFF</Color>
+    <Color x:Key="SurfaceRaisedDark">#1D221E</Color>
+
+    <Color x:Key="Stroke">#E5E7EB</Color>
+    <Color x:Key="StrokeDark">#262B27</Color>
+    <Color x:Key="StrokeStrong">#CBD5E1</Color>
+    <Color x:Key="StrokeStrongDark">#374151</Color>
+
+    <Color x:Key="Ink">#111827</Color>
+    <Color x:Key="InkDark">#F3F4F6</Color>
+    <Color x:Key="InkSoft">#374151</Color>
+    <Color x:Key="InkSoftDark">#D1D5DB</Color>
+    <Color x:Key="Muted">#6B7280</Color>
+    <Color x:Key="MutedDark">#9CA3AF</Color>
+    <Color x:Key="Subtle">#9CA3AF</Color>
+    <Color x:Key="SubtleDark">#6B7280</Color>
+
+    <Color x:Key="Success">#16A34A</Color>
+    <Color x:Key="SuccessDark">#4ADE80</Color>
+    <Color x:Key="SuccessBg">#DCFCE7</Color>
+    <Color x:Key="SuccessBgDark">#12301F</Color>
+    <Color x:Key="Warn">#B45309</Color>
+    <Color x:Key="WarnDark">#FCD34D</Color>
+    <Color x:Key="WarnBg">#FEF3C7</Color>
+    <Color x:Key="WarnBgDark">#3A2E10</Color>
+    <Color x:Key="Danger">#DC2626</Color>
+    <Color x:Key="DangerDark">#F87171</Color>
+    <Color x:Key="DangerBg">#FEE2E2</Color>
+    <Color x:Key="DangerBgDark">#3B1212</Color>
+    <Color x:Key="Info">#0EA5E9</Color>
+    <Color x:Key="InfoDark">#38BDF8</Color>
+    <Color x:Key="InfoBg">#E0F2FE</Color>
+    <Color x:Key="InfoBgDark">#0C2A3A</Color>
+    <Color x:Key="Accent">#EA580C</Color>
+    <Color x:Key="AccentDark">#FB923C</Color>
+    <Color x:Key="AccentBg">#FFEDD5</Color>
+    <Color x:Key="AccentBgDark">#3A1F0B</Color>
+
+    <Color x:Key="GlassSurface">#E0FFFFFF</Color>
+    <Color x:Key="GlassSurfaceDark">#C41C221E</Color>
+    <Color x:Key="GlassStroke">#F0FFFFFF</Color>
+    <Color x:Key="GlassStrokeDark">#30FFFFFF</Color>
+    <Color x:Key="GlassStrokeFade">#33FFFFFF</Color>
+    <Color x:Key="GlassStrokeFadeDark">#0AFFFFFF</Color>
+    <Color x:Key="AuraTop">#DDF1E4</Color>
+    <Color x:Key="AuraTopDark">#121B15</Color>
+    <Color x:Key="AuraBottom">#F3F5F7</Color>
+    <Color x:Key="AuraBottomDark">#0A0C0B</Color>
+
+    <Color x:Key="Scrim">#66000000</Color>
+    <Color x:Key="ScrimDark">#99000000</Color>
+    <Color x:Key="ImageBg">#F1F3F5</Color>
+    <Color x:Key="ImageBgDark">#1A1F1C</Color>
+
+    <Color x:Key="White">#FFFFFF</Color>
+    <Color x:Key="Black">#000000</Color>
+
+    <!-- Eski kalitlar (mavjud sahifalar uchun) -->
+    <Color x:Key="Primary">#255D3A</Color>
+    <Color x:Key="PrimaryDark">#4ADE80</Color>
+    <Color x:Key="PrimaryDarkText">#052E16</Color>
+    <Color x:Key="Secondary">#DCFCE7</Color>
+    <Color x:Key="SecondaryDarkText">#86EFAC</Color>
+    <Color x:Key="Tertiary">#14532D</Color>
+    <Color x:Key="Gray100">#F1F3F5</Color>
+    <Color x:Key="Gray200">#E5E7EB</Color>
+    <Color x:Key="Gray300">#CBD5E1</Color>
+    <Color x:Key="Gray400">#9CA3AF</Color>
+    <Color x:Key="Gray500">#6B7280</Color>
+    <Color x:Key="Gray600">#4B5563</Color>
+    <Color x:Key="Gray900">#1F2937</Color>
+    <Color x:Key="Gray950">#111827</Color>
+
+</ResourceDictionary>

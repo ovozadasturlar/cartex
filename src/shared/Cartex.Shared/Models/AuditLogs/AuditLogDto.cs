@@ -9,4 +9,14 @@ public record AuditLogDto(
     string? OldData,
     string? NewData,
     DateTime CreatedAt,
-    string? Client);
+    string? Client,
+    Guid EventId = default,
+    string? Summary = null,
+    string? CommandName = null,
+    string? Details = null,
+    int EntityCount = 0,
+    long? BranchId = null,
+    string? DeviceId = null,
+    string? DeviceName = null,
+    string? IpAddress = null,
+    string? CorrelationId = null);

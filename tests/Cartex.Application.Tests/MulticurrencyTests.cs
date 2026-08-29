@@ -1,4 +1,4 @@
-using Cartex.Application.Customers.Commands;
+﻿using Cartex.Application.Customers.Commands;
 using Cartex.Application.Products.Commands;
 using Cartex.Application.Rates.Commands;
 using Cartex.Application.Sales.Commands;
@@ -13,6 +13,7 @@ using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Cartex.Shared.Models.Common;
 
 namespace Cartex.Application.Tests;
 
@@ -23,11 +24,12 @@ public class MulticurrencyTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     {
         using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        if (enableFeature)
-            await db.Features.Where(f => f.Code == FeatureCatalog.Multicurrency)
-                .ExecuteUpdateAsync(s => s.SetProperty(f => f.IsEnabled, true));
-        var branch1 = (await db.Branches.FirstAsync(b => b.Name == "Filial 1")).Id;
-        var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Filial 1 ombori")).Id;
+        await db.Features.Where(f => f.Code == FeatureCatalog.Multicurrency
+                                     || f.Code == FeatureCatalog.PricingMulticurrency
+                                     || f.Code == FeatureCatalog.SalesMulticurrency)
+            .ExecuteUpdateAsync(s => s.SetProperty(f => f.IsEnabled, enableFeature));
+        var branch1 = (await db.Branches.FirstAsync(b => b.Name == "Asosiy filial")).Id;
+        var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Asosiy ombor")).Id;
         var businessId = (await db.Businesses.FirstAsync()).Id;
         var adminId = (await db.Users.FirstAsync(u => u.Username == "admin")).Id;
         var productId = (await db.Products.FirstAsync(p => p.Name == "Smesitel oshxona Zegor")).Id;
@@ -54,7 +56,7 @@ public class MulticurrencyTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     [Fact]
     public async Task Foreign_payment_rejected_when_feature_disabled()
     {
-        var (branch1, warehouse1, businessId, adminId, variantId, price) = await SetupAsync(enableFeature: false);
+        var (branch1, warehouse1, businessId, adminId, variantId, _) = await SetupAsync(enableFeature: false);
         Fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
         await TestShift.OpenAsync(Fixture);
         await SetRateAsync("USD", 12600m);
@@ -62,8 +64,10 @@ public class MulticurrencyTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         using var scope = Fixture.CreateScope();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
         await Assert.ThrowsAsync<BusinessRuleException>(() =>
-            sender.Send(new CreateSaleCommand(warehouse1, null, 0, 0, 0, [new CreateSaleItemDto(variantId, 1)],
-                Payments: [new SalePaymentDto(PaymentMethod.Cash, "USD", 10m)])));
+            sender.Send(new CreateSaleCommand(warehouse1, null, 0, 0, 0, [new CreateSaleItemDto(variantId, 1)])
+            {
+                Payments = [new SalePaymentDto(PaymentMethod.Cash, "USD", 10m)]
+            }));
     }
 
     [Fact]
@@ -83,12 +87,13 @@ public class MulticurrencyTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            token = (await sender.Send(new CreateSaleCommand(warehouse1, null, 0, 0, 0, [new CreateSaleItemDto(variantId, 2)],
-                Payments:
-                [
+            token = (await sender.Send(new CreateSaleCommand(warehouse1, null, 0, 0, 0, [new CreateSaleItemDto(variantId, 2)])
+            {
+                Payments = [
                     new SalePaymentDto(PaymentMethod.Cash, "USD", usdAmount),
                     new SalePaymentDto(PaymentMethod.Cash, "UZS", uzsAmount)
-                ]))).ReceiptToken;
+                ]
+            })).ReceiptToken;
         }
 
         using var check = Fixture.CreateScope();
@@ -122,8 +127,10 @@ public class MulticurrencyTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            token = (await sender.Send(new CreateSaleCommand(warehouse1, null, 0, 0, 0, [new CreateSaleItemDto(variantId, 2)],
-                Payments: [new SalePaymentDto(PaymentMethod.Cash, "USD", usdAmount)]))).ReceiptToken;
+            token = (await sender.Send(new CreateSaleCommand(warehouse1, null, 0, 0, 0, [new CreateSaleItemDto(variantId, 2)])
+            {
+                Payments = [new SalePaymentDto(PaymentMethod.Cash, "USD", usdAmount)]
+            })).ReceiptToken;
         }
 
         using var check = Fixture.CreateScope();
@@ -148,8 +155,10 @@ public class MulticurrencyTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
             customerId = await sender.Send(new CreateCustomerCommand("USD Qarzdor", "+998" + Random.Shared.NextInt64(100_000_000, 999_999_999), null, 0m, CreditLimit: 100_000_000m));
-            await sender.Send(new CreateSaleCommand(warehouse1, customerId, 0, 0, 0, [new CreateSaleItemDto(variantId, 2)],
-                DebtCurrency: "USD"));
+            await sender.Send(new CreateSaleCommand(warehouse1, customerId, 0, 0, 0, [new CreateSaleItemDto(variantId, 2)])
+            {
+                DebtCurrency = "USD"
+            });
         }
 
         var total = price * 2;
@@ -223,7 +232,13 @@ public class MulticurrencyTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            await sender.Send(new PaySupplierDebtCommand(supplierId, 120_000m, AccountType.Cash, DebtCurrency: "USD", PayCurrency: "UZS"));
+            await sender.Send(new Cartex.Application.Shifts.Commands.AddCashMovementCommand(120_000m, IsPayOut: false));
+        }
+
+        using (var scope = Fixture.CreateScope())
+        {
+            var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+            await sender.Send(new PaySupplierDebtCommand(supplierId, 120_000m, DebtCurrency: "USD", PayCurrency: "UZS"));
         }
 
         using var check2 = Fixture.CreateScope();
@@ -243,24 +258,25 @@ public class MulticurrencyTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
             shiftId = await sender.Send(new Cartex.Application.Shifts.Commands.OpenShiftCommand(0,
-                [new Cartex.Application.Common.Models.CurrencyAmountDto("USD", 5m)]));
+                [new CurrencyAmountDto("USD", 5m)]));
 
             var total = price * 2;
             var usdAmount = 1m;
             var uzsAmount = total - Math.Round(usdAmount * 12600m, 2);
-            await sender.Send(new CreateSaleCommand(warehouse1, null, 0, 0, 0, [new CreateSaleItemDto(variantId, 2)],
-                Payments:
-                [
+            await sender.Send(new CreateSaleCommand(warehouse1, null, 0, 0, 0, [new CreateSaleItemDto(variantId, 2)])
+            {
+                Payments = [
                     new SalePaymentDto(PaymentMethod.Cash, "USD", usdAmount),
                     new SalePaymentDto(PaymentMethod.Cash, "UZS", uzsAmount)
-                ]));
+                ]
+            });
         }
 
         using var scope2 = Fixture.CreateScope();
         var sender2 = scope2.ServiceProvider.GetRequiredService<ISender>();
         var report = await sender2.Send(new Cartex.Application.Shifts.Commands.CloseShiftCommand(shiftId,
             price * 2 - 12600m,
-            [new Cartex.Application.Common.Models.CurrencyAmountDto("USD", 6m)]));
+            [new CurrencyAmountDto("USD", 6m)]));
 
         var usd = report.Currencies.Single(c => c.Currency == "USD");
         Assert.Equal(5m, usd.OpeningFloat);

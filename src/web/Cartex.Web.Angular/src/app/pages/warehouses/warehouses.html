@@ -1,8 +1,10 @@
 <ng-container *transloco="let t">
   <cx-page-header [title]="t('warehouses')" [subtitle]="t('warehouses_subtitle')">
-    <button mat-flat-button (click)="open(null)">
-      <mat-icon>add</mat-icon>{{ t('add') }}
-    </button>
+    @if (canCreate) {
+      <button mat-flat-button (click)="open(null)">
+        <mat-icon>add</mat-icon>{{ t('add') }}
+      </button>
+    }
   </cx-page-header>
 
   @if (loading()) {
@@ -34,7 +36,7 @@
             </ng-container>
 
             <tr mat-header-row *matHeaderRowDef="cols"></tr>
-            <tr mat-row *matRowDef="let w; columns: cols" class="clickable" (click)="open(w)"></tr>
+            <tr mat-row *matRowDef="let w; columns: cols" [class.clickable]="canEdit" (click)="open(w)"></tr>
           </table>
         </div>
       } @else {

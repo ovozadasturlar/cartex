@@ -12,6 +12,7 @@ import { lastValueFrom } from 'rxjs';
 import { FeaturesApi } from '../../core/api/misc.api';
 import { LicenseApi, LicenseOptions, LicenseStatus } from '../../core/api/settings.api';
 import { AuthService } from '../../core/auth.service';
+import { FeaturesService } from '../../core/features.service';
 import { isoDay } from '../../core/format';
 import { NotifyService } from '../../core/notify.service';
 import { PageHeader } from '../../shared/page-header';
@@ -43,10 +44,11 @@ interface FeatureRow {
 export class License implements OnInit {
   private readonly api = inject(LicenseApi);
   private readonly featuresApi = inject(FeaturesApi);
+  private readonly features = inject(FeaturesService);
   private readonly notify = inject(NotifyService);
   private readonly transloco = inject(TranslocoService);
 
-  readonly canFeatures = inject(AuthService).hasPermission('features.manage');
+  readonly canFeatures = inject(AuthService).hasPermission('features.edit');
   readonly loading = signal(true);
   readonly busy = signal(false);
   readonly status = signal<LicenseStatus | null>(null);
@@ -85,6 +87,7 @@ export class License implements OnInit {
   }
 
   onTariffChange(value: string): void {
+    if (!this.canFeatures) return;
     const options = this.options();
     if (!options) return;
     this.rows.update((all) =>
@@ -96,11 +99,12 @@ export class License implements OnInit {
   }
 
   toggle(code: string, value: boolean): void {
+    if (!this.canFeatures) return;
     this.rows.update((all) => all.map((r) => (r.code === code ? { ...r, isEnabled: value } : r)));
   }
 
   async save(message: string): Promise<void> {
-    if (!this.tariff) return;
+    if (!this.canFeatures || !this.tariff) return;
     this.busy.set(true);
     try {
       const codes = this.rows().filter((r) => r.isEnabled).map((r) => r.code);
@@ -111,12 +115,14 @@ export class License implements OnInit {
           enabledFeatures: JSON.stringify(codes),
         }),
       );
-      if (this.canFeatures) {
-        for (const r of this.rows()) {
-          await lastValueFrom(this.featuresApi.set(r.code, r.isEnabled));
-        }
+      for (const r of this.rows()) {
+        await lastValueFrom(this.featuresApi.set(r.code, r.isEnabled));
       }
+      // RUXSAT-04a: tarif o'zgarishi imkoniyatlar ro'yxatini eskirtiradi - menyu va qorovullar
+      // shu yerdan darhol yangilanishi kerak.
+      this.features.reset();
       this.status.set(await lastValueFrom(this.api.get()));
+      await this.features.ensureLoaded();
       this.notify.success(message);
     } catch (e) {
       this.notify.error(e);

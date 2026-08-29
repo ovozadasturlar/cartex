@@ -10,8 +10,8 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { TranslocoModule } from '@jsverse/transloco';
 import { Subject, debounceTime, distinctUntilChanged, lastValueFrom } from 'rxjs';
 import { PosApi } from '../../core/api/pos.api';
-import { CxDatePipe, CxMoneyPipe } from '../../core/format';
-import { Customer, Receipt } from '../../core/models';
+import { CxMoneyPipe } from '../../core/format';
+import { Customer } from '../../core/models';
 import { NotifyService } from '../../core/notify.service';
 import { EmptyState } from '../../shared/empty-state';
 
@@ -111,7 +111,7 @@ import { EmptyState } from '../../shared/empty-state';
             </mat-form-field>
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
               <mat-label>{{ t('credit_limit') }}</mat-label>
-              <input matInput type="number" min="0" [(ngModel)]="nCreditLimit" />
+              <input matInput type="number" min="0" [(ngModel)]="nCreditLimit" [placeholder]="t('unlimited')" />
             </mat-form-field>
           </div>
           <button matButton="filled" class="save" [disabled]="!nName.trim() || !nPhone.trim() || saving()" (click)="create()">
@@ -175,17 +175,17 @@ export class CustomerPickerDialog implements OnInit {
   nAddress = '';
   nCard = '';
   nDiscount = 0;
-  nCreditLimit = 0;
+  nCreditLimit: number | null = inject<{ defaultCreditLimit?: number | null } | null>(MAT_DIALOG_DATA, { optional: true })?.defaultCreditLimit ?? null;
 
   constructor() {
     this.search$.pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed()).subscribe((v) => {
       this.search = v;
-      this.load();
+      void this.load();
     });
   }
 
   ngOnInit(): void {
-    this.load();
+    void this.load();
   }
 
   onSearch(value: string): void {
@@ -207,7 +207,7 @@ export class CustomerPickerDialog implements OnInit {
         address: this.nAddress.trim() || null,
         cardBarcode: this.nCard.trim() || null,
         discountPct: this.nDiscount || 0,
-        creditLimit: this.nCreditLimit || 0,
+        creditLimit: this.nCreditLimit ?? null,
       }));
       this.ref.close({
         id,
@@ -218,10 +218,11 @@ export class CustomerPickerDialog implements OnInit {
         cardBarcode: this.nCard.trim() || null,
         email: this.nEmail.trim() || null,
         notificationsOptOut: false,
+        allowMarketingSms: false,
         discountPct: this.nDiscount || 0,
         cashbackBalance: 0,
         debtBalance: 0,
-        creditLimit: this.nCreditLimit || 0,
+        creditLimit: this.nCreditLimit ?? null,
         hasTelegram: false,
         debtBalances: [],
       } satisfies Customer);
@@ -244,123 +245,5 @@ export class CustomerPickerDialog implements OnInit {
     } finally {
       this.loading.set(false);
     }
-  }
-}
-
-@Component({
-  selector: 'app-pos-receipt-dialog',
-  imports: [MatButtonModule, MatDialogModule, MatIconModule, TranslocoModule, CxDatePipe, CxMoneyPipe],
-  template: `
-    <ng-container *transloco="let t">
-      <div class="head">
-        <div>
-          <h2>{{ receipt.businessName }}</h2>
-          <p>{{ receipt.branchName }} · {{ receipt.saleDate | cxDate }}</p>
-        </div>
-        <button matIconButton mat-dialog-close><mat-icon>close</mat-icon></button>
-      </div>
-      <mat-dialog-content>
-        <div class="items">
-          @for (item of receipt.items; track $index) {
-            <div class="item">
-              <div class="info">
-                <span class="name">{{ item.productName }}</span>
-                <span class="qty">{{ item.quantity }} {{ item.unitName }} × {{ item.unitPrice | cxMoney }}</span>
-              </div>
-              <span class="cx-money">{{ item.lineTotal | cxMoney }}</span>
-            </div>
-          }
-        </div>
-        @if (receipt.discountAmount > 0) {
-          <div class="row">
-            <span>{{ t('discount') }}</span>
-            <span class="cx-money">−{{ receipt.discountAmount | cxMoney }}</span>
-          </div>
-        }
-        <div class="row total">
-          <span>{{ t('total') }}</span>
-          <span class="cx-money">{{ receipt.totalAmount | cxMoney }}</span>
-        </div>
-        @for (p of receipt.payments; track $index) {
-          <div class="row">
-            <span>{{ t(p.method.toLowerCase()) }}</span>
-            @if (p.isForeign) {
-              <span class="cx-money">{{ p.amount | cxMoney }} {{ p.currency }} ≈ {{ p.amountBase | cxMoney }}</span>
-            } @else {
-              <span class="cx-money">{{ p.amount | cxMoney }} {{ p.currency }}</span>
-            }
-          </div>
-        }
-        @if (receipt.debtAmount > 0) {
-          <div class="row debt">
-            <span>{{ t('debt') }}</span>
-            <span class="cx-money">{{ receipt.debtAmount | cxMoney }}</span>
-          </div>
-        }
-        @if (receipt.creditAmount > 0) {
-          <div class="row">
-            <span>{{ t('advance') }}</span>
-            <span class="cx-money">{{ receipt.creditAmount | cxMoney }}</span>
-          </div>
-        }
-        @if (receipt.changeAmount > 0) {
-          <div class="row">
-            <span>{{ t('change') }}</span>
-            <span class="cx-money">{{ receipt.changeAmount | cxMoney }}</span>
-          </div>
-        }
-        @if (receipt.cashbackEarned > 0) {
-          <div class="row">
-            <span>{{ t('cashback_earned') }}</span>
-            <span class="cx-money">{{ receipt.cashbackEarned | cxMoney }}</span>
-          </div>
-        }
-        <p class="footer">
-          {{ t('cashier') }}: {{ receipt.userName }}
-          @if (receipt.customerName) {
-            · {{ receipt.customerName }}
-          }
-        </p>
-      </mat-dialog-content>
-      <mat-dialog-actions align="end">
-        <button matButton (click)="print()">
-          <mat-icon>print</mat-icon>
-          {{ t('print') }}
-        </button>
-        <button matButton="filled" mat-dialog-close>{{ t('close') }}</button>
-      </mat-dialog-actions>
-    </ng-container>
-  `,
-  styles: `
-    .head {
-      display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
-      padding: 20px 16px 4px 24px;
-      h2 { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
-      p { margin: 4px 0 0; color: var(--cx-text-2); font-size: 13px; }
-    }
-    .item {
-      display: flex; justify-content: space-between; align-items: center; gap: 12px;
-      padding: 9px 0; border-bottom: 1px dashed var(--cx-border);
-      .info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-      .name { font-size: 13.5px; font-weight: 500; }
-      .qty { font-size: 12px; color: var(--cx-text-3); }
-    }
-    .row {
-      display: flex; justify-content: space-between; gap: 12px; padding: 6px 0;
-      font-size: 13.5px; color: var(--cx-text-2);
-      &.total {
-        margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--cx-border);
-        font-size: 15px; font-weight: 700; color: var(--cx-text-1);
-      }
-      &.debt .cx-money { color: var(--cx-danger); }
-    }
-    .footer { margin: 10px 0 0; font-size: 12px; color: var(--cx-text-3); }
-  `,
-})
-export class PosReceiptDialog {
-  readonly receipt = inject<Receipt>(MAT_DIALOG_DATA);
-
-  print(): void {
-    window.open('/r/' + this.receipt.receiptToken, '_blank');
   }
 }

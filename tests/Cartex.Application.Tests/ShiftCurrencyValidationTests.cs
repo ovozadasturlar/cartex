@@ -1,4 +1,4 @@
-using Cartex.Application.Common.Messaging;
+﻿using Cartex.Application.Common.Messaging;
 using Cartex.Application.Common.Models;
 using Cartex.Application.Shifts.Commands;
 using Cartex.Application.Tests.Common;
@@ -8,6 +8,7 @@ using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Cartex.Shared.Models.Common;
 
 namespace Cartex.Application.Tests;
 
@@ -18,9 +19,11 @@ public class ShiftCurrencyValidationTests(DatabaseFixture fixture) : DatabaseTes
     {
         using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        await db.Features.Where(f => f.Code == FeatureCatalog.Multicurrency)
+        await db.Features.Where(f => f.Code == FeatureCatalog.Multicurrency
+                                     || f.Code == FeatureCatalog.PricingMulticurrency
+                                     || f.Code == FeatureCatalog.SalesMulticurrency)
             .ExecuteUpdateAsync(s => s.SetProperty(f => f.IsEnabled, multicurrency));
-        var branch1 = (await db.Branches.FirstAsync(b => b.Name == "Filial 1")).Id;
+        var branch1 = (await db.Branches.FirstAsync(b => b.Name == "Asosiy filial")).Id;
         var businessId = (await db.Businesses.FirstAsync()).Id;
         var adminId = (await db.Users.FirstAsync(u => u.Username == "admin")).Id;
         return (branch1, businessId, adminId);

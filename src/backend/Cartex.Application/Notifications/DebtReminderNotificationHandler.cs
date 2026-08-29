@@ -1,7 +1,7 @@
 using Cartex.Application.Common.Interfaces;
-using Cartex.Application.Common.Messaging;
 using Cartex.Application.Common.Settings;
 using Cartex.Domain.Events;
+using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,7 +23,7 @@ public sealed class DebtReminderNotificationHandler(
 
         var customer = await db.Customers
             .Where(c => c.Id == reminder.CustomerId)
-            .Select(c => new { c.Phone, c.Email, c.TelegramChatId })
+            .Select(c => new { c.Party.Phone, c.Party.Email, c.TelegramChatId })
             .FirstOrDefaultAsync(cancellationToken);
         if (customer is null)
             return;
@@ -48,7 +48,7 @@ public sealed class DebtReminderNotificationHandler(
             };
             if (string.IsNullOrWhiteSpace(recipient))
                 continue;
-            await notifications.SendAsync(new NotificationMessage(channel, recipient, reminder.Template, payload), cancellationToken);
+            await notifications.SendAsync(new NotificationMessage(channel, recipient, reminder.Template, payload, reminder.CustomerId), cancellationToken);
         }
     }
 }

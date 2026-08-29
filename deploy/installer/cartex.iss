@@ -5,7 +5,7 @@
 ;   PostgreSQL 16 portable zip -> deploy/installer/pgsql (bin/initdb.exe mavjud bo'lsin)
 
 #define AppName "Cartex"
-#define AppVersion "1.0.0"
+#define AppVersion "0.0.2"
 
 [Setup]
 AppName={#AppName}

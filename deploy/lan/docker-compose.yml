@@ -1,0 +1,106 @@
+# Yangi do'kon uchun LAN server to'plami: postgres + backend + web + pgadmin.
+# Domen/internet talab qilmaydi — kassalar http://<server-ip>:5015 ga ulanadi,
+# brauzer paneli http://<server-ip>:8080 da ochiladi.
+#
+# Suratlar va fayllar shu kompyuterda saqlanadi (cartex-storage volume) — server
+# qilib qaysi qurilma tanlansa, ma'lumotlar bazasi ham, fayllar ham o'sha yerda
+# turadi va zaxira birga olinadi. S3 uslubi kerak bo'lsagina: --profile minio.
+
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      # Standart "postgres" foydalanuvchi/baza ataylab saqlanadi (o'zgartirmang!):
+      # bo'lim shu tufayli "cartex" ilova bazasiga ulanmasdan turib uni DROP/CREATE
+      # qila oladi. Agar POSTGRES_USER/POSTGRES_DB "cartex" qilib qo'yilsa, o'sha
+      # bazaga ulangan holda uni drop qilib bo'lmay qoladi (Postgres cheklovi).
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD .env faylida majburiy}
+    volumes:
+      - cartex-db:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    image: muqimjon/cartex-api:${CARTEX_VERSION:-0.0.2}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      TZ: ${TZ:-Asia/Tashkent}
+      ConnectionStrings__DefaultConnection: Host=db;Database=cartex;Username=postgres;Password=${DB_PASSWORD}
+      Jwt__Key: ${JWT_KEY:?JWT_KEY .env faylida majburiy (64+ belgi)}
+      Seed__DeveloperPassword: ${DEVELOPER_PASSWORD:?DEVELOPER_PASSWORD .env faylida majburiy}
+      Seed__AdminPassword: ${ADMIN_PASSWORD:?ADMIN_PASSWORD .env faylida majburiy}
+      Barcode__Prefix: ${BARCODE_PREFIX:-CTX}
+      Storage__LocalPath: /data/storage
+      DataProtection__KeysPath: /data/keys
+      Catalog__PackPath: /data/catalog
+    volumes:
+      - cartex-storage:/data/storage
+      - cartex-keys:/data/keys
+      - cartex-catalog:/data/catalog
+    # LAN'dagi kassalar to'g'ridan-to'g'ri shu portga ulanadi.
+    ports:
+      - "5015:5015"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:5015/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  web:
+    image: muqimjon/cartex-web:${CARTEX_VERSION:-0.0.2}
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${WEB_PORT:-8080}:80"
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:?PGADMIN_EMAIL .env faylida majburiy}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:?PGADMIN_PASSWORD .env faylida majburiy}
+    volumes:
+      - cartex-pgadmin:/var/lib/pgadmin
+    # DB konsoli standartda faqat server kompyuterining o'zidan (http://localhost:5050).
+    # LAN'dan kirish zarur bo'lsa "127.0.0.1:" old qo'shimchasini olib tashlang —
+    # lekin bu butun tarmoqqa DB eshigini ochadi, parol kuchli bo'lsin.
+    ports:
+      - "127.0.0.1:${PGADMIN_PORT:-5050}:80"
+
+  # Fayllarni S3 uslubida saqlash kerak bo'lsagina (odatda kerak emas — lokal yetadi):
+  #   docker compose --profile minio up -d
+  # keyin dastur ichida Sozlamalar -> Integratsiyalar -> Saqlash bo'limidan ulanadi.
+  minio:
+    image: minio/minio:latest
+    profiles: ["minio"]
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER:-cartex}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:?MINIO_PASSWORD .env faylida majburiy}
+    volumes:
+      - cartex-minio:/data
+    ports:
+      - "127.0.0.1:${MINIO_PORT:-9002}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9003}:9001"
+
+volumes:
+  cartex-db:
+  cartex-storage:
+  cartex-keys:
+  cartex-catalog:
+  cartex-pgadmin:
+  cartex-minio:

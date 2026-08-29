@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 using Cartex.ApiClient.Api;
@@ -8,9 +9,9 @@ using QuestPDF.Infrastructure;
 
 namespace Cartex.UI.Services;
 
-public enum ExportFormat { Csv, Excel, Pdf }
+public enum ExportFormat { Csv, Excel, Pdf, PdfPortrait }
 
-public sealed record ExportColumn<T>(string Header, Func<T, object?> Value);
+public sealed record ExportColumn<T>(string Header, Func<T, object?> Value, float RelativeWidth = 1f);
 
 public sealed record CompanyHeader(string Name, string? BranchName, string? Contact, byte[]? Logo);
 
@@ -31,7 +32,7 @@ public sealed class ExportService(IFilePickerService picker, IToastService toast
     public async Task ExportAsync<T>(string title, IReadOnlyList<T> rows, IReadOnlyList<ExportColumn<T>> columns, ExportFormat format)
     {
         var ext = format switch { ExportFormat.Csv => "csv", ExportFormat.Excel => "xlsx", _ => "pdf" };
-        var company = format == ExportFormat.Pdf ? await LoadCompanyAsync() : null;
+        var company = (format == ExportFormat.Pdf || format == ExportFormat.PdfPortrait) ? await LoadCompanyAsync() : null;
         var stream = await picker.SaveFileAsync($"{Sanitize(title)}-{DateTime.Now:yyyyMMdd-HHmm}", ext);
         if (stream is null) return;
 
@@ -45,7 +46,7 @@ public sealed class ExportService(IFilePickerService picker, IToastService toast
                     {
                         case ExportFormat.Csv: WriteCsv(stream, columns, rows); break;
                         case ExportFormat.Excel: WriteExcel(stream, title, columns, rows); break;
-                        default: WritePdf(stream, title, columns, rows, company); break;
+                        default: WritePdf(stream, title, columns, rows, company, format); break;
                     }
                 });
             }
@@ -75,6 +76,8 @@ public sealed class ExportService(IFilePickerService picker, IToastService toast
         catch { return null; }
     }
 
+    [SuppressMessage("Meziantou.Analyzer", "MA0045",
+        Justification = "Task.Run ichida, UI oqimidan tashqarida; Excel/PDF yozuvchilar ham sinxron API.")]
     private static void WriteCsv<T>(Stream stream, IReadOnlyList<ExportColumn<T>> columns, IReadOnlyList<T> rows)
     {
         using var writer = new StreamWriter(stream, new UTF8Encoding(true));
@@ -142,7 +145,7 @@ public sealed class ExportService(IFilePickerService picker, IToastService toast
         wb.SaveAs(stream);
     }
 
-    private static void WritePdf<T>(Stream stream, string title, IReadOnlyList<ExportColumn<T>> columns, IReadOnlyList<T> rows, CompanyHeader? company)
+    private static void WritePdf<T>(Stream stream, string title, IReadOnlyList<ExportColumn<T>> columns, IReadOnlyList<T> rows, CompanyHeader? company, ExportFormat format)
     {
         var numeric = columns.Select(c => IsNumericColumn(c, rows)).ToArray();
         var labelCol = Array.IndexOf(numeric, false);
@@ -151,7 +154,7 @@ public sealed class ExportService(IFilePickerService picker, IToastService toast
         {
             doc.Page(page =>
             {
-                page.Size(PageSizes.A4.Landscape());
+                page.Size(format == ExportFormat.PdfPortrait ? PageSizes.A4.Portrait() : PageSizes.A4.Landscape());
                 page.Margin(24);
                 page.DefaultTextStyle(t => t.FontSize(9));
                 page.Header().Column(header =>
@@ -181,7 +184,7 @@ public sealed class ExportService(IFilePickerService picker, IToastService toast
                 {
                     table.ColumnsDefinition(def =>
                     {
-                        foreach (var _ in columns) def.RelativeColumn();
+                        foreach (var col in columns) def.RelativeColumn(col.RelativeWidth);
                     });
 
                     for (var c = 0; c < columns.Count; c++)

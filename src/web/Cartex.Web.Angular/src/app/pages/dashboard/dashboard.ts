@@ -43,12 +43,18 @@ export class Dashboard implements OnInit {
   readonly debt = signal<DebtAgingReport | null>(null);
   readonly low = signal<LowStock[] | null>(null);
 
-  readonly chartPoints = computed<ChartPoint[]>(() =>
-    (this.report()?.daily ?? []).map((d) => ({
+  /// HIS-07: bitta kun so'ralganda grafik soatlar bo'yicha chiziladi — bir kunlik oraliqda
+  /// kun kesimi bitta nuqta bo'lib qolar va kun ichidagi harakat ko'rinmasdi.
+  readonly chartPoints = computed<ChartPoint[]>(() => {
+    const hourly = this.report()?.hourly ?? [];
+    if (hourly.length) {
+      return hourly.map((h) => ({ label: `${String(h.hour).padStart(2, '0')}:00`, value: h.revenue }));
+    }
+    return (this.report()?.daily ?? []).map((d) => ({
       label: `${d.date.slice(8, 10)}.${d.date.slice(5, 7)}`,
       value: d.revenue,
-    })),
-  );
+    }));
+  });
 
   readonly topItems = computed<BarItem[]>(() =>
     (this.report()?.topProducts ?? []).slice(0, 6).map((p) => ({
@@ -59,13 +65,13 @@ export class Dashboard implements OnInit {
   );
 
   ngOnInit(): void {
-    this.loadPeriod();
-    this.loadOverview();
+    void this.loadPeriod();
+    void this.loadOverview();
   }
 
   setDays(days: number): void {
     this.days.set(days);
-    this.loadPeriod();
+    void this.loadPeriod();
   }
 
   money(value: number | null | undefined): string {
@@ -76,11 +82,15 @@ export class Dashboard implements OnInit {
     const b = this.breakdown();
     if (!b) return [];
     return [
+      // HIS-03: pulning har bir kelish yo'li ko'rsatiladi. Avans tushib qolsa, mijoz avansidan
+      // yopilgan savdo daromadda bor, taqsimotda yo'q bo'lib qoladi.
       { label: t('cash'), value: b.cash, display: this.money(b.cash) },
       { label: t('card'), value: b.card, display: this.money(b.card) },
       { label: t('bonus'), value: b.bonus, display: this.money(b.bonus) },
+      { label: t('advance'), value: b.advance, display: this.money(b.advance) },
       { label: t('debt'), value: b.debt, display: this.money(b.debt) },
-    ];
+      { label: t('returned'), value: b.returned, display: '-' + this.money(b.returned) },
+    ].filter((r) => r.value !== 0);
   }
 
   private async loadPeriod(): Promise<void> {

@@ -1,9 +1,9 @@
-using Cartex.Application.Common.Extensions;
+﻿using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Models;
 using Cartex.Domain.Common;
 using Cartex.Persistence;
-using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Transactions;
 
 namespace Cartex.Application.Transactions.Queries;
 
@@ -13,8 +13,6 @@ public record GetTransactionsTotalsQuery : FilteringRequest, IRequest<Transactio
     public DateTime? ToDate { get; set; }
     public string? OperationType { get; set; }
 }
-
-public record TransactionsTotalsDto(int Count, decimal TotalAmount);
 
 public sealed class GetTransactionsTotalsQueryHandler(
     IApplicationDbContext db,

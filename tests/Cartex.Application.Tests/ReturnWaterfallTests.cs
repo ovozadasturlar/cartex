@@ -18,8 +18,8 @@ public class ReturnWaterfallTests(DatabaseFixture fixture) : DatabaseTest(fixtur
     {
         using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var branch1 = (await db.Branches.FirstAsync(b => b.Name == "Filial 1")).Id;
-        var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Filial 1 ombori")).Id;
+        var branch1 = (await db.Branches.FirstAsync(b => b.Name == "Asosiy filial")).Id;
+        var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Asosiy ombor")).Id;
         var businessId = (await db.Businesses.FirstAsync()).Id;
         var adminId = (await db.Users.FirstAsync(u => u.Username == "admin")).Id;
         var productId = (await db.Products.FirstAsync(p => p.Name == "Smesitel oshxona Zegor")).Id;
@@ -59,7 +59,7 @@ public class ReturnWaterfallTests(DatabaseFixture fixture) : DatabaseTest(fixtur
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var item = await db.SaleItems.FirstAsync(i => i.SaleId == saleId);
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            await sender.Send(new ReturnSaleCommand(saleId, [new ReturnLineDto(item.Id, 1, true, null)]));
+            await sender.Send(await TestReturns.ForItemAsync(db, item.Id, 1));
         }
 
         var expectedDebtTake = Math.Min(price, debtBefore);
@@ -77,7 +77,7 @@ public class ReturnWaterfallTests(DatabaseFixture fixture) : DatabaseTest(fixtur
     [Fact]
     public async Task Full_return_after_partial_clears_everything_exactly()
     {
-        var (branch1, warehouse1, businessId, adminId, variantId, price) = await SetupAsync();
+        var (branch1, warehouse1, businessId, adminId, variantId, _) = await SetupAsync();
         Fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
         await TestShift.OpenAsync(Fixture);
 
@@ -99,7 +99,7 @@ public class ReturnWaterfallTests(DatabaseFixture fixture) : DatabaseTest(fixtur
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var item = await db.SaleItems.FirstAsync(i => i.SaleId == saleId);
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            await sender.Send(new ReturnSaleCommand(saleId, [new ReturnLineDto(item.Id, 1, true, null)]));
+            await sender.Send(await TestReturns.ForItemAsync(db, item.Id, 1));
         }
 
         using (var scope = Fixture.CreateScope())
@@ -107,7 +107,7 @@ public class ReturnWaterfallTests(DatabaseFixture fixture) : DatabaseTest(fixtur
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var item = await db.SaleItems.FirstAsync(i => i.SaleId == saleId);
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            await sender.Send(new ReturnSaleCommand(saleId, [new ReturnLineDto(item.Id, 1, true, null)]));
+            await sender.Send(await TestReturns.ForItemAsync(db, item.Id, 1));
         }
 
         using var check = Fixture.CreateScope();
@@ -157,9 +157,8 @@ public class ReturnWaterfallTests(DatabaseFixture fixture) : DatabaseTest(fixtur
         using (var scope = Fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            var items = await db.SaleItems.Where(i => i.SaleId == saleId).ToListAsync();
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            await sender.Send(new ReturnSaleCommand(saleId, [.. items.Select(i => new ReturnLineDto(i.Id, i.Quantity, true, null))]));
+            await sender.Send(await TestReturns.ForSaleAsync(db, saleId));
         }
 
         var bonus = await BalanceAsync(db => db.Accounts.Where(a => a.CustomerId == customerId && a.Type == AccountType.Bonus));

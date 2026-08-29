@@ -5,11 +5,13 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { Router } from '@angular/router';
 import { TranslocoModule } from '@jsverse/transloco';
 import QRCode from 'qrcode';
 import { AuthService } from '../../core/auth.service';
+import { APP_LANGUAGES, PreferencesService } from '../../core/preferences.service';
 import { Logo } from '../../shared/logo';
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -20,6 +22,7 @@ const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
     FormsModule,
     MatFormFieldModule,
     MatInputModule,
+    MatMenuModule,
     MatButtonModule,
     MatCheckboxModule,
     MatIconModule,
@@ -33,6 +36,8 @@ const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export class Login implements OnDestroy {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  readonly preferences = inject(PreferencesService);
+  readonly languages = APP_LANGUAGES;
 
   username = '';
   password = '';
@@ -40,6 +45,10 @@ export class Login implements OnDestroy {
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
   readonly showPassword = signal(false);
+
+  setLang(code: string): void {
+    this.preferences.setLanguage(code);
+  }
 
   readonly qrAvailable = signal(false);
   readonly qrOpen = signal(false);
@@ -65,7 +74,7 @@ export class Login implements OnDestroy {
     this.error.set(null);
     try {
       await this.auth.login(this.username.trim(), this.password, this.rememberMe);
-      this.router.navigate(['/']);
+      void this.router.navigate(['/']);
     } catch {
       this.error.set('login_failed');
     } finally {
@@ -76,7 +85,7 @@ export class Login implements OnDestroy {
   openQr(): void {
     this.error.set(null);
     this.qrOpen.set(true);
-    this.runQr(++this.qrSession);
+    void this.runQr(++this.qrSession);
   }
 
   closeQr(): void {
@@ -118,10 +127,12 @@ export class Login implements OnDestroy {
           if (await this.auth.pollQr(start.code)) {
             if (session !== this.qrSession) return;
             this.closeQr();
-            this.router.navigate(['/']);
+            void this.router.navigate(['/']);
             return;
           }
-        } catch {}
+        } catch {
+          // A stored session that no longer works just means the user signs in again.
+        }
       }
     }
   }

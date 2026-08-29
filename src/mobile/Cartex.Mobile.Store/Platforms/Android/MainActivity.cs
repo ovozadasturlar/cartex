@@ -1,6 +1,9 @@
-﻿using Android.App;
+using Android.App;
 using Android.Content.PM;
-using Android.OS;
+
+[assembly: UsesPermission(Android.Manifest.Permission.Camera)]
+[assembly: UsesPermission(Android.Manifest.Permission.ReadExternalStorage, MaxSdkVersion = 32)]
+[assembly: UsesPermission(Android.Manifest.Permission.WriteExternalStorage, MaxSdkVersion = 32)]
 
 namespace Cartex.Mobile.Store;
 

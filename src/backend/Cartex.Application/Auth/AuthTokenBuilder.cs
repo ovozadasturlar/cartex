@@ -1,4 +1,4 @@
-using Cartex.Domain.Common;
+﻿using Cartex.Domain.Common;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
 using Cartex.Auth.Services;
@@ -6,6 +6,7 @@ using Cartex.Application.Common.Interfaces;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Entities;
 using Cartex.Application.Auth.Commands;
+using Cartex.Shared.Models.Auth;
 
 namespace Cartex.Application.Auth;
 
@@ -18,7 +19,7 @@ public sealed class AuthTokenBuilder(
 {
     private const int RefreshLifetimeDays = 30;
     private const int AbsoluteLifetimeDays = 90;
-    private const int ReuseGraceSeconds = 30;
+    private const int ReuseGraceSeconds = 120;
 
     private IQueryable<User> UsersWithGraph() =>
         db.Users
@@ -34,17 +35,17 @@ public sealed class AuthTokenBuilder(
     public Task<User?> LoadUserByIdAsync(long id, CancellationToken cancellationToken) =>
         UsersWithGraph().FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
 
-    public async Task<LoginResponse> IssueAsync(User user, string? deviceName, CancellationToken cancellationToken)
+    public async Task<LoginResponse> IssueAsync(User user, string? deviceName, string? deviceId, CancellationToken cancellationToken)
     {
-        var (accessToken, role) = await BuildAccessAsync(user, cancellationToken);
+        var (accessToken, role) = await BuildAccessAsync(user, deviceId, cancellationToken);
         var now = DateTime.UtcNow;
-        var refreshToken = CreateSession(user.Id, deviceName, now, out _);
-        audit.Add("login", "auth", user.Id, new { user.Username, Device = deviceName }, asUserId: user.Id);
+        var refreshToken = CreateSession(user.Id, deviceName, deviceId, now, out _);
+        audit.Add("login", "auth", user.Id, new { user.Username, Device = deviceName, DeviceId = deviceId }, asUserId: user.Id);
         await db.SaveChangesAsync(cancellationToken);
         return new LoginResponse(accessToken, refreshToken, user.FullName, role);
     }
 
-    public async Task<LoginResponse?> RotateAsync(string rawRefresh, string? deviceName, CancellationToken cancellationToken)
+    public async Task<LoginResponse?> RotateAsync(string rawRefresh, string? deviceName, string? deviceId, CancellationToken cancellationToken)
     {
         var hash = RefreshTokens.Hash(rawRefresh);
         var session = await db.RefreshSessions.AsNoTracking().FirstOrDefaultAsync(s => s.TokenHash == hash, cancellationToken);
@@ -78,21 +79,22 @@ public sealed class AuthTokenBuilder(
                 .SetProperty(x => x.ReplacedByHash, newHash), cancellationToken);
         if (claimed == 0) return null;
 
-        var (accessToken, role) = await BuildAccessAsync(user, cancellationToken);
-        AddSession(user.Id, deviceName ?? session.DeviceName, newRaw, newHash, now, session.FamilyCreatedAt);
+        var resolvedDeviceId = deviceId ?? session.DeviceId;
+        var (accessToken, role) = await BuildAccessAsync(user, resolvedDeviceId, cancellationToken);
+        AddSession(user.Id, deviceName ?? session.DeviceName, deviceId ?? session.DeviceId, newRaw, newHash, now, session.FamilyCreatedAt);
         await db.SaveChangesAsync(cancellationToken);
         return new LoginResponse(accessToken, newRaw, user.FullName, role);
     }
 
-    private string CreateSession(long userId, string? deviceName, DateTime now, out string hash)
+    private string CreateSession(long userId, string? deviceName, string? deviceId, DateTime now, out string hash)
     {
         var raw = RefreshTokens.Generate();
         hash = RefreshTokens.Hash(raw);
-        AddSession(userId, deviceName, raw, hash, now, now);
+        AddSession(userId, deviceName, deviceId, raw, hash, now, now);
         return raw;
     }
 
-    private void AddSession(long userId, string? deviceName, string raw, string hash, DateTime now, DateTime familyCreatedAt)
+    private void AddSession(long userId, string? deviceName, string? deviceId, string raw, string hash, DateTime now, DateTime familyCreatedAt)
     {
         var absolute = familyCreatedAt.AddDays(AbsoluteLifetimeDays);
         var expires = now.AddDays(RefreshLifetimeDays);
@@ -100,6 +102,7 @@ public sealed class AuthTokenBuilder(
         {
             UserId = userId,
             TokenHash = hash,
+            DeviceId = string.IsNullOrWhiteSpace(deviceId) ? null : deviceId.Trim(),
             DeviceName = string.IsNullOrWhiteSpace(deviceName) ? null : deviceName.Trim(),
             Client = currentUser.Client,
             CreatedAt = now,
@@ -109,9 +112,15 @@ public sealed class AuthTokenBuilder(
         });
     }
 
-    private async Task<(string Token, string Role)> BuildAccessAsync(User user, CancellationToken cancellationToken)
+    private async Task<(string Token, string Role)> BuildAccessAsync(User user, string? deviceId, CancellationToken cancellationToken)
     {
-        var roles = user.UserRoles.Select(ur => ur.Role).OrderByDescending(r => r.Priority).ToList();
+        var roles = user.UserRoles
+            .Select(ur => ur.Role)
+            .Where(role => role.IsActive)
+            .OrderByDescending(role => role.Priority)
+            .ToList();
+        if (roles.Count == 0)
+            throw new ForbiddenException("User has no active role.");
         var roleNames = roles.Select(r => r.Name).ToList();
 
         var permissions = roles.Any(r => r.AccessAll)
@@ -125,7 +134,8 @@ public sealed class AuthTokenBuilder(
 
         if (!roles.Any(r => r.AccessAll))
         {
-            var disabledCodes = await db.Features.Where(f => !f.IsEnabled).Select(f => f.Code).ToListAsync(cancellationToken);
+            var disabledCodes = await db.Features.Where(f => !f.IsEnabled || !f.OwnerEnabled)
+                .Select(f => f.Code).ToListAsync(cancellationToken);
             var permittedFeatures = await licenseService.GetTariffFeaturesAsync(cancellationToken);
             var blockedFeatures = FeatureCatalog.AllCodes.Where(c => !permittedFeatures.Contains(c)).Concat(disabledCodes);
             var blocked = FeatureCatalog.PermissionsFor(blockedFeatures);
@@ -145,7 +155,8 @@ public sealed class AuthTokenBuilder(
 
         var token = jwtTokenGenerator.GenerateToken(
             user.Id, user.Username, user.FullName, roleNames, startPage, permissions,
-            businessId, branchIds, user.DefaultBranchId);
+            RoleAuthorizationStamp.Create(user.PasswordHash, roles),
+            businessId, branchIds, user.DefaultBranchId, deviceId);
 
         return (token, roleNames.FirstOrDefault() ?? "");
     }

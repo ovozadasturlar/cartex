@@ -1,17 +1,16 @@
-using Cartex.Application.Common.Interfaces;
+﻿using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
-using Cartex.Application.Common.Messaging;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Customers;
+using Cartex.Shared.Models.Common;
 
 namespace Cartex.Application.Customers.Queries;
 
 public record GetCustomerLedgerQuery(long CustomerId, int Page = 1, int PageSize = 50) : IRequest<IReadOnlyCollection<CustomerLedgerEntryDto>>;
-
-public record CustomerLedgerEntryDto(DateTime Date, string OperationType, string AccountType, decimal Change, decimal BalanceAfter, string? Currency = null);
 
 public sealed class GetCustomerLedgerQueryHandler(
     IApplicationDbContext db,
@@ -21,7 +20,7 @@ public sealed class GetCustomerLedgerQueryHandler(
     public async Task<IReadOnlyCollection<CustomerLedgerEntryDto>> Handle(GetCustomerLedgerQuery request, CancellationToken cancellationToken)
     {
         if (!currentUser.HasPermission(AppPermissions.Customers.ViewAll) &&
-            !await db.Customers.AnyAsync(c => c.Id == request.CustomerId && c.AgentId == currentUser.UserId, cancellationToken))
+            !await db.Customers.AnyAsync(c => c.Id == request.CustomerId && c.AssignedUserId == currentUser.UserId, cancellationToken))
             return [];
 
         var accounts = await db.Accounts
@@ -45,7 +44,10 @@ public sealed class GetCustomerLedgerQueryHandler(
         {
             var all = await txQuery
                 .OrderBy(t => t.CreatedAt).ThenBy(t => t.Id)
-                .Select(t => new TxRow(t.Id, t.CreatedAt, t.OperationType, t.Amount, t.FromAccountId, t.ToAccountId))
+                .Select(t => new TxRow(t.Id, t.CreatedAt, t.OperationType, t.Amount, t.FromAccountId, t.ToAccountId,
+                t.CustomerPaymentDocumentId,
+                t.CustomerPaymentDocument != null ? t.CustomerPaymentDocument.DocumentNumber : null,
+                t.SaleId))
                 .ToListAsync(cancellationToken);
             var full = BuildEntries(all, typeById, currencyById, ids.ToDictionary(id => id, _ => 0m));
             full.Reverse();
@@ -60,7 +62,10 @@ public sealed class GetCustomerLedgerQueryHandler(
             .OrderByDescending(t => t.CreatedAt).ThenByDescending(t => t.Id)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
-            .Select(t => new TxRow(t.Id, t.CreatedAt, t.OperationType, t.Amount, t.FromAccountId, t.ToAccountId))
+            .Select(t => new TxRow(t.Id, t.CreatedAt, t.OperationType, t.Amount, t.FromAccountId, t.ToAccountId,
+                t.CustomerPaymentDocumentId,
+                t.CustomerPaymentDocument != null ? t.CustomerPaymentDocument.DocumentNumber : null,
+                t.SaleId))
             .ToListAsync(cancellationToken);
 
         if (pageTx.Count == 0)
@@ -88,7 +93,10 @@ public sealed class GetCustomerLedgerQueryHandler(
         return entries;
     }
 
-    private sealed record TxRow(long Id, DateTime CreatedAt, OperationType OperationType, decimal Amount, long? FromAccountId, long? ToAccountId);
+    private sealed record TxRow(
+        long Id, DateTime CreatedAt, OperationType OperationType, decimal Amount,
+        long? FromAccountId, long? ToAccountId,
+        long? PaymentDocumentId, string? PaymentNumber, long? SaleId);
 
     private static List<CustomerLedgerEntryDto> BuildEntries(
         List<TxRow> transactions,
@@ -103,14 +111,14 @@ public sealed class GetCustomerLedgerQueryHandler(
             {
                 var balance = running.GetValueOrDefault(from) - t.Amount;
                 running[from] = balance;
-                entries.Add(new CustomerLedgerEntryDto(t.CreatedAt, t.OperationType.ToString(), fromType.ToString(), -t.Amount, balance, currencyById.GetValueOrDefault(from)));
+                entries.Add(new CustomerLedgerEntryDto(t.CreatedAt, t.OperationType.ToString(), fromType.ToString(), -t.Amount, balance, currencyById.GetValueOrDefault(from), t.Id, t.PaymentDocumentId, t.PaymentNumber, t.SaleId));
             }
 
             if (t.ToAccountId is long to && typeById.TryGetValue(to, out var toType))
             {
                 var balance = running.GetValueOrDefault(to) + t.Amount;
                 running[to] = balance;
-                entries.Add(new CustomerLedgerEntryDto(t.CreatedAt, t.OperationType.ToString(), toType.ToString(), t.Amount, balance, currencyById.GetValueOrDefault(to)));
+                entries.Add(new CustomerLedgerEntryDto(t.CreatedAt, t.OperationType.ToString(), toType.ToString(), t.Amount, balance, currencyById.GetValueOrDefault(to), t.Id, t.PaymentDocumentId, t.PaymentNumber, t.SaleId));
             }
         }
         return entries;

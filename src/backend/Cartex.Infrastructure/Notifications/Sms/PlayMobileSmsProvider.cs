@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using Cartex.Application.Common.Settings;
+using Cartex.Application.Common.Interfaces;
 using Cartex.Domain.Enums;
 using Microsoft.Extensions.Logging;
 
@@ -11,7 +12,7 @@ public sealed class PlayMobileSmsProvider(IHttpClientFactory httpClientFactory, 
 {
     public string Name => "playmobile";
 
-    public async Task<SmsSendResult> SendAsync(SmsSettings settings, string password, string phone, string text, CancellationToken cancellationToken)
+    public async Task<SmsSendResult> SendAsync(SmsSettings settings, string password, string phone, string text, SmsSendContext context, CancellationToken cancellationToken)
     {
         var baseUrl = string.IsNullOrWhiteSpace(settings.BaseUrl) ? "https://send.smsxabar.uz" : settings.BaseUrl.TrimEnd('/');
         var client = httpClientFactory.CreateClient();
@@ -19,16 +20,14 @@ public sealed class PlayMobileSmsProvider(IHttpClientFactory httpClientFactory, 
         var messageId = Guid.NewGuid().ToString("N");
         var message = new Dictionary<string, object>
         {
-            ["recipient"] = phone,
+            ["recipient"] = phone.Trim().TrimStart('+'),
             ["message-id"] = messageId,
             ["sms"] = new { originator = settings.Sender ?? "", content = new { text } }
         };
         var payload = new Dictionary<string, object> { ["messages"] = new[] { message } };
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/broker-api/send")
-        {
-            Content = JsonContent.Create(payload)
-        };
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/broker-api/send");
+        request.Content = JsonContent.Create(payload);
         var basic = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{settings.Login}:{password}"));
         request.Headers.Authorization = new AuthenticationHeaderValue("Basic", basic);
 
@@ -42,6 +41,6 @@ public sealed class PlayMobileSmsProvider(IHttpClientFactory httpClientFactory, 
         return new SmsSendResult(messageId);
     }
 
-    public Task<SmsStatus?> GetStatusAsync(SmsSettings settings, string password, string providerMessageId, CancellationToken cancellationToken) =>
-        Task.FromResult<SmsStatus?>(null);
+    public Task<NotificationDeliveryStatus?> GetStatusAsync(SmsSettings settings, string password, string providerMessageId, CancellationToken cancellationToken) =>
+        Task.FromResult<NotificationDeliveryStatus?>(null);
 }

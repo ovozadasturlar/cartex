@@ -1,53 +1,40 @@
-using Cartex.Application.Barcodes.Commands;
+﻿using Cartex.Application.Barcodes.Commands;
+using Cartex.Application.Common.Images;
+using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Products.Commands;
-using Cartex.Application.Stocks.Commands;
-using Cartex.Application.Supplies.Commands;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
 using Cartex.Persistence;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Products;
 
 namespace Cartex.Application.Products.Import;
 
 public record ImportProductsCommand(
     List<ImportRowDto> Rows,
-    ImportStockMode StockMode = ImportStockMode.None,
-    long? WarehouseId = null,
-    long? SupplierId = null,
-    DateOnly? SupplyDate = null,
-    decimal PaidCash = 0,
-    decimal PaidCard = 0,
-    string? Currency = null,
     bool UpdatePrices = false,
-    bool CreateMissingCategories = true) : ICommand<ImportResultDto>;
+    bool CreateMissingCategories = true,
+    bool IgnoreErrors = false) : IRequest<ImportResultDto>;
 
-public sealed class ImportProductsCommandHandler(IApplicationDbContext db, ISender sender, ICurrentUser currentUser)
+public sealed class ImportProductsCommandHandler(IApplicationDbContext db, ISender sender, ICurrentUser currentUser,
+    IRemoteImageFetcher imageFetcher, IObjectStorage storage, IImageProcessor imageProcessor)
     : IRequestHandler<ImportProductsCommand, ImportResultDto>
 {
     public async Task<ImportResultDto> Handle(ImportProductsCommand request, CancellationToken cancellationToken)
     {
-        if (request.StockMode != ImportStockMode.None && request.WarehouseId is null)
-            throw new BusinessRuleException("Ombor tanlanmagan.");
-
-        if (request.StockMode == ImportStockMode.Supply)
-        {
-            if (!currentUser.HasPermission(AppPermissions.Supplies.Manage))
-                throw new ForbiddenException("Ta'minot kirimi uchun ruxsat yo'q.");
-            if (request.SupplierId is null)
-                throw new BusinessRuleException("Ta'minotchi tanlanmagan.");
-        }
-
-        if (request.StockMode == ImportStockMode.Opening && !currentUser.HasPermission(AppPermissions.Stocks.Manage))
-            throw new ForbiddenException("Zaxirani o'zgartirish uchun ruxsat yo'q.");
-
         var resolved = await ProductImportMatcher.ResolveAsync(
             db,
             [.. request.Rows.Select(r => r with { VariantId = null, Action = ImportRowAction.Create, Errors = [], Warnings = [] })],
             cancellationToken);
 
-        var rows = resolved.Where(r => r.Action != ImportRowAction.Skip).ToList();
+        // IgnoreErrors=true bo'lsa, validatsiya xatosi bor qatorlar ham qoldiriladi
+        // (ular create paytida alohida try-catch orqali boshqariladi)
+        var rows = request.IgnoreErrors
+            ? resolved.ToList()
+            : resolved.Where(r => r.Action != ImportRowAction.Skip).ToList();
+
         if (rows.Count == 0)
             throw new BusinessRuleException("Import uchun yaroqli qator yo'q.");
 
@@ -59,40 +46,50 @@ public sealed class ImportProductsCommandHandler(IApplicationDbContext db, ISend
             .GroupBy(u => u.Key.ToLowerInvariant())
             .ToDictionary(g => g.Key, g => g.First().Id);
 
-        var categoryByName = (await db.Categories.Select(c => new { c.Id, c.Name }).ToListAsync(cancellationToken))
-            .GroupBy(c => c.Name.ToLowerInvariant())
+        var categoryByPath = (await db.Categories.Select(c => new { c.Id, c.Name, c.ParentId }).ToListAsync(cancellationToken))
+            .GroupBy(c => (c.ParentId, c.Name.ToLowerInvariant()))
             .ToDictionary(g => g.Key, g => g.First().Id);
-
-        if (request.CreateMissingCategories)
-        {
-            var missing = rows
-                .Where(r => r.Category is not null)
-                .Select(r => r.Category!.Trim())
-                .Where(c => !categoryByName.ContainsKey(c.ToLowerInvariant()))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .Select(name => new Category { Name = name })
-                .ToList();
-
-            if (missing.Count > 0)
-            {
-                if (!currentUser.HasPermission(AppPermissions.Categories.Manage))
-                    throw new ForbiddenException("Yangi kategoriya yaratish uchun ruxsat yo'q.");
-
-                db.Categories.AddRange(missing);
-                await db.SaveChangesAsync(cancellationToken);
-                foreach (var category in missing)
-                    categoryByName[category.Name.ToLowerInvariant()] = category.Id;
-            }
-        }
 
         long UnitId(string? name) =>
             name is not null && unitByName.TryGetValue(name.ToLowerInvariant(), out var id) ? id : defaultUnit.Id;
 
-        long? CategoryId(string? name) =>
-            name is not null && categoryByName.TryGetValue(name.Trim().ToLowerInvariant(), out var id) ? id : null;
+        async Task<long?> CategoryIdAsync(string? path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                return null;
+
+            long? parent = null;
+            foreach (var segment in path.Split(['/', '>'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                var key = (parent, segment.ToLowerInvariant());
+                if (categoryByPath.TryGetValue(key, out var id))
+                {
+                    parent = id;
+                    continue;
+                }
+
+                if (!request.CreateMissingCategories)
+                    return parent;
+                if (!currentUser.HasPermission(AppPermissions.Categories.Create))
+                    throw new ForbiddenException("Yangi kategoriya yaratish uchun ruxsat yo'q.");
+
+                var created = new Category { Name = segment, ParentId = parent };
+                db.Categories.Add(created);
+                await db.SaveChangesAsync(cancellationToken);
+                categoryByPath[key] = created.Id;
+                parent = created.Id;
+            }
+            return parent;
+        }
 
         var variants = new Dictionary<int, long>();
         var newProducts = new Dictionary<int, long>();
+        var generatedDuringCreate = new HashSet<int>();
+
+        // Har bir "Create" qatorini alohida try-catch ichida bajaramiz.
+        // Bitta qatorda xato bo'lsa — faqat o'sha qator o'tkazib yuboriladi,
+        // boshqa qatorlar importi davom etadi.
+        var rowErrors = new List<ImportRowError>();
 
         foreach (var row in rows)
         {
@@ -102,16 +99,40 @@ public sealed class ImportProductsCommandHandler(IApplicationDbContext db, ISend
                 continue;
             }
 
-            newProducts[row.Row] = await sender.Send(new CreateProductCommand(
-                Name: row.Name!.Trim(),
-                CategoryId: CategoryId(row.Category),
-                UnitId: UnitId(row.Unit),
-                MinStock: row.MinStock,
-                Barcodes: row.Barcode is { } code ? [new BarcodeInput(code, row.PackQty ?? 1)] : null,
-                Code: row.Sku,
-                IkpuCode: row.Ikpu,
-                VatRate: row.Vat,
-                SellingPrice: row.SellingPrice), cancellationToken);
+            // Skip qatorlari (validatsiya xatosi bor) — IgnoreErrors=false bo'lsa bu yerga kelmaydi,
+            // IgnoreErrors=true bo'lsa xatolarni rowErrors ga yozamiz
+            if (row.Action == ImportRowAction.Skip)
+            {
+                rowErrors.Add(new ImportRowError(row.Row, row.Name, row.Errors));
+                continue;
+            }
+
+            try
+            {
+                var productId = await sender.Send(new CreateProductCommand(
+                    Name: row.Name!.Trim(),
+                    CategoryId: await CategoryIdAsync(row.Category),
+                    UnitId: UnitId(row.Unit),
+                    MinStock: row.MinStock,
+                    Barcodes: row.Barcode is { } code ? [new BarcodeInput(code, row.PackQty ?? 1)] : null,
+                    Code: row.Sku,
+                    IkpuCode: row.Ikpu,
+                    VatRate: row.Vat,
+                    SellingPrice: row.SellingPrice,
+                    PriceCurrency: row.Currency), cancellationToken);
+
+                newProducts[row.Row] = productId;
+                if (string.IsNullOrWhiteSpace(row.Barcode))
+                    generatedDuringCreate.Add(row.Row);
+            }
+            catch (Exception ex)
+            {
+                // Bu qatorda DB xatosi yoki boshqa muammo — o'tkazib yuboramiz
+                var message = ex is BusinessRuleException bre
+                    ? bre.Message
+                    : $"Xato: {ex.Message.Split('\n')[0].Trim()}'";
+                rowErrors.Add(new ImportRowError(row.Row, row.Name, [message]));
+            }
         }
 
         if (newProducts.Count > 0)
@@ -127,7 +148,10 @@ public sealed class ImportProductsCommandHandler(IApplicationDbContext db, ISend
                 variants[row] = defaults[productId];
         }
 
-        var attached = rows
+        // Faqat muvaffaqiyatli yaratilgan variantlar bilan ishlaymiz
+        var successRows = rows.Where(r => variants.ContainsKey(r.Row)).ToList();
+
+        var attached = successRows
             .Where(r => r.Action == ImportRowAction.Existing && r.Barcode is not null)
             .Select(r => (VariantId: variants[r.Row], Code: r.Barcode!, PackQty: r.PackQty ?? 1))
             .DistinctBy(b => b.Code)
@@ -139,7 +163,18 @@ public sealed class ImportProductsCommandHandler(IApplicationDbContext db, ISend
             var known = await db.Barcodes.Where(b => codes.Contains(b.Code)).Select(b => b.Code).ToListAsync(cancellationToken);
 
             foreach (var barcode in attached.Where(b => !known.Contains(b.Code)))
-                await sender.Send(new CreateBarcodeCommand(barcode.VariantId, barcode.Code, barcode.PackQty), cancellationToken);
+            {
+                try
+                {
+                    await sender.Send(new CreateBarcodeCommand(barcode.VariantId, barcode.Code, barcode.PackQty), cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    // Barkod qo'shib bo'lmadi — davom etamiz
+                    var message = ex is BusinessRuleException bre ? bre.Message : ex.Message.Split('\n')[0].Trim();
+                    rowErrors.Add(new ImportRowError(0, null, [$"Barkod {barcode.Code}: {message}"]));
+                }
+            }
         }
 
         var variantIds = variants.Values.Distinct().ToList();
@@ -149,66 +184,83 @@ public sealed class ImportProductsCommandHandler(IApplicationDbContext db, ISend
             .Distinct()
             .ToListAsync(cancellationToken);
 
-        var packByVariant = rows
+        var packByVariant = successRows
+            .Where(r => variants.ContainsKey(r.Row))
             .GroupBy(r => variants[r.Row])
             .ToDictionary(g => g.Key, g => g.Select(r => r.PackQty).FirstOrDefault(p => p > 1) ?? 1);
 
-        var generated = 0;
+        var generated = generatedDuringCreate.Count;
         foreach (var variantId in variantIds.Except(withBarcode))
         {
-            await sender.Send(new GenerateBarcodeCommand(variantId, packByVariant[variantId]), cancellationToken);
-            generated++;
+            try
+            {
+                await sender.Send(new GenerateBarcodeCommand(variantId, packByVariant.GetValueOrDefault(variantId, 1)), cancellationToken);
+                generated++;
+            }
+            catch
+            {
+                // Barcode generation muvaffaqiyatsiz — davom etamiz
+            }
         }
 
         if (request.UpdatePrices)
         {
-            foreach (var row in rows.Where(r => r.Action == ImportRowAction.Existing && r.SellingPrice is not null))
-                await ProductPriceWriter.UpsertAsync(db, variants[row.Row], null, row.SellingPrice!.Value, cancellationToken);
+            foreach (var row in successRows.Where(r => r.Action == ImportRowAction.Existing && r.SellingPrice is not null))
+                await ProductPriceWriter.UpsertAsync(db, variants[row.Row], null, row.SellingPrice!.Value, cancellationToken, row.Currency);
             await db.SaveChangesAsync(cancellationToken);
         }
 
-        long? supplyId = null;
-        var adjusted = 0;
-        var stockRows = rows.Where(r => r.Quantity > 0).ToList();
-
-        if (request.StockMode != ImportStockMode.None && stockRows.Count == 0)
-            throw new BusinessRuleException("Miqdor ustuni topilmadi yoki barcha miqdorlar bo'sh.");
-
-        if (request.StockMode == ImportStockMode.Supply)
-        {
-            var items = stockRows
-                .Select(r => new CreateSupplyItemDto(variants[r.Row], r.Quantity!.Value, r.PurchasePrice ?? 0, r.ExpiredAt))
-                .ToList();
-
-            supplyId = await sender.Send(new CreateSupplyCommand(
-                request.SupplierId!.Value,
-                request.WarehouseId!.Value,
-                request.SupplyDate ?? DateOnly.FromDateTime(DateTime.Now),
-                items,
-                request.PaidCash,
-                request.PaidCard,
-                request.Currency), cancellationToken);
-        }
-        else if (request.StockMode == ImportStockMode.Opening)
-        {
-            foreach (var row in stockRows)
-            {
-                await sender.Send(new AddOpeningStockCommand(
-                    request.WarehouseId!.Value,
-                    variants[row.Row],
-                    row.Quantity!.Value,
-                    row.PurchasePrice ?? 0,
-                    row.ExpiredAt), cancellationToken);
-                adjusted++;
-            }
-        }
+        var (imagesSet, imagesFailed) = await AttachImagesAsync(successRows, variants, cancellationToken);
 
         return new ImportResultDto(
             newProducts.Count,
-            rows.Count(r => r.Action == ImportRowAction.Existing),
+            successRows.Count(r => r.Action == ImportRowAction.Existing),
             generated,
-            supplyId,
-            adjusted);
+            imagesSet,
+            imagesFailed,
+            rowErrors.Count > 0 ? rowErrors : null);
+    }
+
+    private async Task<(int Set, int Failed)> AttachImagesAsync(
+        List<ImportRowDto> rows, Dictionary<int, long> variants, CancellationToken cancellationToken)
+    {
+        var imageRows = rows.Where(r => !string.IsNullOrWhiteSpace(r.ImageUrl)).ToList();
+        if (imageRows.Count == 0)
+            return (0, 0);
+
+        var variantIds = imageRows.Select(r => variants[r.Row]).Distinct().ToList();
+        var productByVariant = (await db.ProductVariants
+                .Where(v => variantIds.Contains(v.Id))
+                .Select(v => new { v.Id, v.Product })
+                .ToListAsync(cancellationToken))
+            .ToDictionary(v => v.Id, v => v.Product);
+
+        var set = 0;
+        var failed = 0;
+        var handled = new HashSet<long>();
+
+        foreach (var row in imageRows)
+        {
+            var product = productByVariant.GetValueOrDefault(variants[row.Row]);
+            if (product is null || !handled.Add(product.Id) || product.ImageKey is not null)
+                continue;
+
+            var fetched = await imageFetcher.FetchAsync(row.ImageUrl!.Trim(), cancellationToken);
+            if (fetched is null)
+            {
+                failed++;
+                continue;
+            }
+
+            using var buffer = new MemoryStream(fetched.Content);
+            product.ImageKey = await ImageStore.SaveAsync(storage, imageProcessor, buffer, fetched.ContentType, fetched.Extension, cancellationToken);
+            set++;
+        }
+
+        if (set > 0)
+            await db.SaveChangesAsync(cancellationToken);
+
+        return (set, failed);
     }
 }
 
@@ -218,7 +270,5 @@ public sealed class ImportProductsCommandValidator : AbstractValidator<ImportPro
     {
         RuleFor(x => x.Rows).NotEmpty();
         RuleFor(x => x.Rows.Count).LessThanOrEqualTo(ProductImportMatcher.MaxRows);
-        RuleFor(x => x.PaidCash).GreaterThanOrEqualTo(0);
-        RuleFor(x => x.PaidCard).GreaterThanOrEqualTo(0);
     }
 }

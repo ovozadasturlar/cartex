@@ -42,6 +42,7 @@ export interface Role {
   description: string | null;
   startPage: string | null;
   priority: number;
+  isActive: boolean;
   accessAll: boolean;
   permissions: string[];
   grantablePermissions: string[];
@@ -63,6 +64,12 @@ export interface Permission {
   description: string | null;
   isEnabled: boolean;
   dependsOn: string[];
+}
+
+export interface PermissionBundle {
+  key: string;
+  description: string;
+  permissions: string[];
 }
 
 export interface Branch {
@@ -99,6 +106,22 @@ export interface AuditOptions {
   users: string[];
 }
 
+export interface HardwareKey {
+  id: number;
+  userId: number;
+  username: string;
+  fullName: string;
+  serial: string;
+  issuedAt: string;
+  isEnabled: boolean;
+  revokedAt: string | null;
+}
+
+export interface HardwareKeyResult {
+  fileName: string;
+  content: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminApi {
   private readonly http = inject(HttpClient);
@@ -117,6 +140,10 @@ export class AdminApi {
     return this.http.put<void>(`/api/users/${id}`, body);
   }
 
+  deleteUser(id: number): Observable<void> {
+    return this.http.delete<void>(`/api/users/${id}`);
+  }
+
   roles(): Observable<Role[]> {
     return this.http.get<Role[]>('/api/roles');
   }
@@ -129,12 +156,28 @@ export class AdminApi {
     return this.http.put<void>(`/api/roles/${id}`, body);
   }
 
+  setRoleActive(id: number, isActive: boolean): Observable<void> {
+    return this.http.put<void>(`/api/roles/${id}/active`, { isActive });
+  }
+
+  deleteRole(id: number): Observable<void> {
+    return this.http.delete<void>(`/api/roles/${id}`);
+  }
+
   assignPermissions(id: number, permissionIds: number[]): Observable<void> {
     return this.http.put<void>(`/api/roles/${id}/permissions`, { permissionIds });
   }
 
   permissions(): Observable<Permission[]> {
     return this.http.get<Permission[]>('/api/permissions');
+  }
+
+  permissionBundles(): Observable<PermissionBundle[]> {
+    return this.http.get<PermissionBundle[]>('/api/permissions/bundles');
+  }
+
+  togglePermission(id: number, isEnabled: boolean): Observable<void> {
+    return this.http.put<void>(`/api/permissions/${id}/toggle`, { isEnabled });
   }
 
   branches(): Observable<Branch[]> {
@@ -169,6 +212,22 @@ export class AdminApi {
 
   auditOptions(): Observable<AuditOptions> {
     return this.http.get<AuditOptions>('/api/audit-logs/options');
+  }
+
+  hardwareKeys(): Observable<HardwareKey[]> {
+    return this.http.get<HardwareKey[]>('/api/hardware-keys');
+  }
+
+  createHardwareKey(userId: number, serial: string): Observable<HardwareKeyResult> {
+    return this.http.post<HardwareKeyResult>('/api/hardware-keys', { userId, serial });
+  }
+
+  setHardwareKeyEnabled(id: number, enabled: boolean): Observable<void> {
+    return this.http.put<void>(`/api/hardware-keys/${id}/enabled`, { enabled });
+  }
+
+  revokeHardwareKey(id: number): Observable<void> {
+    return this.http.delete<void>(`/api/hardware-keys/${id}`);
   }
 }
 

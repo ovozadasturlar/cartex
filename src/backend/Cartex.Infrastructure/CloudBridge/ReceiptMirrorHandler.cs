@@ -22,9 +22,27 @@ public sealed class ReceiptMirrorHandler(ISender sender, IReceiptPdfRenderer pdf
             return;
 
         var s = await sender.Send(new GetReceiptSettingsQuery(), cancellationToken);
-        var opts = new ReceiptSettings { HeaderText = s.HeaderText, FooterText = s.FooterText, PaperWidth = s.PaperWidth };
+        var opts = new ReceiptSettings
+        {
+            HeaderText = s.HeaderText,
+            FooterText = s.FooterText,
+            PaperWidth = Cartex.Shared.Models.Printing.ReceiptPaper.Sanitize(s.PaperWidth),
+            PaperFormat = s.PaperFormat,
+            ShowBusinessName = s.ShowBusinessName,
+            ShowBranchName = s.ShowBranchName,
+            ShowAddress = s.ShowAddress,
+            ShowPhone = s.ShowPhone,
+            ShowCashier = s.ShowCashier,
+            ShowCustomer = s.ShowCustomer,
+            ShowReceiptNumber = s.ShowReceiptNumber,
+            ShowPaymentDetails = s.ShowPaymentDetails,
+            ShowQrCode = s.ShowQrCode,
+            ShowElectronicLink = s.ShowElectronicLink,
+            PublicReceiptBaseUrl = s.PublicReceiptBaseUrl,
+            Language = s.Language
+        };
         var html = ReceiptHtmlRenderer.Render(receipt, opts);
-        var pdf = opts?.PaperFormat switch
+        var pdf = opts.PaperFormat switch
         {
             "A4" => pdfRenderer.RenderDocument(receipt, opts, a4: true),
             "Thermal" => pdfRenderer.Render(receipt, opts),

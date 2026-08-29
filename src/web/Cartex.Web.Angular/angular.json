@@ -32,6 +32,10 @@
             ],
             "styles": [
               "src/styles.scss"
+            ],
+            "allowedCommonJsDependencies": [
+              "qrcode",
+              "jsbarcode"
             ]
           },
           "configurations": {
@@ -44,8 +48,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "8kB",
-                  "maximumError": "16kB"
+                  "maximumWarning": "16kB",
+                  "maximumError": "24kB"
                 }
               ],
               "outputHashing": "all"

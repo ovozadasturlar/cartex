@@ -22,8 +22,16 @@ public partial class OrdersViewModel : ViewModelBase, ILoadable
         _navigation = navigation;
         _toast = toast;
         _busy = busy;
+        // RUXSAT-02: bu sahifa `sales.view` bilan ochiladi, lekin holatni o'zgartirish va savatni
+        // kassaga olib o'tish boshqa ruxsatlarni talab qiladi — tugmalar shu sababli alohida
+        // tekshiriladi, aks holda ko'rish huquqi bor xodim bosib "ruxsat yo'q" javobini olardi.
+        CanManageOrders = auth.HasPermission("sales.pick|sales.create");
+        CanTakeToPos = auth.HasPermission("sales.create|sales.checkout");
         auth.LoggedOut += ResetState;
     }
+
+    public bool CanManageOrders { get; }
+    public bool CanTakeToPos { get; }
 
     public ObservableCollection<CartListDto> Carts { get; } = [];
 
@@ -35,8 +43,7 @@ public partial class OrdersViewModel : ViewModelBase, ILoadable
     private void ResetState()
     {
         Carts.Clear();
-        _statusFilter = "Open";
-        OnPropertyChanged(nameof(StatusFilter));
+        StatusFilter = "Open";
         OnPropertyChanged(nameof(IsEmpty));
     }
 

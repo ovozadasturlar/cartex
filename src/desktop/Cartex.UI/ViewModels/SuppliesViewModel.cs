@@ -2,15 +2,13 @@ using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using System.IO;
-using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
 using Cartex.ApiClient.Querying;
 using Cartex.ApiClient.Paging;
 using Refit;
-using Cartex.Shared.Models.Barcodes;
+using Cartex.Shared.Models.Catalog;
 using Cartex.Shared.Models.Products;
 using Cartex.Shared.Models.Suppliers;
 using Cartex.Shared.Models.Supplies;
@@ -92,35 +90,34 @@ public sealed record SupplyEntryOption(string Display, string ShortName, long? U
     public bool IsPack => PackId is not null;
 }
 
-public sealed record BarcodeChip(string Code, decimal PackQty, string Label)
-{
-    public bool IsPack => PackQty > 1;
-}
-
 public partial class SuppliesViewModel : ViewModelBase, ILoadable
 {
     private readonly ISuppliesApi _api;
     private readonly ISuppliersApi _suppliersApi;
     private readonly IWarehousesApi _warehousesApi;
     private readonly IProductsApi _productsApi;
+    private readonly ICatalogApi _catalogApi;
     private readonly IUnitsApi _unitsApi;
     private readonly IBarcodesApi _barcodesApi;
     private readonly IStorageApi _storageApi;
     private readonly IBarcodeLabelService _labels;
     private readonly IPrinterService _printer;
+    private readonly PrintDispatchService _printDispatch;
     private readonly IToastService _toast;
     private readonly IBusyService _busy;
     private readonly IExportService _export;
     private readonly AuthService _auth;
     private readonly IDialogService _dialog;
+    private readonly IFilePickerService _filePicker;
 
     public QuickProductViewModel QuickProduct { get; }
+    public ScanIndicator ScanIndicator { get; } = new();
 
     public ObservableCollection<SupplyDto> Supplies { get; } = [];
     public ObservableCollection<IdOption> SupplierOptions { get; } = [];
     public ObservableCollection<IdOption> SupplierChoices { get; } = [];
     public ObservableCollection<IdOption> WarehouseOptions { get; } = [];
-    public ObservableCollection<IdOption> ProductOptions { get; } = [];
+    [ObservableProperty] private IReadOnlyList<IdOption> _productOptions = [];
     public ObservableCollection<SupplyEntryOption> EntryOptions { get; } = [];
 
     private readonly List<UnitDto> _allUnits = [];
@@ -130,6 +127,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     private readonly Dictionary<long, decimal> _lastPurchasePrices = [];
     private readonly Dictionary<long, List<ProductPackDto>> _variantPacks = [];
     private readonly Dictionary<long, string?> _variantImages = [];
+    private Task? _entryCatalogTask;
     public ObservableCollection<SupplyLine> Items { get; } = [];
 
     [ObservableProperty] private bool _isEditOpen;
@@ -147,13 +145,18 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     private ISettingsApi _settingsApi = null!;
     private ReferenceCache _cache = null!;
 
+    private static bool IsOfflineMode =>
+        ServiceLocator.Resolve<OfflineSyncService>().ShouldUseOffline;
+
+    private static OfflineStore Offline => ServiceLocator.Resolve<OfflineStore>();
+
     private async Task EnsureCurrenciesAsync()
     {
         try
         {
             var business = await _cache.GetAsync(CacheKeys.Business, _businessApi.GetAsync);
             _baseCurrency = business.Currency;
-            IsMulticurrency = business.Multicurrency;
+            IsMulticurrency = business.PricingMulticurrency;
             var selected = SupplyCurrency;
             Currencies.Clear();
             Currencies.Add(_baseCurrency);
@@ -395,6 +398,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private IdOption? _lineProduct;
     [ObservableProperty] private string _lineProductText = "";
     [ObservableProperty] private SupplyEntryOption? _lineEntry;
+    private bool _addQuickProductAsLine;
 
     public event Action? FocusProductRequested;
 
@@ -410,10 +414,9 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
             return;
         }
 
-        if (await _dialog.ConfirmAsync(string.Format(L["product_create_confirm"], name), L["add_product"]))
+        if (!IsOfflineMode && await _dialog.ConfirmAsync(string.Format(L["product_create_confirm"], name), L["add_product"]))
         {
-            await QuickProduct.OpenCommand.ExecuteAsync(null);
-            QuickProduct.Name = name;
+            await OpenQuickProductAsync(name, null, null, false);
             return;
         }
 
@@ -500,8 +503,71 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     {
         EntryOptions.Clear();
         if (product?.Id is not { } id) { LineEntry = null; return; }
-        foreach (var option in BuildEntryOptions(id)) EntryOptions.Add(option);
+        var options = BuildEntryOptions(id);
+        foreach (var option in IsOfflineMode ? options.Where(o => o.PackId is null && o.Ratio == 1) : options)
+            EntryOptions.Add(option);
         LineEntry = EntryOptions.FirstOrDefault();
+    }
+
+    private Task EnsureEntryCatalogAsync() => _entryCatalogTask ??= LoadEntryCatalogAsync();
+
+    private async Task LoadEntryCatalogAsync()
+    {
+        try
+        {
+            if (IsOfflineMode)
+            {
+                var cached = await Offline.SearchProductsAsync(null, int.MaxValue);
+                _variantDimensions.Clear();
+                _variantStockUnits.Clear();
+                _variantPacks.Clear();
+                _variantImages.Clear();
+                var offlineOptions = new List<IdOption>(cached.Count);
+                foreach (var product in cached)
+                {
+                    offlineOptions.Add(new IdOption(product.VariantId, product.ProductName));
+                    _variantStockUnits[product.VariantId] = (0, product.UnitName);
+                }
+                ProductOptions = offlineOptions;
+                _allUnits.Clear();
+                RebuildEntryOptions(LineProduct);
+                return;
+            }
+
+            var productsTask = _cache.GetAsync(CacheKeys.ProductLookup, _productsApi.GetLookupAsync);
+            var unitsTask = _cache.GetAsync(CacheKeys.Units, () => _unitsApi.GetAllAsync());
+            var products = await productsTask;
+            var options = new List<IdOption>(products.Count);
+
+            _variantDimensions.Clear();
+            _variantStockUnits.Clear();
+            _variantPacks.Clear();
+            _variantImages.Clear();
+            foreach (var product in products)
+            {
+                options.Add(new IdOption(product.DefaultVariantId, product.Name));
+                if (product.Dimension is { } dimension) _variantDimensions[product.DefaultVariantId] = dimension;
+                if (product.UnitId is { } unitId) _variantStockUnits[product.DefaultVariantId] = (unitId, product.UnitShortName ?? "");
+                if (product.Packs is { Count: > 0 } packs)
+                    _variantPacks[product.DefaultVariantId] = [.. packs.Where(pack => pack.Kind is "Purchase" or "Both")];
+                _variantImages[product.DefaultVariantId] = product.ImageKey;
+            }
+
+            ProductOptions = options;
+            _allUnits.Clear();
+            _allUnits.AddRange(await unitsTask);
+            RebuildEntryOptions(LineProduct);
+        }
+        finally
+        {
+            _entryCatalogTask = null;
+        }
+    }
+
+    private void AddProductOption(IdOption option)
+    {
+        if (ProductOptions.Any(item => item.Id == option.Id)) return;
+        ProductOptions = [.. ProductOptions, option];
     }
 
     private SupplyEntryOption? EntryFor(long variantId, long? unitId, long? packId)
@@ -518,6 +584,13 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     {
         if (product?.Id is not { } variantId || SelectedWarehouse?.Id is not { } warehouseId) return;
         if (IsMulticurrency && SupplyCurrency != _baseCurrency) return;
+        if (IsOfflineMode)
+        {
+            if (await Offline.GetProductAsync(variantId) is { } cached
+                && LineProduct?.Id == variantId && LineSellingPrice == 0)
+                LineSellingPrice = cached.SellingPrice;
+            return;
+        }
         var priceSnapshot = LinePrice;
         var sellingSnapshot = LineSellingPrice;
         var entrySnapshot = LineEntry;
@@ -550,7 +623,8 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     }
 
     public PaginationState Paging { get; } = new();
-    [ObservableProperty] private SuppliesTotalsDto? _totals;
+    [ObservableProperty] private SuppliesTotalsDto _totals = new(0, 0);
+    public decimal SuppliesTotalAmount => Totals?.TotalAmount ?? 0;
 
     [ObservableProperty] private DateTimeOffset _dateFrom = DateTimeOffset.Now.AddDays(-30);
     [ObservableProperty] private DateTimeOffset _dateTo = DateTimeOffset.Now;
@@ -559,12 +633,41 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private bool _isDetailOpen;
     [ObservableProperty] private SupplyDetailDto? _detail;
     public ObservableCollection<SupplyItemDto> DetailItems { get; } = [];
-    public bool CanVoid => _auth.HasPermission("supplies.manage");
-    public bool CanPay => _auth.HasPermission("suppliers.manage");
+    public bool CanVoid => _auth.HasPermission("supplies.void");
+    public bool CanPay => _auth.HasPermission("suppliers.pay");
     public bool CanEdit => _auth.HasPermission("supplies.edit");
     public bool DetailCanPay => CanPay && Detail?.SupplierId is not null;
+    public string DetailSupplyDate => Detail?.SupplyDate.ToString("dd.MM.yyyy") ?? string.Empty;
+    public string DetailSupplierName => Detail?.SupplierName ?? "—";
+    public string DetailWarehouseName => Detail?.WarehouseName ?? string.Empty;
+    public string DetailUserName => Detail?.UserName ?? string.Empty;
+    public decimal DetailPaidCash => Detail?.PaidCash ?? 0;
+    public decimal DetailPaidCard => Detail?.PaidCard ?? 0;
+    public decimal DetailPaidTransfer => Detail?.PaidTransfer ?? 0;
+    public decimal DetailPaidBank => Detail?.PaidBank ?? 0;
+    public bool HasDetailPaidTransfer => DetailPaidTransfer > 0;
+    public bool HasDetailPaidBank => DetailPaidBank > 0;
+    public decimal DetailTotalAmount => Detail?.TotalAmount ?? 0;
+    public string DetailCurrency => Detail?.Currency ?? string.Empty;
 
-    partial void OnDetailChanged(SupplyDetailDto? value) => OnPropertyChanged(nameof(DetailCanPay));
+    partial void OnTotalsChanged(SuppliesTotalsDto value) => OnPropertyChanged(nameof(SuppliesTotalAmount));
+
+    partial void OnDetailChanged(SupplyDetailDto? value)
+    {
+        OnPropertyChanged(nameof(DetailCanPay));
+        OnPropertyChanged(nameof(DetailSupplyDate));
+        OnPropertyChanged(nameof(DetailSupplierName));
+        OnPropertyChanged(nameof(DetailWarehouseName));
+        OnPropertyChanged(nameof(DetailUserName));
+        OnPropertyChanged(nameof(DetailPaidCash));
+        OnPropertyChanged(nameof(DetailPaidCard));
+        OnPropertyChanged(nameof(DetailPaidTransfer));
+        OnPropertyChanged(nameof(DetailPaidBank));
+        OnPropertyChanged(nameof(HasDetailPaidTransfer));
+        OnPropertyChanged(nameof(HasDetailPaidBank));
+        OnPropertyChanged(nameof(DetailTotalAmount));
+        OnPropertyChanged(nameof(DetailCurrency));
+    }
 
     private long? _editingSupplyId;
     public string EditorTitle => _editingSupplyId is null ? L["supply_new"] : L["supply_edit"];
@@ -572,11 +675,18 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     public bool IsModalOpen => IsDetailOpen || IsPrintOpen || IsPaymentOpen || QuickProduct.IsOpen;
 
     partial void OnIsDetailOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
-    partial void OnIsPrintOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
+    private void OnBarcodePrintChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(BarcodeLabelSession.IsOpen)) return;
+        OnPropertyChanged(nameof(IsPrintOpen));
+        OnPropertyChanged(nameof(IsModalOpen));
+    }
     partial void OnIsPaymentOpenChanged(bool value) => OnPropertyChanged(nameof(IsModalOpen));
 
     public bool IsEmpty => Supplies.Count == 0;
     public bool CanExport => _auth.HasPermission("reports.export");
+    public bool CanCreate => _auth.HasPermission("supplies.create");
+    public bool CanImport => _auth.HasPermission("supplies.import");
     public decimal EditTotal => Items.Sum(i => i.LineTotal);
     public bool HasItems => Items.Count > 0;
 
@@ -605,10 +715,12 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         OnPropertyChanged(nameof(HasItems));
     }
 
-    public SuppliesViewModel(ISuppliesApi api, ISuppliersApi suppliersApi, IWarehousesApi warehousesApi, IProductsApi productsApi,
+    public SuppliesViewModel(ISuppliesApi api, ISuppliersApi suppliersApi, IWarehousesApi warehousesApi, IProductsApi productsApi, ICatalogApi catalogApi,
         IUnitsApi unitsApi, IBarcodesApi barcodesApi, IStorageApi storageApi, IBarcodeLabelService labels, IPrinterService printer, QuickProductViewModel quickProduct, IToastService toast, IBusyService busy,
-        IExportService export, AuthService auth, IBusinessApi businessApi, IRatesApi ratesApi, ISettingsApi settingsApi, ReferenceCache cache, IDialogService dialog)
+        IExportService export, AuthService auth, IBusinessApi businessApi, IRatesApi ratesApi, ISettingsApi settingsApi, ReferenceCache cache, IDialogService dialog, PrintDispatchService printDispatch,
+        IFilePickerService filePicker)
     {
+        _filePicker = filePicker;
         _dialog = dialog;
         _cache = cache;
         _businessApi = businessApi;
@@ -618,13 +730,18 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         _suppliersApi = suppliersApi;
         _warehousesApi = warehousesApi;
         _productsApi = productsApi;
+        _catalogApi = catalogApi;
         _unitsApi = unitsApi;
         _barcodesApi = barcodesApi;
         _storageApi = storageApi;
         _labels = labels;
         _printer = printer;
+        _printDispatch = printDispatch;
+        BarcodePrint = new BarcodeLabelSession(barcodesApi, ratesApi, settingsApi, labels, printer, printDispatch, toast);
+        BarcodePrint.PropertyChanged += OnBarcodePrintChanged;
         QuickProduct = quickProduct;
         QuickProduct.Created += OnQuickProductCreated;
+        QuickProduct.ExistingSelected += OnQuickProductExistingSelected;
         QuickProduct.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(QuickProductViewModel.IsOpen)) OnPropertyChanged(nameof(IsModalOpen)); };
         _toast = toast;
         _busy = busy;
@@ -646,13 +763,23 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         IsEditOpen = false;
         IsPaymentOpen = false;
         IsDetailOpen = false;
-        IsPrintOpen = false;
+        BarcodePrint.CancelCommand.Execute(null);
         SelectedSupplier = null;
         SelectedWarehouse = null;
     }
 
+    public override void OnNavigatedFrom()
+    {
+        IsEditOpen = false;
+        IsPaymentOpen = false;
+        IsDetailOpen = false;
+        BarcodePrint.CancelCommand.Execute(null);
+        QuickProduct.IsOpen = false;
+    }
+
     private async Task LoadSuppliesAsync()
     {
+        if (IsOfflineMode) { OnPropertyChanged(nameof(IsEmpty)); return; }
         try
         {
             var from = new DateTimeOffset(DateFrom.Date).UtcDateTime;
@@ -681,6 +808,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task Export(string format)
     {
+        if (IsOfflineMode) { _toast.Warning(L["offline_pos_limited"]); return; }
         try
         {
             var from = new DateTimeOffset(DateFrom.Date).UtcDateTime;
@@ -702,6 +830,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     private async Task OpenDetail(SupplyDto supply)
     {
         if (supply is null) return;
+        if (IsOfflineMode) { _toast.Warning(L["offline_pos_limited"]); return; }
         try
         {
             using (_busy.Begin(L["loading"]))
@@ -742,6 +871,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     private async Task OpenPaymentAsync()
     {
         if (Detail?.SupplierId is not { } supplierId || !DetailCanPay) return;
+        if (IsOfflineMode) { _toast.Warning(L["offline_pos_limited"]); return; }
         var remains = Detail.TotalAmount - Detail.PaidCash - Detail.PaidCard - Detail.PaidTransfer - Detail.PaidBank;
         IsDetailOpen = false;
         await OpenPaymentModalAsync(supplierId, Detail.Id,
@@ -752,8 +882,9 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     private async Task OpenEditAsync()
     {
         if (Detail is null || !CanEdit) return;
+        if (IsOfflineMode) { _toast.Warning(L["offline_pos_limited"]); return; }
         if (Items.Count > 0 && !await _dialog.ConfirmAsync(L["supply_edit_discard"], L["supply_edit"])) return;
-        await EnsureCurrenciesAsync();
+        await Task.WhenAll(EnsureCurrenciesAsync(), EnsureEntryCatalogAsync());
 
         _editingSupplyId = Detail.Id;
         SelectedSupplier = Detail.SupplierId is { } sid
@@ -796,6 +927,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     private async Task VoidSupplyAsync()
     {
         if (Detail is null) return;
+        if (IsOfflineMode) { _toast.Warning(L["offline_pos_limited"]); return; }
         if (!await _dialog.ConfirmDangerAsync(L["supply_void_confirm"], L["supply_void"])) return;
         try
         {
@@ -808,52 +940,21 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
 
-    [ObservableProperty] private bool _isPrintOpen;
-    [ObservableProperty] private string _printProductName = string.Empty;
-    [ObservableProperty] private string _printUnitName = string.Empty;
-    [ObservableProperty] private string? _printCode;
-    [ObservableProperty] private int _printQuantity = 1;
-    [ObservableProperty] private Bitmap? _printPreview;
-    [ObservableProperty] private string? _printImageUrl;
-
-    [ObservableProperty] private BarcodeChip? _selectedPrintBarcode;
-
-    public ObservableCollection<BarcodeChip> PrintBarcodes { get; } = [];
-    public bool HasManyBarcodes => PrintBarcodes.Count > 1;
-
-    private long _printVariantId;
+    public BarcodeLabelSession BarcodePrint { get; }
+    public bool IsPrintOpen => BarcodePrint.IsOpen;
 
     [RelayCommand]
     private async Task OpenPrintBarcode(SupplyLine line)
     {
-        PrintBarcodes.Clear();
-        SelectedPrintBarcode = null;
-        PrintImageUrl = null;
-        PrintPreview = null;
-        PrintCode = null;
-        PrintProductName = line.ProductName;
-        PrintUnitName = string.IsNullOrEmpty(line.StockingUnitName) ? line.UnitName : line.StockingUnitName;
-        PrintQuantity = 1;
-        _printVariantId = line.VariantId;
-        IsPrintOpen = true;
+        await BarcodePrint.OpenAsync(new BarcodeLabelTarget(
+            line.VariantId,
+            line.ProductName,
+            string.IsNullOrEmpty(line.StockingUnitName) ? line.UnitName : line.StockingUnitName,
+            null,
+            null,
+            line.SellingPrice,
+            SupplyCurrency ?? _baseCurrency));
         _ = SetPrintImageUrlAsync(line.VariantId, line.ImageKey);
-        try
-        {
-            var codes = await _barcodesApi.GetByVariantAsync(line.VariantId);
-            if (codes.Count == 0)
-            {
-                var generated = await _barcodesApi.GenerateAsync(line.VariantId);
-                codes = [new BarcodeDto(0, generated, 1)];
-            }
-
-            foreach (var b in codes.OrderBy(b => b.PackQty))
-                PrintBarcodes.Add(new BarcodeChip(b.Code, b.PackQty,
-                    b.PackQty > 1 ? $"×{b.PackQty:0.###}" : L["unit_piece"]));
-
-            SelectedPrintBarcode = PrintBarcodes[0];
-        }
-        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
-        finally { OnPropertyChanged(nameof(HasManyBarcodes)); }
     }
 
     private static readonly ConcurrentDictionary<string, string> _imageUrlCache = new();
@@ -869,52 +970,12 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
                 if (string.IsNullOrEmpty(url)) return;
                 _imageUrlCache[key] = url;
             }
-            if (_printVariantId == variantId) PrintImageUrl = url;
+            BarcodePrint.SetImageUrl(variantId, url);
         }
         catch { }
     }
 
-    partial void OnSelectedPrintBarcodeChanged(BarcodeChip? value)
-    {
-        PrintCode = value?.Code;
-        if (value is null) { PrintPreview = null; return; }
-        try
-        {
-            using var stream = new MemoryStream(_labels.RenderPng(value.Code));
-            PrintPreview = new Bitmap(stream);
-        }
-        catch { PrintPreview = null; }
-    }
-
-    public event Action? FocusPrintQuantityRequested;
-
-    [RelayCommand]
-    private void FocusPrintQuantity() => FocusPrintQuantityRequested?.Invoke();
-
-    [RelayCommand]
-    private void PrintQtyDec() => PrintQuantity = Math.Max(1, PrintQuantity - 1);
-
-    [RelayCommand]
-    private void PrintQtyInc() => PrintQuantity++;
-
-    [RelayCommand]
-    private void CancelPrint() => IsPrintOpen = false;
-
-    [RelayCommand]
-    private void DoPrintBarcode()
-    {
-        if (string.IsNullOrWhiteSpace(PrintCode) || PrintQuantity < 1) return;
-        try
-        {
-            var name = SelectedPrintBarcode is { IsPack: true } chip ? $"{PrintProductName} {chip.Label}" : PrintProductName;
-            _labels.PrintLabels(PrintCode, name, PrintQuantity, null);
-            IsPrintOpen = false;
-            _toast.Success(L["success"]);
-        }
-        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
-    }
-
-    private async void OnQuickProductCreated(long variantId, string name)
+    private async Task OnQuickProductCreated(long variantId, string name)
     {
         if (QuickProduct.SelectedUnit is { } su)
         {
@@ -922,18 +983,48 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
             _variantStockUnits[variantId] = (su.Id, su.ShortName);
         }
         var option = new IdOption(variantId, name);
-        ProductOptions.Add(option);
+        AddProductOption(option);
         LineProduct = option;
+
+        if (_addQuickProductAsLine)
+        {
+            _addQuickProductAsLine = false;
+            if (SelectedWarehouse?.Id is not { } warehouseId) { _toast.Warning(L["select_warehouse"]); return; }
+            var entry = LineEntry is { Ratio: 1, PackId: null } ? null : LineEntry;
+            await AddOrMergeAsync(variantId, name, LineQuantity, warehouseId,
+                entry, PricePerStockingUnit, LinePrice, LineSellingPrice > 0 ? LineSellingPrice : null,
+                LineExpiry is { } expiry ? DateOnly.FromDateTime(expiry.Date) : null);
+            ResetLine();
+        }
 
         if (!string.IsNullOrWhiteSpace(QuickProduct.Barcode)) return;
         try
         {
             var code = await _barcodesApi.GenerateAsync(variantId);
             _toast.Success($"{L["barcode"]}: {code}");
-            if (!string.IsNullOrWhiteSpace(_printer.BarcodePrinter))
-                _labels.PrintLabels(code, name, 1, _printer.BarcodePrinter);
+            await _printDispatch.PrintBarcodeAsync(code, name, 1, null, null, false, false);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    private async Task OpenQuickProductAsync(string? name, string? barcode, decimal? sellingPrice, bool addAsLine,
+        CatalogProductDto? reference = null)
+    {
+        _addQuickProductAsLine = addAsLine;
+        await QuickProduct.OpenCommand.ExecuteAsync(null);
+        QuickProduct.LookupWarehouseId = SelectedWarehouse?.Id ?? 0;
+        QuickProduct.Name = name ?? string.Empty;
+        QuickProduct.Barcode = barcode ?? string.Empty;
+        QuickProduct.SellingPrice = sellingPrice;
+        if (reference is not null) QuickProduct.ApplyReference(reference);
+    }
+
+    private async Task OnQuickProductExistingSelected(ProductLookupDto product)
+    {
+        if (SelectedWarehouse?.Id is not { } warehouseId) return;
+        AddProductOption(new IdOption(product.VariantId, product.ProductName));
+        await AddOrMergeAsync(product.VariantId, product.ProductName, product.PackQty > 1 ? product.PackQty : 1,
+            warehouseId, entry: null);
     }
 
     private void RaisePermissions()
@@ -943,11 +1034,26 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         OnPropertyChanged(nameof(CanEdit));
         OnPropertyChanged(nameof(DetailCanPay));
         OnPropertyChanged(nameof(CanExport));
+        OnPropertyChanged(nameof(CanCreate));
+        OnPropertyChanged(nameof(CanImport));
     }
 
     public async Task LoadAsync()
     {
         RaisePermissions();
+        if (IsOfflineMode)
+        {
+            SupplierOptions.Clear();
+            SupplierChoices.Clear();
+            if (!_supplierRequired) SupplierChoices.Add(new IdOption(null, L["none"]));
+            foreach (var s in await Offline.GetSuppliersAsync())
+            {
+                SupplierOptions.Add(new IdOption(s.Id, s.Name));
+                SupplierChoices.Add(new IdOption(s.Id, s.Name));
+            }
+            OnPropertyChanged(nameof(IsEmpty));
+            return;
+        }
         try
         {
             using (_busy.Begin(L["loading"]))
@@ -957,9 +1063,6 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
                 var policyTask = _cache.GetAsync(CacheKeys.SalesPolicy, _settingsApi.GetSalesPolicyAsync);
                 var suppliersTask = _cache.GetAsync(CacheKeys.Suppliers, () => _suppliersApi.GetAllAsync());
                 var warehousesTask = _cache.GetAsync(CacheKeys.Warehouses, () => _warehousesApi.GetAllAsync());
-                var productsTask = _cache.GetAsync(CacheKeys.ProductLookup, _productsApi.GetLookupAsync);
-                var unitsTask = _cache.GetAsync(CacheKeys.Units, () => _unitsApi.GetAllAsync());
-
                 try { _supplierRequired = (await policyTask).RequireSupplier; }
                 catch { }
 
@@ -981,27 +1084,6 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
                 WarehouseOptions.Clear();
                 foreach (var w in warehouses) WarehouseOptions.Add(new IdOption(w.Id, w.Name));
 
-                var products = await productsTask;
-                ProductOptions.Clear();
-                _variantDimensions.Clear();
-                _variantStockUnits.Clear();
-                _variantPacks.Clear();
-                _variantImages.Clear();
-                foreach (var p in products)
-                {
-                    ProductOptions.Add(new IdOption(p.DefaultVariantId, p.Name));
-                    if (p.Dimension is { } dim) _variantDimensions[p.DefaultVariantId] = dim;
-                    if (p.UnitId is { } unitId) _variantStockUnits[p.DefaultVariantId] = (unitId, p.UnitShortName ?? "");
-                    if (p.Packs is { Count: > 0 } packs)
-                        _variantPacks[p.DefaultVariantId] = [.. packs.Where(pk => pk.Kind is "Purchase" or "Both")];
-                    _variantImages[p.DefaultVariantId] = p.ImageKey;
-                }
-
-                var units = await unitsTask;
-                _allUnits.Clear();
-                _allUnits.AddRange(units);
-                RebuildEntryOptions(LineProduct);
-
                 await currenciesTask;
                 await suppliesTask;
             }
@@ -1010,11 +1092,12 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     }
 
     [RelayCommand]
-    private void OpenCreate()
+    private async Task OpenCreateAsync()
     {
+        if (!CanCreate) return;
+        await Task.WhenAll(EnsureCurrenciesAsync(), EnsureEntryCatalogAsync());
         _editingSupplyId = null;
         OnPropertyChanged(nameof(EditorTitle));
-        _ = EnsureCurrenciesAsync();
         if (Items.Count == 0)
         {
             SelectedSupplier ??= SupplierChoices.FirstOrDefault();
@@ -1022,6 +1105,21 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
             SupplyDate = DateTime.Now;
             SupplyCurrency ??= _baseCurrency;
             ResetLine();
+        }
+
+        if (IsOfflineMode)
+        {
+            SupplyCurrency = _baseCurrency;
+            if (ServiceLocator.Resolve<OfflineSyncService>().Credential?.WarehouseId is { } leaseWarehouseId)
+            {
+                var lease = WarehouseOptions.FirstOrDefault(o => o.Id == leaseWarehouseId);
+                if (lease is null)
+                {
+                    lease = new IdOption(leaseWarehouseId, L["warehouse"]);
+                    WarehouseOptions.Add(lease);
+                }
+                SelectedWarehouse = lease;
+            }
         }
 
         IsEditOpen = true;
@@ -1049,22 +1147,55 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         LineBarcode = "";
         if (SelectedWarehouse?.Id is not { } warehouseId) { _toast.Warning(L["select_warehouse"]); return; }
 
+        if (IsOfflineMode)
+        {
+            var cachedBarcode = await Offline.GetBarcodeAsync(code);
+            if (cachedBarcode is not null && await Offline.GetProductAsync(cachedBarcode.VariantId) is { } cachedProduct)
+            {
+                AddProductOption(new IdOption(cachedProduct.VariantId, cachedProduct.ProductName));
+                var cachedQty = cachedBarcode.PackQty > 1 ? cachedBarcode.PackQty : 1;
+                await AddOrMergeAsync(cachedProduct.VariantId, cachedProduct.ProductName, cachedQty, warehouseId, entry: null);
+                return;
+            }
+            _toast.Warning(L["barcode_not_found"]);
+            return;
+        }
+
         try
         {
             var found = await _productsApi.GetByBarcodeAsync(code, warehouseId);
             _variantDimensions[found.VariantId] = found.Dimension;
-            if (!ProductOptions.Any(o => o.Id == found.VariantId))
-                ProductOptions.Add(new IdOption(found.VariantId, found.ProductName));
+            AddProductOption(new IdOption(found.VariantId, found.ProductName));
 
             var scanned = found.PackQty > 1 ? found.PackQty : 1;
             await AddOrMergeAsync(found.VariantId, found.ProductName, scanned, warehouseId, entry: null);
         }
         catch (ApiException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
-            await QuickProduct.OpenCommand.ExecuteAsync(null);
-            QuickProduct.Barcode = code;
+            await ReceiveFromCatalogAsync(code, warehouseId);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    private async Task ReceiveFromCatalogAsync(string code, long warehouseId)
+    {
+        CatalogProductDto? reference;
+        try { reference = await ScanIndicator.TrackAsync(_catalogApi.GetByBarcodeAsync(code)); }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); return; }
+
+        if (reference is null)
+        {
+            _toast.Warning(L["barcode_not_found"]);
+            await OpenQuickProductAsync(null, code, null, false);
+            return;
+        }
+
+        var variantId = await QuickProduct.CreateFromReferenceAsync(reference, warehouseId);
+        if (variantId == 0) return;
+
+        await AddOrMergeAsync(variantId, reference.Name, reference.PackQty is > 1 ? reference.PackQty.Value : 1,
+            warehouseId, entry: null);
+        ResetLine();
     }
 
     private async Task AddOrMergeAsync(long variantId, string productName, decimal quantity, long warehouseId,
@@ -1085,9 +1216,9 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
             return;
         }
 
-        var stockingUnit = _variantStockUnits.TryGetValue(variantId, out var s)
-            ? _allUnits.FirstOrDefault(u => u.Id == s.Id)
-            : null;
+        var stockingName = _variantStockUnits.TryGetValue(variantId, out var s)
+            ? _allUnits.FirstOrDefault(u => u.Id == s.Id)?.ShortName ?? s.ShortName
+            : "";
 
         var line = new SupplyLine
         {
@@ -1097,8 +1228,8 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
             Quantity = quantity,
             UnitId = unitId,
             PackId = packId,
-            UnitName = entry?.ShortName ?? stockingUnit?.ShortName ?? "",
-            StockingUnitName = stockingUnit?.ShortName ?? "",
+            UnitName = entry?.ShortName ?? stockingName,
+            StockingUnitName = stockingName,
             Ratio = entry?.Ratio is { } r && r > 0 ? r : 1,
             PricePerStockingUnit = pricePerStockingUnit,
             PurchasePrice = purchasePrice ?? 0,
@@ -1108,6 +1239,13 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         Items.Add(line);
 
         if (purchasePrice is not null) return;
+
+        if (IsOfflineMode)
+        {
+            if (line.SellingPrice is null or 0 && await Offline.GetProductAsync(variantId) is { SellingPrice: > 0 } cached)
+                line.SellingPrice = cached.SellingPrice;
+            return;
+        }
 
         try
         {
@@ -1121,10 +1259,27 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task AddLineAsync()
     {
-        if (LineProduct?.Id is not { } variantId) { _toast.Warning(L["err_select_product"]); return; }
+        var name = LineProductText.Trim();
+        var barcode = LineBarcode.Trim();
+        if (LineProduct is null && name.Length == 0 && barcode.Length == 0)
+        {
+            _toast.Warning(L["err_select_product"]);
+            return;
+        }
         if (LineQuantity <= 0) { _toast.Warning(L["err_qty_positive"]); return; }
         if (LinePrice < 0) { _toast.Warning(L["err_price_negative"]); return; }
         if (SelectedWarehouse?.Id is not { } warehouseId) { _toast.Warning(L["select_warehouse"]); return; }
+        if (LineProduct?.Id is not { } variantId)
+        {
+            if (IsOfflineMode)
+            {
+                _toast.Warning(L["err_select_product"]);
+                return;
+            }
+
+            await OpenQuickProductAsync(name, barcode, LineSellingPrice > 0 ? LineSellingPrice : null, true);
+            return;
+        }
         if (!await ConfirmPriceAsync(variantId)) return;
 
         var entry = LineEntry is { Ratio: 1, PackId: null } ? null : LineEntry;
@@ -1151,6 +1306,64 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     }
 
     [RelayCommand]
+    private async Task ImportExcelAsync()
+    {
+        if (!CanImport) return;
+        if (IsOfflineMode) { _toast.Warning(L["offline_pos_limited"]); return; }
+        try
+        {
+            var picked = await _filePicker.PickSpreadsheetAsync();
+            if (picked is null) return;
+
+            SupplyImportPreviewDto preview;
+            using (_busy.Begin(L["loading"]))
+            await using (picked.Content)
+            {
+                preview = await _api.PreviewImportAsync(new StreamPart(picked.Content, picked.FileName,
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+            }
+
+            await OpenCreateAsync();
+            if (SelectedWarehouse?.Id is not { } warehouseId) { _toast.Warning(L["select_warehouse"]); return; }
+
+            var added = 0;
+            foreach (var row in preview.Rows.Where(r => r.VariantId is not null))
+            {
+                await AddOrMergeAsync(row.VariantId!.Value, row.Name ?? "", row.Quantity, warehouseId, entry: null,
+                    purchasePrice: row.PurchasePrice is > 0 ? row.PurchasePrice : null,
+                    sellingPrice: row.SellingPrice is > 0 ? row.SellingPrice : null,
+                    expiredAt: row.ExpiredAt);
+                added++;
+            }
+
+            if (added > 0) _toast.Success(string.Format(L["supply_import_added_fmt"], added));
+            var unmatched = preview.Rows.Where(r => r.VariantId is null).ToList();
+            if (unmatched.Count > 0)
+                _toast.Warning(string.Format(L["supply_import_unmatched_fmt"], unmatched.Count,
+                    string.Join(", ", unmatched.Take(3).Select(r => r.Name ?? r.Barcode ?? $"#{r.Row}"))));
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    [RelayCommand]
+    private async Task ImportTemplateAsync()
+    {
+        if (!CanImport) return;
+        if (IsOfflineMode) { _toast.Warning(L["offline_pos_limited"]); return; }
+        try
+        {
+            await using var content = await _api.GetImportTemplateAsync();
+            var target = await _filePicker.SaveFileAsync("cartex-kirim", "xlsx");
+            if (target is null) return;
+
+            await using (target)
+                await content.CopyToAsync(target);
+            _toast.Success(L["success"]);
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    [RelayCommand]
     private void RemoveLine(SupplyLine line) => Items.Remove(line);
 
     [RelayCommand]
@@ -1169,6 +1382,7 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
     [RelayCommand]
     private async Task SaveAsync()
     {
+        if (_editingSupplyId is null ? !CanCreate : !CanEdit) return;
         if (SelectedWarehouse?.Id is null) { _toast.Warning(L["select_warehouse"]); return; }
         if (Items.Count == 0) { _toast.Warning(L["err_no_items"]); return; }
         if (_supplierRequired && SelectedSupplier?.Id is null) { _toast.Warning(L["err_select_supplier"]); return; }
@@ -1180,6 +1394,28 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
         var date = DateOnly.FromDateTime(SupplyDate.Date);
         long supplyId = 0;
 
+        if (IsOfflineMode)
+        {
+            if (!SettingsService.Instance.OfflineAllowSupplies) { _toast.Warning(L["offline_pos_limited"]); return; }
+            if (editId is not null || supplyCurrency is not null
+                || date != DateOnly.FromDateTime(DateTime.Today)) { _toast.Warning(L["offline_pos_limited"]); return; }
+            var leaseWarehouseId = ServiceLocator.Resolve<OfflineSyncService>().Credential?.WarehouseId;
+            if (SelectedWarehouse.Id != leaseWarehouseId) { _toast.Warning(L["offline_supply_warehouse"]); return; }
+            try
+            {
+                await ServiceLocator.Resolve<OfflineSyncService>().EnqueueSupplyAsync(new OfflineSupplyDraft(
+                    supplierId, SelectedWarehouse.Id.Value,
+                    [.. Items.Select(i => new OfflineSupplyLineDraft(i.VariantId, i.StockingQuantity,
+                        i.PricePerStockingUnitValue, i.ExpiredAt, i.SellingPrice))]));
+            }
+            catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); return; }
+            Items.Clear();
+            ResetLine();
+            IsEditOpen = false;
+            _toast.Success(L["offline_supply_queued"]);
+            return;
+        }
+
         try
         {
             var request = new CreateSupplyRequest(
@@ -1190,7 +1426,8 @@ public partial class SuppliesViewModel : ViewModelBase, ILoadable
                     i.UnitId, i.SellingPrice, i.PackId, i.PricePerStockingUnit ? "PerStockingUnit" : "PerEntry"))],
                 0,
                 0,
-                supplyCurrency);
+                supplyCurrency,
+                editId is null ? Guid.NewGuid().ToString("N") : null);
             using (_busy.Begin(L["loading"]))
             {
                 if (editId is { } id) await _api.UpdateAsync(id, request);

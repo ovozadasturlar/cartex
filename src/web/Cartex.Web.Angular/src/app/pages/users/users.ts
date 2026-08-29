@@ -17,6 +17,7 @@ import { AuthService } from '../../core/auth.service';
 import { NotifyService } from '../../core/notify.service';
 import { Paged } from '../../core/paging';
 import { EmptyState } from '../../shared/empty-state';
+import { downloadCsv } from '../../core/csv-export';
 import { PageHeader } from '../../shared/page-header';
 import { PagingBar } from '../../shared/paging-bar';
 
@@ -42,13 +43,18 @@ export class Users implements OnInit {
   private readonly api = inject(AdminApi);
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
+  private readonly transloco = inject(TranslocoService);
   private readonly search$ = new Subject<string>();
 
-  readonly canManage = inject(AuthService).hasPermission('users.manage');
+  private readonly auth = inject(AuthService);
+  readonly canCreate = this.auth.hasPermission('users.create');
+  readonly canExport = this.auth.hasPermission('reports.export');
+  readonly canEdit = this.auth.hasPermission('users.edit');
+  readonly canDelete = this.auth.hasPermission('users.delete');
   readonly loading = signal(true);
   readonly busy = signal(false);
   readonly paged = signal<Paged<AdminUser> | null>(null);
-  readonly cols = ['username', 'name', 'roles', 'branch', 'status'];
+  readonly cols = ['username', 'name', 'roles', 'branch', 'status', ...(this.canDelete ? ['actions'] : [])];
 
   private roles: Role[] = [];
   private branches: Branch[] = [];
@@ -61,8 +67,26 @@ export class Users implements OnInit {
       .pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed())
       .subscribe(() => {
         this.page = 1;
-        this.reload();
+        void this.reload();
       });
+  }
+
+  // Eksport joriy sahifani emas, butun ro'yxatni oladi - desktopdagi bilan bir xil.
+  async exportCsv(): Promise<void> {
+    if (!this.canExport) return;
+    const t = (key: string): string => this.transloco.translate(key);
+    try {
+      const all = await lastValueFrom(this.api.users({ page: 0, pageSize: 0, sortBy: 'FullName' }));
+      downloadCsv(t('users'), all.items, [
+        { header: t('full_name'), value: (u) => u.fullName },
+        { header: t('username'), value: (u) => u.username },
+        { header: t('roles'), value: (u) => u.roleNames.join(', ') },
+        { header: t('default_branch'), value: (u) => u.defaultBranchName },
+        { header: t('active'), value: (u) => u.isActive },
+      ]);
+    } catch (e) {
+      this.notify.error(e);
+    }
   }
 
   async ngOnInit(): Promise<void> {
@@ -90,20 +114,34 @@ export class Users implements OnInit {
   onPage(e: { page: number; pageSize: number }): void {
     this.page = e.page;
     this.pageSize = e.pageSize;
-    this.reload();
+    void this.reload();
   }
 
   open(user: AdminUser | null): void {
-    if (!this.canManage) return;
+    if (user ? !this.canEdit : !this.canCreate) return;
     this.dialog
       .open(UserDialog, {
         data: { user, roles: this.roles, branches: this.branches },
         width: '520px',
         maxWidth: '94vw',
-        autoFocus: false,
+        autoFocus: 'first-tabbable',
       })
       .afterClosed()
-      .subscribe((saved) => saved && this.reload());
+      .subscribe((saved) => {
+        if (saved) void this.reload();
+      });
+  }
+
+  async remove(user: AdminUser): Promise<void> {
+    if (!this.canDelete) return;
+    if (!window.confirm(this.transloco.translate('delete_confirm'))) return;
+    try {
+      await lastValueFrom(this.api.deleteUser(user.id));
+      await this.reload();
+      this.notify.success(this.transloco.translate('success'));
+    } catch (error) {
+      this.notify.error(error);
+    }
   }
 
   private async reload(): Promise<void> {
@@ -150,7 +188,7 @@ export class Users implements OnInit {
       <div mat-dialog-content class="dlg-form">
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('username') }}</mat-label>
-          <input matInput [(ngModel)]="username" [disabled]="!!user" />
+          <input matInput [(ngModel)]="username" [disabled]="!!user" [attr.cdkFocusInitial]="user ? null : ''" />
         </mat-form-field>
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('full_name') }}</mat-label>
@@ -164,7 +202,11 @@ export class Users implements OnInit {
           <mat-label>{{ t('roles') }}</mat-label>
           <mat-select [(ngModel)]="roleIds" multiple>
             @for (r of data.roles; track r.id) {
-              <mat-option [value]="r.id">{{ r.name }}</mat-option>
+              <mat-option
+                [value]="r.id"
+                [disabled]="!r.isActive && !roleIds.includes(r.id)">
+                {{ r.name }}{{ r.isActive ? '' : ' · ' + t('inactive') }}
+              </mat-option>
             }
           </mat-select>
         </mat-form-field>

@@ -2,6 +2,12 @@
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: 12px;
   margin-bottom: 16px;
+
+  /* Telefonda ikkitadan: ustma-ust qo'yilsa ro'yxatga yetguncha to'rt karta bo'yi suriladi. */
+  @media (width <= 767px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
 }
 
 .search {
@@ -15,6 +21,12 @@
   table {
     width: 100%;
     min-width: 840px;
+
+    /* Telefonda ustunlar kamaytirilgan — eng kengi ham ekranga sig'adi, ko'ndalang
+       surish shart emas. */
+    @media (width <= 767px) {
+      min-width: 0;
+    }
   }
 }
 

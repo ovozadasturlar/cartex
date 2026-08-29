@@ -6,6 +6,71 @@ export interface SaleLine {
   unitPrice: number;
 }
 
+export interface SaleDetailLine {
+  saleItemId: number;
+  variantId: number;
+  productName: string;
+  unitName: string;
+  quantity: number;
+  returnedQuantity: number;
+  returnableQuantity: number;
+  unitPrice: number;
+  enteredUnitPrice: number;
+  discountAmount: number;
+  netTotal: number;
+  allowsFractional: boolean;
+}
+
+export interface SaleDetailPayment {
+  method: string;
+  currency: string;
+  amount: number;
+}
+
+export interface SaleDetail {
+  id: number;
+  warehouseId: number;
+  customerId: number | null;
+  customerName: string | null;
+  status: string;
+  saleDate: string;
+  receiptToken: string;
+  note: string | null;
+  manualDiscountAmount: number;
+  paidCash: number;
+  paidCard: number;
+  paidBonus: number;
+  creditAmount: number;
+  debtCurrency: string;
+  debtDueDate: string | null;
+  items: SaleDetailLine[];
+  payments: SaleDetailPayment[];
+  allowedActions: string[];
+}
+
+export interface CustomerReturnLine {
+  variantId: number;
+  saleItemId: number;
+  quantity: number;
+  reason: string | null;
+  condition: string;
+  disposition: string;
+}
+
+export interface CreateCustomerReturn {
+  warehouseId: number;
+  lines: CustomerReturnLine[];
+  customerId: number | null;
+  autoSettle: boolean;
+  idempotencyKey: string;
+}
+
+export interface CustomerReturnCreated {
+  id: number;
+  documentNumber: string;
+  refundAmount: number;
+}
+
 export interface Sale {
   id: number;
   saleDate: string;
@@ -18,6 +83,7 @@ export interface Sale {
   status: string;
   receiptToken: string;
   customerName: string | null;
+  customerPhone: string | null;
   userName: string;
   items: SaleLine[];
 }
@@ -64,11 +130,17 @@ export interface Customer {
   cardBarcode: string | null;
   discountPct: number;
   notificationsOptOut: boolean;
+  allowMarketingSms: boolean;
   cashbackBalance: number;
   debtBalance: number;
-  creditLimit: number;
+  creditLimit: number | null;
   hasTelegram: boolean;
   debtBalances: CurrencyAmount[];
+  note?: string | null;
+  // QARZ-24: faqat bitta mijoz so'ralganda to'ldiriladi (`GET /api/customers/{id}`).
+  isUntouched?: boolean;
+  openingBalance?: number;
+  openingCurrency?: string | null;
 }
 
 export interface CustomerTotals {
@@ -84,6 +156,10 @@ export interface LedgerEntry {
   change: number;
   balanceAfter: number;
   currency: string | null;
+  transactionId: number;
+  paymentDocumentId: number | null;
+  paymentNumber: string | null;
+  saleId: number | null;
 }
 
 export interface TopProduct {
@@ -101,6 +177,13 @@ export interface DailySales {
   count: number;
 }
 
+export interface HourlySales {
+  hour: number;
+  revenue: number;
+  profit: number;
+  count: number;
+}
+
 export interface SalesReport {
   revenue: number;
   profit: number;
@@ -109,6 +192,7 @@ export interface SalesReport {
   maxSale: number;
   topProducts: TopProduct[];
   daily: DailySales[];
+  hourly: HourlySales[];
 }
 
 export interface DailyCashFlow {
@@ -156,6 +240,8 @@ export interface SalesBreakdown {
   bonus: number;
   debt: number;
   credit: number;
+  advance: number;
+  returned: number;
   byCashier: CashierSales[];
   byCategory: CategorySales[];
 }
@@ -189,6 +275,7 @@ export interface Warehouse {
 
 export interface Receipt {
   receiptToken: string;
+  status: string;
   businessName: string;
   branchName: string;
   saleDate: string;
@@ -204,6 +291,31 @@ export interface Receipt {
   baseCurrency: string;
   userName: string;
   customerName: string | null;
-  items: { productName: string; quantity: number; unitName: string; unitPrice: number; lineTotal: number }[];
-  payments: { method: string; currency: string; amount: number; rate: number; amountBase: number; isForeign: boolean }[];
+  customerPhone: string | null;
+  note: string | null;
+  items: {
+    productName: string;
+    quantity: number;
+    unitName: string;
+    unitPrice: number;
+    lineTotal: number;
+    discountAmount: number;
+    netTotal: number;
+    hasDiscount: boolean;
+  }[];
+  payments: {
+    method: string;
+    currency: string;
+    amount: number;
+    rate: number;
+    amountBase: number;
+    isForeign: boolean;
+  }[];
 }
+
+export interface SalePayment {
+  method: string;
+  currency: string;
+  amount: number;
+}
+

@@ -1,0 +1,81 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cartex.UI.ViewModels"
+             x:Class="Cartex.UI.Views.NotificationDeliveryDetailDialog"
+             x:DataType="vm:NotificationDeliveryDetailViewModel"
+             x:CompileBindings="True">
+    <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="680" MaxHeight="720"
+            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+            BoxShadow="0 18 50 0 #33000000" Padding="24">
+        <DockPanel>
+            <Grid DockPanel.Dock="Top" Margin="0,0,0,16">
+                <StackPanel>
+                    <TextBlock Text="{Binding L[notification_detail]}" Classes="h2" />
+                    <TextBlock Text="{Binding Delivery.Purpose}" Foreground="{DynamicResource TextMuted}" FontSize="12" />
+                </StackPanel>
+            </Grid>
+
+            <ScrollViewer>
+                <StackPanel Spacing="14">
+                    <Grid ColumnDefinitions="*,12,*">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="{Binding L[channel]}" Classes="caption" />
+                            <TextBlock Text="{Binding Delivery.Channel}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Spacing="4">
+                            <TextBlock Text="{Binding L[provider]}" Classes="caption" />
+                            <TextBlock Text="{Binding Delivery.Provider}" />
+                        </StackPanel>
+                    </Grid>
+                    <Grid ColumnDefinitions="*,12,*">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="{Binding L[status]}" Classes="caption" />
+                            <TextBlock Text="{Binding Delivery.Status}" FontWeight="SemiBold" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Spacing="4">
+                            <TextBlock Text="{Binding L[provider_message_id]}" Classes="caption" />
+                            <TextBlock Text="{Binding Delivery.ProviderMessageId, FallbackValue=—}" />
+                        </StackPanel>
+                    </Grid>
+                    <Grid ColumnDefinitions="*,12,*">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="{Binding L[customer]}" Classes="caption" />
+                            <TextBlock Text="{Binding Delivery.CustomerName, FallbackValue=—}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Spacing="4">
+                            <TextBlock Text="{Binding L[recipient]}" Classes="caption" />
+                            <TextBlock Text="{Binding Delivery.Recipient}" />
+                        </StackPanel>
+                    </Grid>
+                    <Grid ColumnDefinitions="*,12,*">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="{Binding L[attempts]}" Classes="caption" />
+                            <TextBlock Text="{Binding Delivery.AttemptCount}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Spacing="4">
+                            <TextBlock Text="{Binding L[billable_units]}" Classes="caption" />
+                            <TextBlock Text="{Binding Delivery.Units}" />
+                        </StackPanel>
+                    </Grid>
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="{Binding L[message_text]}" Classes="caption" />
+                        <TextBox Text="{Binding Delivery.Content, Mode=OneWay}" IsReadOnly="True" AcceptsReturn="True"
+                                 TextWrapping="Wrap" MinHeight="90" />
+                    </StackPanel>
+                    <StackPanel Spacing="4" IsVisible="{Binding !!Delivery.Error}">
+                        <TextBlock Text="{Binding L[error]}" Classes="caption" />
+                        <TextBlock Text="{Binding Delivery.Error}" Foreground="{DynamicResource DangerBrush}" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="8">
+                        <TextBlock Text="{Binding L[created_at]}" Classes="caption" />
+                        <TextBlock Grid.Column="1" Text="{Binding Delivery.CreatedAt, StringFormat='{}{0:dd.MM.yyyy HH:mm:ss}'}" />
+                        <TextBlock Grid.Row="1" Text="{Binding L[accepted_at]}" Classes="caption" />
+                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Delivery.AcceptedAt, StringFormat='{}{0:dd.MM.yyyy HH:mm:ss}', FallbackValue=—}" />
+                        <TextBlock Grid.Row="2" Text="{Binding L[delivered_at]}" Classes="caption" />
+                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Delivery.DeliveredAt, StringFormat='{}{0:dd.MM.yyyy HH:mm:ss}', FallbackValue=—}" />
+                    </Grid>
+                </StackPanel>
+            </ScrollViewer>
+        </DockPanel>
+    </Border>
+</UserControl>

@@ -1,7 +1,8 @@
-using Cartex.Application.Common.Messaging;
 using FluentValidation;
 using Cartex.Persistence;
 using Cartex.Domain.Entities;
+using Cartex.Application.Categories;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Application.Categories.Commands;
 
@@ -11,11 +12,14 @@ public sealed class CreateCategoryCommandHandler(IApplicationDbContext db) : IRe
 {
     public async Task<long> Handle(CreateCategoryCommand request, CancellationToken cancellationToken)
     {
+        var categories = await db.Categories.ToListAsync(cancellationToken);
+        CategoryTreeRules.ValidateParent(categories, null, request.ParentId);
         var category = new Category
         {
             Name = request.Name,
             ParentId = request.ParentId,
-            Description = request.Description
+            Description = request.Description,
+            SortOrder = categories.Count(x => x.ParentId == request.ParentId)
         };
 
         db.Categories.Add(category);

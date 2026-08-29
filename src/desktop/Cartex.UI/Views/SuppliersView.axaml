@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:conv="using:Cartex.UI.Converters"
              xmlns:mi="using:Material.Icons.Avalonia"
@@ -48,11 +48,11 @@
     </UserControl.Styles>
 
     <Panel>
-        <DockPanel Margin="24" Classes.blurred="{Binding IsModalOpen}">
+        <DockPanel Margin="24" Classes.blurred="{Binding IsModalOpen}" IsVisible="{Binding !IsProfileOpen}">
             <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[suppliers]}" Margin="0,0,0,16">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <c:ExportButton Command="{Binding ExportCommand}" Text="{Binding L[export]}" IsVisible="{Binding CanExport}" />
-                    <Button Classes="brand" Command="{Binding OpenCreateCommand}" IsVisible="{Binding CanManage}">
+                    <Button Classes="brand" Command="{Binding OpenCreateCommand}" IsVisible="{Binding CanCreate}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <mi:MaterialIcon Kind="Plus" Width="18" Height="18" />
                             <TextBlock Text="{Binding L[add]}" VerticalAlignment="Center" />
@@ -61,8 +61,7 @@
                 </StackPanel>
             </c:PageHeader>
 
-            <Grid ColumnDefinitions="380,16,*">
-                <DockPanel Grid.Column="0">
+            <DockPanel>
                     <Grid DockPanel.Dock="Top" Margin="0,0,0,12" ColumnDefinitions="*,Auto,Auto">
                         <TextBox Classes="search" PlaceholderText="{Binding L[search]}" Text="{Binding SearchText, Mode=TwoWay}" />
                         <ComboBox Grid.Column="1" Margin="8,0,0,0" MinWidth="130" VerticalAlignment="Stretch"
@@ -95,7 +94,7 @@
                             <DataGrid ItemsSource="{Binding Suppliers}" SelectedItem="{Binding SelectedSupplier, Mode=TwoWay}"
                                       AutoGenerateColumns="False" IsReadOnly="True"
                                       GridLinesVisibility="Horizontal" HeadersVisibility="Column"
-                                      c:GridDoubleClick.Command="{Binding OpenEditCommand}">
+                                      c:GridDoubleClick.Command="{Binding OpenProfileCommand}">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Width="*" Binding="{Binding Name}"
                                                         Header="{Binding [name], Source={x:Static svc:LocalizationManager.Instance}}" />
@@ -118,7 +117,7 @@
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
                                                 <Button Classes="icon" Margin="6,0"
-                                                        IsVisible="{Binding $parent[DataGrid].DataContext.CanManage}"
+                                                        IsVisible="{Binding $parent[DataGrid].DataContext.CanEdit}"
                                                         Command="{Binding $parent[DataGrid].DataContext.OpenEditCommand}"
                                                         CommandParameter="{Binding}" ToolTip.Tip="{Binding $parent[DataGrid].DataContext.L[edit]}">
                                                     <mi:MaterialIcon Kind="Pencil" Width="16" Height="16"
@@ -132,9 +131,16 @@
                         </Border>
                         <c:EmptyState Icon="TruckOutline" Title="{Binding L[no_data]}" IsVisible="{Binding IsEmpty}" />
                     </Panel>
-                </DockPanel>
+            </DockPanel>
+        </DockPanel>
 
-                <Panel Grid.Column="2">
+        <!-- Profil sahifasi: ro'yxatdan yetkazib beruvchi tanlangach ochiladi. -->
+        <DockPanel Margin="24" Classes.blurred="{Binding IsModalOpen}" IsVisible="{Binding IsProfileOpen}">
+            <Button DockPanel.Dock="Top" Classes="icon" HorizontalAlignment="Left" Margin="0,0,0,12"
+                    Command="{Binding CloseProfileCommand}" ToolTip.Tip="{Binding L[back]}">
+                <mi:MaterialIcon Kind="ArrowLeft" Width="20" Height="20" />
+            </Button>
+            <Panel>
                     <Grid IsVisible="{Binding HasSelection}" RowDefinitions="Auto,Auto,Auto,Auto,*,Auto">
                             <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
                                     Margin="0,0,0,16"
@@ -146,12 +152,12 @@
                                                FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                 </Border>
                                 <StackPanel Grid.Column="2" Spacing="8" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding SelectedSupplier.Name}" FontSize="20" FontWeight="Bold"
+                                    <TextBlock Text="{Binding SelectedSupplierDisplay.Name}" FontSize="20" FontWeight="Bold"
                                                Foreground="{DynamicResource TextPrimary}" />
                                     <StackPanel Orientation="Horizontal" Spacing="6"
-                                                IsVisible="{Binding SelectedSupplier.Phone, Converter={x:Static conv:StringNotEmptyConverter.Instance}}">
+                                                IsVisible="{Binding SelectedSupplierDisplay.Phone, Converter={x:Static conv:StringNotEmptyConverter.Instance}}">
                                         <mi:MaterialIcon Kind="PhoneOutline" Width="15" Height="15" Foreground="{DynamicResource TextSecondary}" />
-                                        <TextBlock Text="{Binding SelectedSupplier.Phone}" Foreground="{DynamicResource TextSecondary}" />
+                                        <TextBlock Text="{Binding SelectedSupplierDisplay.Phone}" Foreground="{DynamicResource TextSecondary}" />
                                     </StackPanel>
                                 </StackPanel>
                                 </Grid>
@@ -174,7 +180,7 @@
 
                             <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" Margin="0,0,0,16">
                                 <Button Classes="brand" Command="{Binding OpenRepayCommand}"
-                                        IsVisible="{Binding CanManage}">
+                                        IsVisible="{Binding CanPay}">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <mi:MaterialIcon Kind="CashCheck" Width="17" Height="17" />
                                         <TextBlock Text="{Binding L[payment]}" VerticalAlignment="Center" />
@@ -233,7 +239,7 @@
                                         </DataGridTemplateColumn>
                                     </DataGrid.Columns>
                                 </DataGrid>
-                                <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLedgerLoading}" Height="3" VerticalAlignment="Top" />
+                                <ProgressBar IsIndeterminate="{Binding IsLedgerLoading}" IsVisible="{Binding IsLedgerLoading}" Height="3" VerticalAlignment="Top" />
                               </Panel>
                             </Border>
                             <Border Grid.Row="4" Background="{DynamicResource CardBg}" CornerRadius="12" ClipToBounds="True"
@@ -253,18 +259,16 @@
                                                             Header="{Binding [user], Source={x:Static svc:LocalizationManager.Instance}}" />
                                     </DataGrid.Columns>
                                 </DataGrid>
-                                <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsSuppliesLoading}" Height="3" VerticalAlignment="Top" />
+                                <ProgressBar IsIndeterminate="{Binding IsSuppliesLoading}" IsVisible="{Binding IsSuppliesLoading}" Height="3" VerticalAlignment="Top" />
                               </Panel>
                             </Border>
                             <c:Pager Grid.Row="5" State="{Binding LedgerPaging}" Margin="0,10,0,0" IsVisible="{Binding !IsSuppliesTab}" />
                             <c:Pager Grid.Row="5" State="{Binding SuppliesPaging}" Margin="0,10,0,0" IsVisible="{Binding IsSuppliesTab}" />
                     </Grid>
-                    <c:EmptyState Icon="TruckOutline" Title="{Binding L[select_supplier]}" IsVisible="{Binding !HasSelection}" />
-                </Panel>
-            </Grid>
+            </Panel>
         </DockPanel>
 
-        <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" Height="3" VerticalAlignment="Top" />
+        <ProgressBar IsIndeterminate="{Binding IsLoading}" IsVisible="{Binding IsLoading}" Height="3" VerticalAlignment="Top" />
 
         <Border IsVisible="{Binding IsEditOpen}" Background="#30000000"
                 c:OverlayBehaviors.DismissCommand="{Binding CancelEditCommand}">
@@ -305,13 +309,13 @@
                     <TextBlock Text="{Binding L[payment]}" FontSize="18" FontWeight="Bold"
                                Foreground="{DynamicResource TextPrimary}" />
                     <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Text="{Binding SelectedSupplier.Name}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding SelectedSupplierDisplay.Name}" Foreground="{DynamicResource TextSecondary}" VerticalAlignment="Center" />
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
-                            <TextBlock Text="{Binding SelectedSupplier.Payable, Converter={x:Static conv:DebtBalanceConverter.Instance}, ConverterParameter=supkind}"
-                                       IsVisible="{Binding SelectedSupplier.Payable, Converter={x:Static conv:DebtBalanceConverter.Instance}, ConverterParameter=haskind}"
+                            <TextBlock Text="{Binding SelectedSupplierDisplay.Payable, Converter={x:Static conv:DebtBalanceConverter.Instance}, ConverterParameter=supkind}"
+                                       IsVisible="{Binding SelectedSupplierDisplay.Payable, Converter={x:Static conv:DebtBalanceConverter.Instance}, ConverterParameter=haskind}"
                                        Foreground="{DynamicResource TextSecondary}" FontSize="12" VerticalAlignment="Center" />
-                            <TextBlock Text="{Binding SelectedSupplier.Payable, Converter={x:Static conv:DebtBalanceConverter.Instance}}"
-                                       Foreground="{Binding SelectedSupplier.Payable, Converter={x:Static conv:DebtBalanceConverter.Instance}, ConverterParameter=brush}"
+                            <TextBlock Text="{Binding SelectedSupplierDisplay.Payable, Converter={x:Static conv:DebtBalanceConverter.Instance}}"
+                                       Foreground="{Binding SelectedSupplierDisplay.Payable, Converter={x:Static conv:DebtBalanceConverter.Instance}, ConverterParameter=brush}"
                                        FontWeight="SemiBold" VerticalAlignment="Center" />
                         </StackPanel>
                     </Grid>

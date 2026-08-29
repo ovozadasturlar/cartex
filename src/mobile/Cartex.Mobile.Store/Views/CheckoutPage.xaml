@@ -4,87 +4,234 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:vm="clr-namespace:Cartex.Mobile.Store.ViewModels"
+    xmlns:rates="clr-namespace:Cartex.Shared.Models.Rates;assembly=Cartex.Shared"
     xmlns:svc="clr-namespace:Cartex.Mobile.Core;assembly=Cartex.Mobile.Core"
+    xmlns:views="clr-namespace:Cartex.Mobile.Store.Views"
     x:DataType="vm:CheckoutViewModel"
     Title="{svc:T checkout}">
-    <ScrollView>
-        <VerticalStackLayout Padding="16" Spacing="12" IsVisible="{Binding IsLoaded}">
-
-            <Border Style="{StaticResource Card}" Padding="14,10">
-                <VerticalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding Items}">
-                    <BindableLayout.ItemTemplate>
-                        <DataTemplate x:DataType="vm:CheckoutLine">
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                                <VerticalStackLayout Spacing="1">
-                                    <Label Text="{Binding Name}" FontSize="14" LineBreakMode="TailTruncation"
+    <Grid IsVisible="{Binding CanUseCart}">
+    <Grid RowDefinitions="*,Auto">
+        <ScrollView>
+            <VerticalStackLayout Padding="16" Spacing="12" IsVisible="{Binding IsLoaded}">
+                
+                <!-- Items Summary -->
+                <Border Style="{StaticResource Card}" Padding="14,10">
+                    <VerticalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding Items}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:CheckoutLine">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                    <VerticalStackLayout Spacing="1">
+                                        <Label Text="{Binding Name}" FontSize="14" LineBreakMode="TailTruncation"
+                                               TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                        <Label Text="{Binding QtyPriceText}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                                    </VerticalStackLayout>
+                                    <Label Grid.Column="1" Text="{Binding LineTotalText}" FontAttributes="Bold" FontSize="14" VerticalOptions="Center"
                                            TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
-                                    <Label Text="{Binding QtyPriceText}" Style="{StaticResource MutedLabel}" FontSize="12" />
+                                </Grid>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Mijoz: to'lov bosqichida ham biriktirish yoki yaratish mumkin -->
+                <views:CustomerPickerView BindingContext="{Binding CustomerPicker}" />
+
+                <Border Style="{StaticResource Card}" Padding="14,10" IsVisible="{Binding HasParticipants}">
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Participants}" Spacing="8">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:CheckoutParticipantLine">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                    <Label Text="{StaticResource IcAccount}" Style="{StaticResource Icon}" VerticalOptions="Center" />
+                                    <VerticalStackLayout Grid.Column="1" Spacing="1">
+                                        <Label Text="{Binding RoleLabel}" Style="{StaticResource MutedLabel}" FontSize="11" />
+                                        <Label Text="{Binding PartyName}" FontAttributes="Bold" FontSize="14" />
+                                    </VerticalStackLayout>
+                                </Grid>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Notes Input -->
+                <Border Style="{StaticResource InputWrap}">
+                    <Entry Placeholder="{svc:T note_placeholder}" Text="{Binding NoteText}" IsReadOnly="{Binding CanEditNote, Converter={StaticResource Invert}}" />
+                </Border>
+
+                <!-- Total -->
+                <Border Style="{StaticResource Card}">
+                    <VerticalStackLayout Spacing="10">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="{svc:T total}" FontSize="15" Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
+                            <Label Grid.Column="1" Text="{Binding TotalText}" FontSize="16" FontAttributes="Bold"
+                                   TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" IsVisible="{Binding CanDiscount}">
+                            <Label Text="{svc:T discount}" FontSize="14" Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
+                            <Border Grid.Column="1" Style="{StaticResource InputWrap}" WidthRequest="140">
+                                <Entry Text="{Binding DiscountText}" Keyboard="Numeric" HorizontalTextAlignment="End"
+                                       Placeholder="0" />
+                            </Border>
+                            <Button Grid.Column="2" Text="=" Command="{Binding FillDiscountFromTenderCommand}"
+                                    IsEnabled="{Binding HasShortfall}" WidthRequest="44" HeightRequest="44"
+                                    Padding="0" FontSize="18" />
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Text="{svc:T pos_payable}" FontSize="15" Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
+                            <Label Grid.Column="1" Text="{Binding PayableText}" FontSize="22" FontAttributes="Bold"
+                                   TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Payment Block -->
+                <VerticalStackLayout Spacing="10" IsVisible="{Binding CanSelfSell}">
+                    <Border Style="{StaticResource Card}" IsVisible="{Binding IsSimplePayment}">
+                        <VerticalStackLayout Spacing="10">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                <Border Style="{StaticResource InputWrap}">
+                                    <Entry Placeholder="{svc:T pay_cash}" Text="{Binding CashText}" Keyboard="Numeric" />
+                                </Border>
+                                <Button Grid.Column="1" Text="{svc:T exact_amount}" Style="{StaticResource BtnOutline}"
+                                        HeightRequest="44" MinimumHeightRequest="44" FontSize="13" Padding="14,0"
+                                        Command="{Binding ExactCommand}" />
+                            </Grid>
+                            <Border Style="{StaticResource InputWrap}">
+                                <Entry Placeholder="{svc:T pay_card}" Text="{Binding CardText}" Keyboard="Numeric" />
+                            </Border>
+                            <Border Style="{StaticResource InputWrap}" IsVisible="{Binding HasCustomer}">
+                                <Entry Placeholder="{svc:T pay_bonus}" Text="{Binding BonusText}" Keyboard="Numeric" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}" IsVisible="{Binding IsMulticurrency}">
+                        <VerticalStackLayout Spacing="12">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <VerticalStackLayout Spacing="2">
+                                    <Label Text="{svc:T payment_rows}" FontSize="15" FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
+                                    <Label Text="{svc:T payment_rows_hint}" Style="{StaticResource MutedLabel}" FontSize="11" />
                                 </VerticalStackLayout>
-                                <Label Grid.Column="1" Text="{Binding LineTotalText}" FontAttributes="Bold" FontSize="14" VerticalOptions="Center"
+                                <Button Grid.Column="1" Text="{StaticResource IcPlus}" FontFamily="MDI" Padding="0"
+                                        WidthRequest="40" HeightRequest="40" CornerRadius="20"
+                                        Command="{Binding AddPaymentCommand}" IsEnabled="{Binding CanAddPayment}" />
+                            </Grid>
+                            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Payments}" Spacing="10">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:CheckoutPaymentRow">
+                                        <Border StrokeThickness="1" StrokeShape="RoundRectangle 12" Padding="10"
+                                                Stroke="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}">
+                                            <VerticalStackLayout Spacing="8">
+                                                <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="6">
+                                                    <Picker ItemsSource="{Binding Methods}"
+                                                            ItemDisplayBinding="{Binding Label, x:DataType=vm:CheckoutPaymentMethod}"
+                                                            SelectedItem="{Binding SelectedMethod}" />
+                                                    <Picker Grid.Column="1" ItemsSource="{Binding CurrencyOptions}"
+                                                            ItemDisplayBinding="{Binding Code, x:DataType=rates:CurrencyDto}"
+                                                            SelectedItem="{Binding SelectedCurrency}" />
+                                                    <Button Grid.Column="2" Text="{StaticResource IcClose}" FontFamily="MDI" Padding="0"
+                                                            WidthRequest="38" HeightRequest="38" BackgroundColor="Transparent"
+                                                            Command="{Binding RemovePaymentCommand, Source={RelativeSource AncestorType={x:Type vm:CheckoutViewModel}}}"
+                                                            CommandParameter="{Binding .}" />
+                                                </Grid>
+                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                    <Border Style="{StaticResource InputWrap}">
+                                                        <Entry Text="{Binding AmountText}" Placeholder="{svc:T payment_amount}" Keyboard="Numeric" />
+                                                    </Border>
+                                                    <Button Grid.Column="1" Text="{svc:T exact_amount}" Style="{StaticResource BtnOutline}"
+                                                            HeightRequest="44" MinimumHeightRequest="44" FontSize="12" Padding="12,0"
+                                                            Command="{Binding ExactPaymentCommand, Source={RelativeSource AncestorType={x:Type vm:CheckoutViewModel}}}"
+                                                            CommandParameter="{Binding .}" />
+                                                </Grid>
+                                                <Label Text="{Binding BaseAmountText}" Style="{StaticResource MutedLabel}" FontSize="11" HorizontalTextAlignment="End" />
+                                                <Label Text="{svc:T rate_stale_warning}" FontSize="11"
+                                                       TextColor="{AppThemeBinding Light={StaticResource Warn}, Dark={StaticResource WarnDark}}"
+                                                       IsVisible="{Binding IsRateStale}" />
+                                            </VerticalStackLayout>
+                                        </Border>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </VerticalStackLayout>
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" IsVisible="{Binding HasCustomer}">
+                                <VerticalStackLayout Spacing="1">
+                                    <Label Text="{svc:T use_customer_advance}" FontSize="13" FontAttributes="Bold" />
+                                    <Label Text="{svc:T use_customer_advance_hint}" Style="{StaticResource MutedLabel}" FontSize="11" />
+                                </VerticalStackLayout>
+                                <Switch Grid.Column="1" IsToggled="{Binding UseCustomerAdvance}" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" IsVisible="{Binding DebtText, Converter={StaticResource NotEmpty}}">
+                                <Label Text="{svc:T debt_currency}" VerticalOptions="Center" Style="{StaticResource MutedLabel}" />
+                                <Picker Grid.Column="1" ItemsSource="{Binding Currencies}" SelectedItem="{Binding SelectedDebtCurrency}"
+                                        ItemDisplayBinding="{Binding Code, x:DataType=rates:CurrencyDto}" WidthRequest="110" />
+                            </Grid>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}" IsVisible="{Binding CanStoreExcessAsCredit}">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                            <VerticalStackLayout Spacing="1">
+                                <Label Text="{svc:T keep_excess_as_credit}" FontSize="13" FontAttributes="Bold" />
+                                <Label Text="{Binding ExcessText}" Style="{StaticResource MutedLabel}" FontSize="11" />
+                            </VerticalStackLayout>
+                            <Switch Grid.Column="1" IsToggled="{Binding KeepExcessAsCredit}" />
+                        </Grid>
+                    </Border>
+
+                    <Border Style="{StaticResource Card}">
+                        <VerticalStackLayout Spacing="8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Text="{svc:T paid_label}" Style="{StaticResource MutedLabel}" FontSize="13" />
+                                <Label Grid.Column="1" Text="{Binding PaidText}" FontSize="13" FontAttributes="Bold"
                                        TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
                             </Grid>
-                        </DataTemplate>
-                    </BindableLayout.ItemTemplate>
-                </VerticalStackLayout>
-            </Border>
-
-            <Border Style="{StaticResource Card}" Padding="14,10" IsVisible="{Binding HasCustomer}">
-                <HorizontalStackLayout Spacing="10">
-                    <Label Text="{StaticResource IcAccount}" Style="{StaticResource Icon}" VerticalOptions="Center" />
-                    <Label Text="{Binding CustomerName}" FontAttributes="Bold" FontSize="14" VerticalOptions="Center"
-                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
-                </HorizontalStackLayout>
-            </Border>
-
-            <Label Text="{Binding NoteText}" FontAttributes="Italic" FontSize="13" IsVisible="{Binding HasNote}"
-                   TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
-
-            <Border Style="{StaticResource Card}">
-                <Grid ColumnDefinitions="*,Auto">
-                    <Label Text="{svc:T total}" FontSize="15" Style="{StaticResource MutedLabel}" VerticalOptions="Center" />
-                    <Label Grid.Column="1" Text="{Binding TotalText}" FontSize="22" FontAttributes="Bold"
-                           TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
-                </Grid>
-            </Border>
-
-            <Border Style="{StaticResource Card}">
-                <VerticalStackLayout Spacing="10">
-                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                        <Border Style="{StaticResource InputWrap}">
-                            <Entry Placeholder="{svc:T pay_cash}" Text="{Binding CashText}" Keyboard="Numeric" />
-                        </Border>
-                        <Button Grid.Column="1" Text="{svc:T exact_amount}" Style="{StaticResource BtnOutline}"
-                                HeightRequest="44" MinimumHeightRequest="44" FontSize="13" Padding="14,0"
-                                Command="{Binding ExactCommand}" />
-                    </Grid>
-                    <Border Style="{StaticResource InputWrap}">
-                        <Entry Placeholder="{svc:T pay_card}" Text="{Binding CardText}" Keyboard="Numeric" />
+                            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding ChangeText, Converter={StaticResource NotEmpty}}">
+                                <Label Text="{svc:T change_label}" Style="{StaticResource MutedLabel}" FontSize="13" />
+                                <Label Grid.Column="1" Text="{Binding ChangeText}" FontSize="13" FontAttributes="Bold"
+                                       TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding DebtText, Converter={StaticResource NotEmpty}}">
+                                <Label Text="{svc:T debt_label}" FontSize="13"
+                                       TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+                                <Label Grid.Column="1" Text="{Binding DebtText}" FontSize="13" FontAttributes="Bold"
+                                       TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
+                            </Grid>
+                            <Label Text="{svc:T rate_missing}" Style="{StaticResource TxDanger}" IsVisible="{Binding HasPaymentRateError}" />
+                            <Label Text="{svc:T change_cash_only}" Style="{StaticResource TxDanger}" IsVisible="{Binding HasInvalidChange}" />
+                            <Label Text="{svc:T rate_stale_warning}" FontSize="11"
+                                   TextColor="{AppThemeBinding Light={StaticResource Warn}, Dark={StaticResource WarnDark}}"
+                                   IsVisible="{Binding HasRateWarning}" />
+                        </VerticalStackLayout>
                     </Border>
-                    <Border Style="{StaticResource InputWrap}" IsVisible="{Binding HasCustomer}">
-                        <Entry Placeholder="{svc:T pay_bonus}" Text="{Binding BonusText}" Keyboard="Numeric" />
-                    </Border>
-                    <Grid ColumnDefinitions="*,Auto">
-                        <Label Text="{svc:T paid_label}" Style="{StaticResource MutedLabel}" FontSize="13" />
-                        <Label Grid.Column="1" Text="{Binding PaidText}" FontSize="13" FontAttributes="Bold"
-                               TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
-                    </Grid>
-                    <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding ChangeText, Converter={StaticResource NotEmpty}}">
-                        <Label Text="{svc:T change_label}" Style="{StaticResource MutedLabel}" FontSize="13" />
-                        <Label Grid.Column="1" Text="{Binding ChangeText}" FontSize="13" FontAttributes="Bold"
-                               TextColor="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
-                    </Grid>
-                    <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding DebtText, Converter={StaticResource NotEmpty}}">
-                        <Label Text="{svc:T debt_label}" FontSize="13"
-                               TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
-                        <Label Grid.Column="1" Text="{Binding DebtText}" FontSize="13" FontAttributes="Bold"
-                               TextColor="{AppThemeBinding Light={StaticResource Danger}, Dark={StaticResource DangerDark}}" />
-                    </Grid>
                 </VerticalStackLayout>
-            </Border>
 
-            <Button Text="{svc:T checkout_complete}" Style="{StaticResource BtnPrimary}" Margin="0,2,0,14"
-                    Command="{Binding CompleteCommand}"
-                    IsEnabled="{Binding IsBusy, Converter={StaticResource Invert}}" />
-        </VerticalStackLayout>
-    </ScrollView>
+                <Border Padding="12" StrokeThickness="0" StrokeShape="RoundRectangle 12"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource DangerBg}, Dark={StaticResource DangerBgDark}}"
+                        IsVisible="{Binding HasError}">
+                    <Label Text="{Binding Error}" Style="{StaticResource TxDanger}" />
+                </Border>
+
+            </VerticalStackLayout>
+        </ScrollView>
+        
+        <!-- Action Buttons Footer -->
+        <Border Grid.Row="1" StrokeThickness="1" Padding="16,12"
+                BackgroundColor="{AppThemeBinding Light={StaticResource Surface}, Dark={StaticResource SurfaceDark}}"
+                Stroke="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}">
+            <VerticalStackLayout Spacing="10">
+                <Button Text="{svc:T send_to_queue}" Style="{StaticResource BtnOutline}"
+                        Command="{Binding QueueCommand}"
+                        IsVisible="{Binding CanQueue}"
+                        IsEnabled="{Binding IsBusy, Converter={StaticResource Invert}}" />
+                
+                <Button Text="{svc:T checkout_complete}" Style="{StaticResource BtnPrimary}"
+                        Command="{Binding CompleteCommand}"
+                        IsVisible="{Binding CanSelfSell}"
+                        IsEnabled="{Binding IsBusy, Converter={StaticResource Invert}}" />
+            </VerticalStackLayout>
+        </Border>
+    </Grid>
+    <views:CustomerFormView BindingContext="{Binding CustomerPicker}" />
+    </Grid>
 </ContentPage>

@@ -1,15 +1,11 @@
-using Cartex.Domain.Enums;
+﻿using Cartex.Domain.Enums;
 using Cartex.Persistence;
-using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Reports;
 
 namespace Cartex.Application.Reports.Queries;
 
 public record GetDebtAgingReportQuery : IRequest<DebtAgingReportDto>;
-
-public record DebtAgingRowDto(long CustomerId, string CustomerName, decimal Balance, string Currency, decimal BalanceBase, DateTime? LastActivity, int DaysOverdue, string Bucket);
-
-public record DebtAgingReportDto(decimal Total, decimal Bucket0_30, decimal Bucket31_60, decimal Bucket60Plus, List<DebtAgingRowDto> Rows);
 
 public sealed class GetDebtAgingReportQueryHandler(IApplicationDbContext db) : IRequestHandler<GetDebtAgingReportQuery, DebtAgingReportDto>
 {
@@ -22,7 +18,7 @@ public sealed class GetDebtAgingReportQueryHandler(IApplicationDbContext db) : I
             {
                 a.Id,
                 CustomerId = a.CustomerId!.Value,
-                CustomerName = a.Customer!.FullName,
+                CustomerName = a.Customer!.Party.FullName,
                 a.Balance,
                 a.Currency,
                 BalanceBase = a.Balance * (a.Currency == baseCode ? 1m

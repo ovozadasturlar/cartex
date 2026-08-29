@@ -1,0 +1,54 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Cartex.UI.ViewModels"
+             x:Class="Cartex.UI.Views.AuditDetailDialog"
+             x:DataType="vm:AuditDetailViewModel"
+             x:CompileBindings="True">
+    <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="760" MaxHeight="720"
+            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+            BoxShadow="0 18 50 0 #33000000" Padding="24">
+        <DockPanel>
+            <Grid DockPanel.Dock="Top" Margin="0,0,0,16">
+                <StackPanel>
+                    <TextBlock Text="{Binding L[audit_detail]}" Classes="h2" />
+                    <TextBlock Text="{Binding Log.Action}" Foreground="{DynamicResource TextMuted}" />
+                </StackPanel>
+            </Grid>
+            <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,16">
+                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="16" RowSpacing="6">
+                    <TextBlock Text="{Binding L[user]}" Classes="caption" />
+                    <TextBlock Grid.Column="1" Text="{Binding Log.UserName, FallbackValue=—}" />
+                    <TextBlock Grid.Row="1" Text="{Binding L[table_name]}" Classes="caption" />
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Log.TableName}" />
+                    <TextBlock Grid.Row="2" Text="{Binding L[record_id]}" Classes="caption" />
+                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Log.RecordId, FallbackValue=—}" />
+                </Grid>
+            </StackPanel>
+            <Border Background="{DynamicResource AppBg}" CornerRadius="10"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
+                <Grid RowDefinitions="Auto,*">
+                    <Grid ColumnDefinitions="180,*,*" Background="{DynamicResource SidebarItemHover}">
+                        <TextBlock Text="{Binding L[field]}" FontWeight="SemiBold" Padding="10,8" />
+                        <TextBlock Grid.Column="1" Text="{Binding L[old_value]}" FontWeight="SemiBold" Padding="10,8" />
+                        <TextBlock Grid.Column="2" Text="{Binding L[new_value]}" FontWeight="SemiBold" Padding="10,8" />
+                    </Grid>
+                    <ScrollViewer Grid.Row="1">
+                        <ItemsControl ItemsSource="{Binding Changes}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:AuditChangeRow">
+                                    <Grid ColumnDefinitions="180,*,*" MinHeight="38">
+                                        <TextBlock Text="{Binding TranslatedField}" Padding="10,8" ToolTip.Tip="{Binding Field}" />
+                                        <TextBlock Grid.Column="1" Text="{Binding OldValue, FallbackValue=—}" Padding="10,8"
+                                                   TextWrapping="Wrap" Foreground="{DynamicResource DangerBrush}" />
+                                        <TextBlock Grid.Column="2" Text="{Binding NewValue, FallbackValue=—}" Padding="10,8"
+                                                   TextWrapping="Wrap" Foreground="{DynamicResource SuccessBrush}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+        </DockPanel>
+    </Border>
+</UserControl>

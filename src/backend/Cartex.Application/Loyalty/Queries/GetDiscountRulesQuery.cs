@@ -1,15 +1,9 @@
-using Cartex.Domain.Enums;
+﻿using Cartex.Domain.Enums;
 using Cartex.Persistence;
-using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Loyalty;
 
 namespace Cartex.Application.Loyalty.Queries;
-
-public record DiscountExceptionDto(string Scope, long TargetId, string TargetName);
-
-public record DiscountRuleDto(long Id, string Name, bool IsEnabled, string Scope, long? TargetId, string? TargetName,
-    long? CustomerId, string? CustomerName, decimal MinAmount, string Method, decimal Value, int Priority,
-    DateOnly? StartsOn, DateOnly? EndsOn, List<DiscountExceptionDto> Exceptions);
 
 public record GetDiscountRulesQuery : IRequest<IReadOnlyCollection<DiscountRuleDto>>;
 
@@ -19,7 +13,7 @@ public sealed class GetDiscountRulesQueryHandler(IApplicationDbContext db) : IRe
     {
         var rules = await db.DiscountRules
             .Include(r => r.Exceptions)
-            .Include(r => r.Customer)
+            .Include(r => r.Customer).ThenInclude(r => r!.Party)
             .OrderByDescending(r => r.Priority).ThenBy(r => r.Name)
             .ToListAsync(cancellationToken);
 
@@ -45,7 +39,7 @@ public sealed class GetDiscountRulesQueryHandler(IApplicationDbContext db) : IRe
                     DiscountScope.Manufacturer => manufacturerNames.GetValueOrDefault(r.TargetId.Value),
                     _ => null
                 },
-                r.CustomerId, r.Customer?.FullName, r.MinAmount, r.Method.ToString(), r.Value, r.Priority,
+                r.CustomerId, r.Customer?.Party.FullName, r.MinAmount, r.Method.ToString(), r.Value, r.Priority,
                 r.StartsOn, r.EndsOn,
                 r.Exceptions.Select(e => new DiscountExceptionDto(e.Scope.ToString(), e.TargetId, e.Scope switch
                 {

@@ -1,26 +1,31 @@
+﻿using Cartex.Domain.Authorization;
+using Cartex.Domain.Common;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
-using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Customers;
 
 namespace Cartex.Application.Customers.Queries;
 
 public record GetCustomerByCardQuery(string Code) : IRequest<CustomerDto?>;
 
-public sealed class GetCustomerByCardQueryHandler(IApplicationDbContext db) : IRequestHandler<GetCustomerByCardQuery, CustomerDto?>
+public sealed class GetCustomerByCardQueryHandler(IApplicationDbContext db, ICurrentUser currentUser) : IRequestHandler<GetCustomerByCardQuery, CustomerDto?>
 {
     public async Task<CustomerDto?> Handle(GetCustomerByCardQuery request, CancellationToken cancellationToken)
     {
         var baseCode = await db.Businesses.Select(b => b.Currency).FirstAsync(cancellationToken);
-        return await db.Customers
-            .Where(c => c.CardBarcode == request.Code)
+        var customers = db.Customers.Where(c => c.CardBarcode == request.Code);
+        if (!currentUser.HasPermission(AppPermissions.Customers.ViewAll))
+            customers = customers.Where(c => c.AssignedUserId == currentUser.UserId);
+
+        return await customers
             .Select(c => new CustomerDto(
                 c.Id,
-                c.FullName,
+                c.Party.FullName,
                 c.LastName,
-                c.Address,
-                c.Phone,
-                c.Email,
+                c.Party.Address,
+                c.Party.Phone,
+                c.Party.Email,
                 c.CardBarcode,
                 c.DiscountPct,
                 c.Accounts.Where(a => a.Type == AccountType.Bonus).Sum(a => a.Balance),

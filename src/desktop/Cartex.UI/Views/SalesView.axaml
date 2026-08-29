@@ -5,6 +5,8 @@
              xmlns:il="using:AsyncImageLoader"
              xmlns:conv="using:Cartex.UI.Converters"
              xmlns:views="using:Cartex.UI.Views"
+             xmlns:svc="using:Cartex.UI.Services"
+             xmlns:sales="using:Cartex.Shared.Models.Sales"
              x:Class="Cartex.UI.Views.SalesView"
              c:Shortcuts.Source="{Binding Shortcuts}"
              x:CompileBindings="False">
@@ -25,8 +27,9 @@
             <Setter Property="CornerRadius" Value="12" />
             <Setter Property="Padding" Value="0" />
             <Setter Property="Margin" Value="5" />
-            <Setter Property="Width" Value="162" />
+            <Setter Property="MinWidth" Value="150" />
             <Setter Property="Height" Value="208" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="ClipToBounds" Value="True" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -105,6 +108,19 @@
             <Setter Property="Cursor" Value="Hand" />
         </Style>
 
+        <Style Selector="Button.detail-edit">
+            <Setter Property="Background" Value="{DynamicResource CardBg}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="7" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.detail-edit:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SidebarItemHover}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BrandPrimaryBrush}" />
+        </Style>
+
         <Style Selector="TextBlock.ratedate">
             <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
         </Style>
@@ -153,6 +169,14 @@
                         <mi:MaterialIcon Kind="ViewGridOutline" Width="24" Height="24" IsVisible="{Binding PosListMode}" />
                     </Panel>
                 </ToggleButton>
+                <Button DockPanel.Dock="Right" Classes="outline" Padding="12,0" Margin="8,0,0,0"
+                        Command="{Binding OpenProductEditorCommand}" IsVisible="{Binding CanCreateProduct}"
+                        ToolTip.Tip="{Binding L[add_product]}">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                        <mi:MaterialIcon Kind="Plus" Width="18" Height="18" />
+                        <TextBlock Text="{Binding L[add_product]}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6" Margin="8,0,0,0"
                             VerticalAlignment="Center" IsVisible="{Binding ShiftRequired}">
                     <Border Background="{DynamicResource SuccessBg}" CornerRadius="8" Padding="10,6"
@@ -198,6 +222,9 @@
                             <mi:MaterialIcon Kind="BarcodeScan" Width="20" Height="20" Margin="10,0,4,0"
                                              Foreground="{DynamicResource BrandPrimaryBrush}" />
                         </TextBox.InnerLeftContent>
+                        <TextBox.InnerRightContent>
+                            <views:ScanIndicatorView DataContext="{Binding ScanIndicator}" />
+                        </TextBox.InnerRightContent>
                         <TextBox.KeyBindings>
                             <KeyBinding Gesture="Enter" Command="{Binding ScanCommand}" />
                         </TextBox.KeyBindings>
@@ -264,15 +291,17 @@
             </DockPanel>
 
             <ScrollViewer ScrollChanged="OnProductsScroll">
-                <Panel>
-                    <StackPanel>
-                    <ItemsControl ItemsSource="{Binding Products}" IsVisible="{Binding !PosListMode}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
+                <Grid RowDefinitions="Auto,Auto">
+                    <ItemsRepeater Grid.Row="0" ItemsSource="{Binding Products}" IsVisible="{Binding !PosListMode}">
+                        <ItemsRepeater.Layout>
+                            <!-- 150px card + 10px horizontal margins. ItemsStretch="Fill" hands the
+                                 leftover width back to the columns, so the row has no dead space
+                                 when the cart panel is resized. -->
+                            <UniformGridLayout MinItemWidth="160" MinItemHeight="218"
+                                               MinColumnSpacing="0" MinRowSpacing="0"
+                                               ItemsStretch="Fill" />
+                        </ItemsRepeater.Layout>
+                        <ItemsRepeater.ItemTemplate>
                             <DataTemplate>
                                 <Button Classes="pcard"
                                         Command="{Binding $parent[UserControl].DataContext.AddStockToCartCommand}"
@@ -321,11 +350,14 @@
                                     </Grid>
                                 </Button>
                             </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                        </ItemsRepeater.ItemTemplate>
+                    </ItemsRepeater>
 
-                    <ItemsControl ItemsSource="{Binding Products}" IsVisible="{Binding PosListMode}">
-                        <ItemsControl.ItemTemplate>
+                    <ItemsRepeater Grid.Row="0" ItemsSource="{Binding Products}" IsVisible="{Binding PosListMode}">
+                        <ItemsRepeater.Layout>
+                            <StackLayout Spacing="0" />
+                        </ItemsRepeater.Layout>
+                        <ItemsRepeater.ItemTemplate>
                             <DataTemplate>
                                 <Button Classes="prow"
                                         Command="{Binding $parent[UserControl].DataContext.AddStockToCartCommand}"
@@ -357,21 +389,20 @@
                                     </Grid>
                                 </Button>
                             </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                        </ItemsRepeater.ItemTemplate>
+                    </ItemsRepeater>
 
-                    <Button Classes="outline" HorizontalAlignment="Center" Margin="0,10,0,16" Padding="18,8"
+                    <Button Grid.Row="1" Classes="outline" HorizontalAlignment="Center" Margin="0,10,0,16" Padding="18,8"
                             Command="{Binding LoadMoreProductsCommand}" IsVisible="{Binding HasMoreProducts}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <mi:MaterialIcon Kind="ChevronDown" Width="16" Height="16" />
                             <TextBlock Text="{Binding L[load_more]}" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
-                    </StackPanel>
 
-                    <c:EmptyState Icon="PackageVariant" Title="{Binding L[no_data]}"
+                    <c:EmptyState Grid.Row="0" Icon="PackageVariant" Title="{Binding L[no_data]}"
                                   IsVisible="{Binding !Products.Count}" />
-                </Panel>
+                </Grid>
             </ScrollViewer>
         </DockPanel>
 
@@ -380,7 +411,7 @@
                 Classes.blurred="{Binding IsModalOpen}">
             <DockPanel Margin="16">
 
-                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto,Auto" Margin="0,0,0,12">
+                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto,Auto,Auto" Margin="0,0,0,12">
                     <TextBlock Text="{Binding L[cart]}" Classes="h2" VerticalAlignment="Center" />
                     <Button Grid.Column="1" Classes="paybtn" Padding="10,6" Margin="0,0,8,0"
                             Command="{Binding ToggleQueuePanelCommand}" ToolTip.Tip="{Binding L[queue]}"
@@ -407,8 +438,35 @@
                             <TextBlock Text="{Binding HeldSales.Count}" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
-                    <Button Grid.Column="4" Classes="paybtn" Padding="8,6"
-                            Command="{Binding ClearCartCommand}" ToolTip.Tip="{Binding L[cancel]}"
+                    <Button Grid.Column="4" Classes="paybtn" Padding="10,6" Margin="0,0,8,0"
+                            ToolTip.Tip="{Binding L[note]}">
+                        <Panel>
+                            <mi:MaterialIcon Kind="InformationOutline" Width="18" Height="18" />
+                            <Border Background="{DynamicResource BrandPrimaryBrush}" CornerRadius="5" Width="10" Height="10"
+                                    HorizontalAlignment="Right" VerticalAlignment="Top"
+                                    Margin="0,-5,-7,0" IsVisible="{Binding HasSaleNote}" />
+                        </Panel>
+                        <Button.Flyout>
+                            <Flyout Placement="Bottom">
+                                <TextBox Width="280" MinHeight="88" AcceptsReturn="True" TextWrapping="Wrap"
+                                         c:FormBehaviors.SelectAllOnFocus="False"
+                                         Text="{Binding SaleNote, Mode=TwoWay}"
+                                         PlaceholderText="{Binding L[note]}" />
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
+                    <Button Grid.Column="5" Classes="paybtn" Padding="10,6" Margin="0,0,8,0"
+                            Command="{Binding SendToQueueCommand}" ToolTip.Tip="{Binding L[send_to_queue]}"
+                            IsVisible="{Binding CanSeeQueue}" IsEnabled="{Binding !IsCartEmpty}">
+                        <mi:MaterialIcon Kind="TrayArrowUp" Width="18" Height="18" />
+                    </Button>
+                    <Button Grid.Column="6" Classes="paybtn" Padding="10,6" Margin="0,0,8,0"
+                            Command="{Binding PrintPreviewCommand}" ToolTip.Tip="{Binding L[print_kind_preview]}"
+                            IsVisible="{Binding CanPrintProforma}" IsEnabled="{Binding !IsCartEmpty}">
+                        <mi:MaterialIcon Kind="PrinterOutline" Width="18" Height="18" />
+                    </Button>
+                    <Button Grid.Column="7" Classes="paybtn" Padding="8,6"
+                            Command="{Binding ClearCartConfirmedCommand}" ToolTip.Tip="{Binding L[cancel]}"
                             IsEnabled="{Binding !IsCartEmpty}">
                         <mi:MaterialIcon Kind="TrashCanOutline" Width="18" Height="18"
                                          Foreground="{DynamicResource DangerBrush}" />
@@ -435,14 +493,14 @@
                               IsVisible="{Binding SelectedCustomer, Converter={x:Static ObjectConverters.IsNotNull}}">
                             <StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="5">
-                                    <TextBlock Text="{Binding SelectedCustomer.FullName}" FontWeight="SemiBold"
+                                    <TextBlock Text="{Binding SelectedCustomerDisplay.FullName}" FontWeight="SemiBold"
                                                Foreground="{DynamicResource TextPrimary}" />
-                                    <TextBlock Text="{Binding SelectedCustomer.LastName}" FontWeight="SemiBold"
+                                    <TextBlock Text="{Binding SelectedCustomerDisplay.LastName}" FontWeight="SemiBold"
                                                Foreground="{DynamicResource TextSecondary}" />
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="10">
                                     <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondary}"
-                                               Text="{Binding SelectedCustomer.CashbackBalance, StringFormat='{}{0:N0} 🎁'}" />
+                                               Text="{Binding SelectedCustomerDisplay.CashbackBalance, StringFormat='{}{0:N0} 🎁'}" />
                                     <TextBlock FontSize="11" Foreground="{DynamicResource DangerBrush}"
                                                IsVisible="{Binding CustomerIsDebtor}">
                                         <Run Text="{Binding L[opening_kind_debt]}" />
@@ -478,32 +536,25 @@
                                        Foreground="{DynamicResource TextPrimary}" />
                         </Grid>
 
-                        <Grid ColumnDefinitions="*,110,150">
-                            <TextBlock Text="{Binding L[discount]}" Foreground="{DynamicResource TextSecondary}"
-                                       VerticalAlignment="Center" />
-                            <NumericUpDown Grid.Column="1" Value="{Binding DiscountPercent, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Maximum="100"
-                                           FormatString="0.00" ShowButtonSpinner="False" MinHeight="34" ToolTip.Tip="%">
-                                <NumericUpDown.InnerRightContent>
-                                    <TextBlock Text="%" VerticalAlignment="Center" Margin="0,0,8,0"
-                                               Foreground="{DynamicResource TextMuted}" />
-                                </NumericUpDown.InnerRightContent>
-                            </NumericUpDown>
-                            <NumericUpDown Grid.Column="2" Value="{Binding DiscountAmount, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0"
-                                           FormatString="N0" ShowButtonSpinner="False" MinHeight="34" Margin="6,0,0,0">
-                                <NumericUpDown.InnerRightContent>
-                                    <TextBlock Text="{Binding L[currency_sum]}" VerticalAlignment="Center" Margin="0,0,8,0"
-                                               Foreground="{DynamicResource TextMuted}" />
-                                </NumericUpDown.InnerRightContent>
-                            </NumericUpDown>
-                        </Grid>
-
-                        <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasAutoDiscount}">
-                            <TextBlock Text="{Binding L[loyalty_discount]}" Foreground="{DynamicResource TextSecondary}"
-                                       VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="1" Text="{Binding AutoDiscountAmount, StringFormat='{}-{0:N0}'}"
-                                       Foreground="{DynamicResource BrandPrimaryBrush}" FontWeight="SemiBold" />
-                        </Grid>
-
+                        <StackPanel Spacing="10" ClipToBounds="True" Classes="form payment-panel" Classes.open="{Binding IsPaymentPanelOpen}">
+                            <StackPanel.Styles>
+                                <Style Selector="StackPanel.payment-panel">
+                                    <Setter Property="MaxHeight" Value="0" />
+                                    <Setter Property="Opacity" Value="0" />
+                                    <Setter Property="IsHitTestVisible" Value="False" />
+                                </Style>
+                                <Style Selector="StackPanel.payment-panel.open">
+                                    <Setter Property="MaxHeight" Value="2000" />
+                                    <Setter Property="Opacity" Value="1" />
+                                    <Setter Property="IsHitTestVisible" Value="True" />
+                                </Style>
+                            </StackPanel.Styles>
+                            <StackPanel.Transitions>
+                                <Transitions>
+                                    <DoubleTransition Property="MaxHeight" Duration="0:0:0.3" Easing="CubicEaseOut" />
+                                    <DoubleTransition Property="Opacity" Duration="0:0:0.3" Easing="CubicEaseOut" />
+                                </Transitions>
+                            </StackPanel.Transitions>
                         <Separator Background="{DynamicResource BorderBrush}" Height="1" />
 
                         <Grid ColumnDefinitions="*,Auto">
@@ -513,7 +564,7 @@
                                        Foreground="{DynamicResource BrandPrimaryBrush}" />
                         </Grid>
 
-                        <Grid ColumnDefinitions="Auto,*,*,*" Margin="0,2,0,0" IsVisible="{Binding !IsMulticurrency}">
+                        <Grid ColumnDefinitions="Auto,*,*,*" Margin="0,2,0,0" IsVisible="{Binding ShowSingleCurrencyPayments}">
                             <Button Classes="icon" Margin="0,15,4,0" VerticalAlignment="Bottom"
                                     Command="{Binding PayExactCommand}"
                                     ToolTip.Tip="{Binding L[shortcut_pay_exact]}">
@@ -536,11 +587,11 @@
                             </StackPanel>
                         </Grid>
 
-                        <StackPanel Spacing="6" Margin="0,2,0,0" IsVisible="{Binding IsMulticurrency}">
+                        <StackPanel Spacing="6" Margin="0,2,0,0" IsVisible="{Binding ShowMulticurrencyPayments}">
                             <ItemsControl ItemsSource="{Binding PaymentRows}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Grid ColumnDefinitions="106,6,84,6,*,6,Auto" Margin="0,0,0,6">
+                                        <Grid ColumnDefinitions="132,6,84,6,*,6,Auto" Margin="0,0,0,6">
                                             <ComboBox ItemsSource="{Binding Methods}"
                                                       SelectedItem="{Binding Method}" MinHeight="36" VerticalAlignment="Top"
                                                       HorizontalAlignment="Stretch">
@@ -598,6 +649,38 @@
                                 </Button>
                             </Grid>
                         </StackPanel>
+
+                        <Grid ColumnDefinitions="*,110,150,Auto">
+                            <TextBlock Text="{Binding L[discount]}" Foreground="{DynamicResource TextSecondary}"
+                                       VerticalAlignment="Center" />
+                            <NumericUpDown Grid.Column="1" Value="{Binding DiscountPercent, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Maximum="100"
+                                           FormatString="0.00" ShowButtonSpinner="False" MinHeight="34" ToolTip.Tip="%">
+                                <NumericUpDown.InnerRightContent>
+                                    <TextBlock Text="%" VerticalAlignment="Center" Margin="0,0,8,0"
+                                               Foreground="{DynamicResource TextMuted}" />
+                                </NumericUpDown.InnerRightContent>
+                            </NumericUpDown>
+                            <NumericUpDown Grid.Column="2" Value="{Binding DiscountAmount, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0"
+                                           FormatString="N0" ShowButtonSpinner="False" MinHeight="34" Margin="6,0,0,0">
+                                <NumericUpDown.InnerRightContent>
+                                    <TextBlock Text="{Binding L[currency_sum]}" VerticalAlignment="Center" Margin="0,0,8,0"
+                                               Foreground="{DynamicResource TextMuted}" />
+                                </NumericUpDown.InnerRightContent>
+                            </NumericUpDown>
+                            <Button Grid.Column="3" Classes="icon" Margin="6,0,0,0" MinHeight="34"
+                                    IsVisible="{Binding CanDiscount}" IsEnabled="{Binding HasShortfall}"
+                                    Command="{Binding FillDiscountFromTenderCommand}"
+                                    ToolTip.Tip="{Binding L[discount_fill_shortfall]}">
+                                <TextBlock Text="=" FontSize="16" FontWeight="SemiBold" />
+                            </Button>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasAutoDiscount}">
+                            <TextBlock Text="{Binding L[loyalty_discount]}" Foreground="{DynamicResource TextSecondary}"
+                                       VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" Text="{Binding AutoDiscountAmount, StringFormat='{}-{0:N0}'}"
+                                       Foreground="{DynamicResource BrandPrimaryBrush}" FontWeight="SemiBold" />
+                        </Grid>
 
                         <Button Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand"
                                 HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
@@ -661,22 +744,33 @@
                             </StackPanel>
                         </Border>
 
-                        <Grid ColumnDefinitions="Auto,8,*">
-                            <Button Grid.Column="0" Classes="outline" MinHeight="50" Padding="14,0"
+                        </StackPanel>
+
+                        <Grid ColumnDefinitions="Auto,8,Auto,8,*">
+                            <Button Grid.Column="0" Background="Transparent" BorderThickness="0" MinHeight="50" Padding="14,0"
+                                    HorizontalContentAlignment="Center" Command="{Binding TogglePaymentPanelCommand}"
+                                    ToolTip.Tip="{Binding L[payment_details]}">
+                                <Panel>
+                                    <mi:MaterialIcon Kind="ChevronDown" Width="22" Height="22" IsVisible="{Binding IsPaymentPanelOpen}" />
+                                    <mi:MaterialIcon Kind="ChevronUp" Width="22" Height="22" IsVisible="{Binding !IsPaymentPanelOpen}" />
+                                </Panel>
+                            </Button>
+                            <Button Grid.Column="2" Classes="outline" MinHeight="50" Padding="14,0"
                                     HorizontalContentAlignment="Center" Command="{Binding HoldSaleCommand}"
-                                    IsEnabled="{Binding !IsCartEmpty}" ToolTip.Tip="{Binding L[hold_sale]}">
+                                    IsEnabled="{Binding !IsCartEmpty}" IsVisible="{Binding CanCreateCart}"
+                                    ToolTip.Tip="{Binding L[hold_sale]}">
                                 <mi:MaterialIcon Kind="PauseCircleOutline" Width="22" Height="22" />
                             </Button>
-                            <Button Grid.Column="2" Classes="brand" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                            <Button Grid.Column="4" Classes="brand" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                                     MinHeight="50" FontSize="17" Command="{Binding CompleteSaleCommand}"
-                                    IsEnabled="{Binding !IsCartEmpty}"
+                                    IsEnabled="{Binding !IsCartEmpty}" IsVisible="{Binding CanCheckout}"
                                     Content="{Binding L[complete_sale]}" />
                         </Grid>
 
                     </StackPanel>
                 </Border>
 
-                <ScrollViewer>
+                <ScrollViewer c:ScanFocus.Target="{Binding #ScanBox}">
                     <Panel>
                         <ItemsControl ItemsSource="{Binding CartItems}">
                             <ItemsControl.ItemTemplate>
@@ -687,12 +781,12 @@
                                         <Grid ColumnDefinitions="*,Auto,Auto">
                                             <StackPanel VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding ProductName}" FontWeight="SemiBold"
-                                                           TextTrimming="CharacterEllipsis" MaxWidth="170"
+                                                           TextTrimming="CharacterEllipsis"
                                                            Foreground="{DynamicResource TextPrimary}" />
                                                 <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondary}"
                                                            IsVisible="{Binding !$parent[UserControl].DataContext.CanOverridePrice}"
                                                            Text="{Binding UnitPrice, StringFormat='{}{0:N0}'}" />
-                                                <NumericUpDown Value="{Binding UnitPrice, Mode=TwoWay, Converter={x:Static conv:EmptyKeepsValueConverter.Instance}}" Minimum="0"
+                                                <NumericUpDown Value="{Binding UnitPrice, Mode=TwoWay, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0"
                                                                FormatString="0.##" ShowButtonSpinner="False"
                                                                MinHeight="28" MinWidth="96" HorizontalAlignment="Left"
                                                                IsVisible="{Binding $parent[UserControl].DataContext.CanOverridePrice}" />
@@ -712,10 +806,16 @@
                                                     <mi:MaterialIcon Kind="Plus" Width="14" Height="14" />
                                                 </Button>
                                             </StackPanel>
-                                            <StackPanel Grid.Column="2" VerticalAlignment="Center" MinWidth="64">
+                                            <StackPanel Grid.Column="2" VerticalAlignment="Center" MinWidth="76">
                                                 <TextBlock Text="{Binding LineTotal, StringFormat='{}{0:N0}'}"
                                                            FontWeight="SemiBold" TextAlignment="Right"
+                                                           IsVisible="{Binding !AllowsAmountEntry}"
                                                            Foreground="{DynamicResource TextPrimary}" />
+                                                <NumericUpDown Value="{Binding AmountInput, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                               Minimum="0" FormatString="N0" ShowButtonSpinner="False"
+                                                               MinWidth="76" MinHeight="30" TextAlignment="Right"
+                                                               IsVisible="{Binding AllowsAmountEntry}"
+                                                               ToolTip.Tip="{Binding $parent[UserControl].DataContext.L[amount_entry_sale_hint]}" />
                                                 <Button Background="Transparent" BorderThickness="0" Padding="2"
                                                         HorizontalAlignment="Right" Cursor="Hand"
                                                         Command="{Binding $parent[UserControl].DataContext.RemoveItemCommand}"
@@ -740,13 +840,13 @@
 
         <Border Grid.ColumnSpan="3" Background="#30000000" IsVisible="{Binding IsCustomerPanelOpen}"
                 c:OverlayBehaviors.DismissCommand="{Binding ToggleCustomerPanelCommand}">
-            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="440" MaxHeight="560"
+            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="620" MinHeight="520" MaxHeight="640"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="22"
                     BoxShadow="0 16 48 0 #44000000">
                 <Panel>
 
-                <DockPanel IsVisible="{Binding !IsAddingCustomer}">
+                <DockPanel IsVisible="{Binding !IsAddingCustomer}" c:FormBehaviors.AutoFocus="True">
                     <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,14">
                         <TextBlock Text="{Binding L[customers]}" FontSize="18" FontWeight="Bold"
                                    Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
@@ -755,7 +855,7 @@
                             <mi:MaterialIcon Kind="Close" Width="18" Height="18" Foreground="{DynamicResource TextMuted}" />
                         </Button>
                     </Grid>
-                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto" Margin="0,0,0,12">
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
                         <TextBox Text="{Binding CustomerSearch, Mode=TwoWay}" PlaceholderText="{Binding L[search]}" MinHeight="42">
                             <TextBox.InnerLeftContent>
                                 <mi:MaterialIcon Kind="Magnify" Width="16" Height="16" Margin="10,0,0,0"
@@ -766,11 +866,20 @@
                                 ToolTip.Tip="{Binding L[cashback_balance]}">
                             <mi:MaterialIcon Kind="EyeOutline" Width="18" Height="18" />
                         </Button>
-                        <Button Grid.Column="2" Classes="brand" Margin="8,0,0,0" Command="{Binding ShowAddCustomerCommand}"
-                                ToolTip.Tip="{Binding L[add]}">
-                            <mi:MaterialIcon Kind="AccountPlus" Width="18" Height="18" Foreground="White" />
+                    </Grid>
+                    <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,14,0,0">
+                        <TextBlock Text="{Binding L[pick_customer_subtitle]}" VerticalAlignment="Center"
+                                   TextWrapping="Wrap" FontSize="12.5"
+                                   Foreground="{DynamicResource TextMuted}" />
+                        <Button Grid.Column="1" Classes="brand" MinHeight="42" Padding="18,0"
+                                Command="{Binding ShowAddCustomerCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <mi:MaterialIcon Kind="AccountPlus" Width="16" Height="16" />
+                                <TextBlock Text="{Binding L[add_customer]}" />
+                            </StackPanel>
                         </Button>
                     </Grid>
+
                     <ScrollViewer>
                         <ItemsControl ItemsSource="{Binding CustomerResults}">
                             <ItemsControl.ItemTemplate>
@@ -806,7 +915,7 @@
                     </ScrollViewer>
                 </DockPanel>
 
-                <StackPanel Spacing="12" IsVisible="{Binding IsAddingCustomer}">
+                <StackPanel Spacing="12" IsVisible="{Binding IsAddingCustomer}" c:FormBehaviors.AutoFocus="True">
                     <Grid ColumnDefinitions="Auto,*" Margin="0,0,0,2">
                         <Button Grid.Column="0" Background="Transparent" BorderThickness="0" Padding="4" Cursor="Hand"
                                 Command="{Binding CancelAddCustomerCommand}">
@@ -858,11 +967,12 @@
                         </StackPanel>
                         <StackPanel Grid.Column="2" Spacing="5">
                             <c:FieldLabel Text="{Binding L[credit_limit]}" />
-                            <NumericUpDown Value="{Binding NewCustomerCreditLimit, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="100000"
-                                           FormatString="0.##" ShowButtonSpinner="False" MinHeight="40" />
+                            <NumericUpDown Value="{Binding NewCustomerCreditLimit}" Minimum="0" Increment="100000"
+                                           FormatString="0.##" ShowButtonSpinner="False" MinHeight="40"
+                                           PlaceholderText="{Binding L[unlimited]}" />
                         </StackPanel>
                     </Grid>
-                    <StackPanel Spacing="5">
+                    <StackPanel Spacing="5" IsVisible="{Binding CanSetOpeningBalance}">
                         <c:FieldLabel Text="{Binding L[opening_balance]}" />
                         <Grid ColumnDefinitions="*,8,Auto,Auto">
                             <NumericUpDown Value="{Binding NewCustomerOpening, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="10000"
@@ -885,108 +995,270 @@
             </Border>
         </Border>
 
-        <Border Grid.ColumnSpan="3" Background="#30000000" IsVisible="{Binding IsQueuePanelOpen}"
+        <Border Grid.ColumnSpan="3" Background="#55000000" IsVisible="{Binding IsQueuePanelOpen}"
                 c:OverlayBehaviors.DismissCommand="{Binding ToggleQueuePanelCommand}">
-            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Width="460" MaxHeight="520"
-                    VerticalAlignment="Center" HorizontalAlignment="Center"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="16"
-                    BoxShadow="0 12 40 0 #33000000">
+            <Border Background="{DynamicResource CardBg}" CornerRadius="16" Width="820" MinHeight="480" MaxHeight="620"
+                    VerticalAlignment="Center" HorizontalAlignment="Center" ClipToBounds="True"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    BoxShadow="0 24 80 0 #44000000">
                 <DockPanel>
-                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,10">
-                        <TextBlock Text="{Binding L[queue]}" Classes="h3" VerticalAlignment="Center" />
-                        <Button Grid.Column="1" Background="Transparent" BorderThickness="0" Padding="4" Cursor="Hand"
-                                Command="{Binding ToggleQueuePanelCommand}">
-                            <mi:MaterialIcon Kind="Close" Width="18" Height="18" Foreground="{DynamicResource TextMuted}" />
-                        </Button>
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto" Margin="22,18,22,14">
+                        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                            <mi:MaterialIcon Kind="FormatListNumbered" Width="22" Height="22"
+                                             Foreground="{DynamicResource BrandPrimaryBrush}" />
+                            <TextBlock Text="{Binding L[queue]}" Classes="h2" VerticalAlignment="Center" />
+                            <Border Background="{DynamicResource SidebarItemActive}" CornerRadius="10" Padding="9,2"
+                                    VerticalAlignment="Center" IsVisible="{Binding QueueCount}">
+                                <TextBlock Text="{Binding QueueCount}" FontSize="12" FontWeight="SemiBold" />
+                            </Border>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
+                            <Button Classes="icon" Command="{Binding ToggleQueuePanelCommand}"
+                                    ToolTip.Tip="{Binding L[refresh]}" IsVisible="False" />
+                            <Button Classes="icon" Command="{Binding ToggleQueuePanelCommand}">
+                                <mi:MaterialIcon Kind="Close" Width="18" Height="18" Foreground="{DynamicResource TextMuted}" />
+                            </Button>
+                        </StackPanel>
                     </Grid>
-                    <ScrollViewer>
-                        <Panel>
-                            <ItemsControl ItemsSource="{Binding QueueCarts}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Margin="0,3" Padding="12,10" CornerRadius="8"
-                                                Background="{DynamicResource AppBg}">
-                                            <Grid ColumnDefinitions="*,Auto,Auto">
-                                                <StackPanel VerticalAlignment="Center" Spacing="2">
-                                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
-                                                               Foreground="{DynamicResource TextPrimary}" />
-                                                    <TextBlock Text="{Binding Subtitle}" FontSize="12"
-                                                               Foreground="{DynamicResource TextMuted}" />
-                                                    <TextBlock Text="{Binding CustomerName}" FontSize="12" IsVisible="{Binding HasCustomer}"
-                                                               Foreground="{DynamicResource TextSecondary}" />
-                                                    <TextBlock Text="{Binding Note}" FontSize="12" FontStyle="Italic" IsVisible="{Binding HasNote}"
-                                                               TextWrapping="Wrap" Foreground="{DynamicResource TextMuted}" />
-                                                </StackPanel>
-                                                <Button Grid.Column="1" Classes="brand" Padding="12,6" Margin="8,0,6,0"
-                                                        VerticalAlignment="Center"
-                                                        Command="{Binding $parent[ItemsControl].DataContext.OpenQueueCartCommand}"
-                                                        CommandParameter="{Binding}">
-                                                    <mi:MaterialIcon Kind="Play" Width="16" Height="16" />
-                                                </Button>
-                                                <Button Grid.Column="2" Classes="paybtn" Padding="8,6" VerticalAlignment="Center"
-                                                        Command="{Binding $parent[ItemsControl].DataContext.CancelQueueCartCommand}"
-                                                        CommandParameter="{Binding}">
-                                                    <mi:MaterialIcon Kind="Close" Width="14" Height="14"
-                                                                     Foreground="{DynamicResource DangerBrush}" />
-                                                </Button>
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                            <TextBlock Text="{Binding L[no_data]}" Foreground="{DynamicResource TextMuted}"
-                                       HorizontalAlignment="Center" Margin="0,20"
-                                       IsVisible="{Binding !QueueCarts.Count}" />
-                        </Panel>
-                    </ScrollViewer>
+                    <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource BorderBrush}" />
+
+                    <Grid ColumnDefinitions="340,1,*">
+                        <ScrollViewer Padding="14">
+                            <Panel>
+                                <ItemsControl ItemsSource="{Binding QueueCarts}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Background="Transparent" BorderThickness="0" Padding="12,10" Cursor="Hand"
+                                                    Margin="0,0,0,6" CornerRadius="10"
+                                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                                    Command="{Binding $parent[ItemsControl].DataContext.SelectQueueRowCommand}"
+                                                    CommandParameter="{Binding}">
+                                                <Grid ColumnDefinitions="Auto,*">
+                                                    <Border Width="36" Height="36" CornerRadius="18" Margin="0,0,12,0"
+                                                            Background="{DynamicResource SidebarItemHover}">
+                                                        <mi:MaterialIcon Kind="CartOutline" Width="18" Height="18"
+                                                                         Foreground="{DynamicResource BrandPrimaryBrush}"
+                                                                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                    </Border>
+                                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
+                                                        <TextBlock Text="{Binding Subtitle}" FontSize="12"
+                                                                   Foreground="{DynamicResource TextMuted}" />
+                                                        <TextBlock Text="{Binding CustomerName}" FontSize="12"
+                                                                   IsVisible="{Binding HasCustomer}"
+                                                                   Foreground="{DynamicResource TextSecondary}" />
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10"
+                                            Margin="0,60,0,0" IsVisible="{Binding !QueueCarts.Count}">
+                                    <mi:MaterialIcon Kind="TrayRemove" Width="38" Height="38"
+                                                     HorizontalAlignment="Center" Foreground="{DynamicResource TextMuted}" />
+                                    <TextBlock Text="{Binding L[queue_empty]}" Foreground="{DynamicResource TextMuted}"
+                                               HorizontalAlignment="Center" />
+                                </StackPanel>
+                            </Panel>
+                        </ScrollViewer>
+
+                        <Border Grid.Column="1" Background="{DynamicResource BorderBrush}" />
+
+                        <DockPanel Grid.Column="2" Margin="18" IsVisible="{Binding HasSelectedQueueRow}">
+                            <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,12">
+                                <TextBlock Text="{Binding SelectedQueueRow.Title}" Classes="h3" />
+                                <TextBlock Text="{Binding SelectedQueueRow.Subtitle}" FontSize="12"
+                                           Foreground="{DynamicResource TextMuted}" />
+                                <TextBlock Text="{Binding SelectedQueueRow.CustomerName}" FontSize="12.5"
+                                           IsVisible="{Binding SelectedQueueRow.HasCustomer}"
+                                           Foreground="{DynamicResource TextSecondary}" />
+                                <TextBlock Text="{Binding SelectedQueueRow.Note}" FontSize="12" FontStyle="Italic"
+                                           TextWrapping="Wrap" IsVisible="{Binding SelectedQueueRow.HasNote}"
+                                           Foreground="{DynamicResource TextMuted}" />
+                            </StackPanel>
+                            <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,Auto" ColumnSpacing="10" Margin="0,14,0,0">
+                                <Button Classes="danger" HorizontalAlignment="Left" Padding="14,8"
+                                        Command="{Binding CancelQueueCartCommand}"
+                                        CommandParameter="{Binding SelectedQueueRow}"
+                                        Content="{Binding L[cancel]}" />
+                                <Button Grid.Column="1" Classes="brand" MinWidth="150" Padding="16,10"
+                                        Command="{Binding OpenQueueCartCommand}"
+                                        CommandParameter="{Binding SelectedQueueRow}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <mi:MaterialIcon Kind="Play" Width="16" Height="16" />
+                                        <TextBlock Text="{Binding L[resume]}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+                            <Border Background="{DynamicResource AppBg}" CornerRadius="10" Padding="4" ClipToBounds="True">
+                                <ScrollViewer>
+                                    <ItemsControl ItemsSource="{Binding SelectedQueueItems}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid ColumnDefinitions="*,Auto" Margin="10,7">
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock Text="{Binding ProductName}" TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock FontSize="11" Foreground="{DynamicResource TextMuted}"
+                                                                   Text="{Binding Quantity, StringFormat='{}{0:0.###} x'}" />
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="1" VerticalAlignment="Center" FontWeight="SemiBold"
+                                                               Text="{Binding LineTotal, StringFormat='{}{0:N0}'}" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </Border>
+                        </DockPanel>
+
+                        <StackPanel Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10"
+                                    IsVisible="{Binding !HasSelectedQueueRow}">
+                            <mi:MaterialIcon Kind="GestureTapButton" Width="34" Height="34"
+                                             HorizontalAlignment="Center" Foreground="{DynamicResource TextMuted}" />
+                            <TextBlock Text="{Binding L[select_row_hint]}" Foreground="{DynamicResource TextMuted}"
+                                       HorizontalAlignment="Center" TextWrapping="Wrap" MaxWidth="220" TextAlignment="Center" />
+                        </StackPanel>
+                    </Grid>
                 </DockPanel>
             </Border>
         </Border>
 
-        <Border Grid.ColumnSpan="3" Background="#30000000" IsVisible="{Binding IsHeldPanelOpen}"
+        <Border Grid.ColumnSpan="3" Background="#55000000" IsVisible="{Binding IsHeldPanelOpen}"
                 c:OverlayBehaviors.DismissCommand="{Binding ToggleHeldPanelCommand}">
-            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Width="380" MaxHeight="460"
-                    VerticalAlignment="Center" HorizontalAlignment="Center"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="16"
-                    BoxShadow="0 12 40 0 #33000000">
+            <Border Background="{DynamicResource CardBg}" CornerRadius="16" Width="820" MinHeight="480" MaxHeight="620"
+                    VerticalAlignment="Center" HorizontalAlignment="Center" ClipToBounds="True"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    BoxShadow="0 24 80 0 #44000000">
                 <DockPanel>
-                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,10">
-                        <TextBlock Text="{Binding L[held_sales]}" Classes="h3" VerticalAlignment="Center" />
-                        <Button Grid.Column="1" Background="Transparent" BorderThickness="0" Padding="4" Cursor="Hand"
-                                Command="{Binding ToggleHeldPanelCommand}">
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto" Margin="22,18,22,14">
+                        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                            <mi:MaterialIcon Kind="PauseCircleOutline" Width="22" Height="22"
+                                             Foreground="{DynamicResource BrandPrimaryBrush}" />
+                            <TextBlock Text="{Binding L[held_sales]}" Classes="h2" VerticalAlignment="Center" />
+                            <Border Background="{DynamicResource SidebarItemActive}" CornerRadius="10" Padding="9,2"
+                                    VerticalAlignment="Center" IsVisible="{Binding HeldSales.Count}">
+                                <TextBlock Text="{Binding HeldSales.Count}" FontSize="12" FontWeight="SemiBold" />
+                            </Border>
+                        </StackPanel>
+                        <Button Grid.Column="2" Classes="icon" Command="{Binding ToggleHeldPanelCommand}">
                             <mi:MaterialIcon Kind="Close" Width="18" Height="18" Foreground="{DynamicResource TextMuted}" />
                         </Button>
                     </Grid>
-                    <ScrollViewer>
-                        <Panel>
-                            <ItemsControl ItemsSource="{Binding HeldSales}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,4">
-                                            <StackPanel VerticalAlignment="Center" Spacing="1">
-                                                <TextBlock Text="{Binding Label}"
-                                                           Foreground="{DynamicResource TextPrimary}" />
-                                                <TextBlock Text="{Binding HeldAt, StringFormat='{}{0:dd.MM HH:mm}'}"
-                                                           FontSize="11" Foreground="{DynamicResource TextMuted}" />
-                                            </StackPanel>
-                                            <Button Grid.Column="1" Classes="brand" Padding="10,6" Margin="0,0,6,0"
-                                                    Command="{Binding $parent[ItemsControl].DataContext.ResumeSaleCommand}"
-                                                    CommandParameter="{Binding}" Content="{Binding $parent[ItemsControl].DataContext.L[resume]}" />
-                                            <Button Grid.Column="2" Classes="paybtn" Padding="8,6"
-                                                    Command="{Binding $parent[ItemsControl].DataContext.DiscardHeldCommand}"
+                    <Border DockPanel.Dock="Top" Height="1" Background="{DynamicResource BorderBrush}" />
+
+                    <Grid ColumnDefinitions="340,1,*">
+                        <ScrollViewer Padding="14">
+                            <Panel>
+                                <ItemsControl ItemsSource="{Binding HeldSales}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Background="Transparent" BorderThickness="0" Padding="12,10" Cursor="Hand"
+                                                    Margin="0,0,0,6" CornerRadius="10"
+                                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                                    Command="{Binding $parent[ItemsControl].DataContext.SelectHeldCommand}"
                                                     CommandParameter="{Binding}">
-                                                <mi:MaterialIcon Kind="Close" Width="14" Height="14"
-                                                                 Foreground="{DynamicResource DangerBrush}" />
+                                                <Grid ColumnDefinitions="Auto,*,Auto">
+                                                    <Border Width="36" Height="36" CornerRadius="18" Margin="0,0,12,0"
+                                                            Background="{DynamicResource SidebarItemHover}">
+                                                        <mi:MaterialIcon Kind="PauseCircleOutline" Width="18" Height="18"
+                                                                         Foreground="{DynamicResource BrandPrimaryBrush}"
+                                                                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                    </Border>
+                                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Label}" FontWeight="SemiBold" />
+                                                        <TextBlock Text="{Binding HeldAt, StringFormat='{}{0:dd.MM HH:mm}'}"
+                                                                   FontSize="11" Foreground="{DynamicResource TextMuted}" />
+                                                        <TextBlock Text="{Binding CustomerName}" FontSize="12"
+                                                                   IsVisible="{Binding HasCustomer}"
+                                                                   Foreground="{DynamicResource TextSecondary}" />
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="2" VerticalAlignment="Center" FontWeight="SemiBold"
+                                                               Text="{Binding Total, StringFormat='{}{0:N0}'}" />
+                                                </Grid>
                                             </Button>
-                                        </Grid>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                            <TextBlock Text="{Binding L[no_data]}" Foreground="{DynamicResource TextMuted}"
-                                       HorizontalAlignment="Center" Margin="0,20"
-                                       IsVisible="{Binding !HeldSales.Count}" />
-                        </Panel>
-                    </ScrollViewer>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10"
+                                            Margin="0,60,0,0" IsVisible="{Binding !HeldSales.Count}">
+                                    <mi:MaterialIcon Kind="PauseCircleOutline" Width="38" Height="38"
+                                                     HorizontalAlignment="Center" Foreground="{DynamicResource TextMuted}" />
+                                    <TextBlock Text="{Binding L[held_empty]}" Foreground="{DynamicResource TextMuted}"
+                                               HorizontalAlignment="Center" />
+                                </StackPanel>
+                            </Panel>
+                        </ScrollViewer>
+
+                        <Border Grid.Column="1" Background="{DynamicResource BorderBrush}" />
+
+                        <DockPanel Grid.Column="2" Margin="18" IsVisible="{Binding HasSelectedHeld}">
+                            <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+                                <StackPanel Spacing="3">
+                                    <TextBlock Text="{Binding SelectedHeld.Label}" Classes="h3" />
+                                    <TextBlock Text="{Binding SelectedHeld.HeldAt, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
+                                               FontSize="12" Foreground="{DynamicResource TextMuted}" />
+                                    <TextBlock Text="{Binding SelectedHeld.CustomerName}" FontSize="12.5"
+                                               IsVisible="{Binding SelectedHeld.HasCustomer}"
+                                               Foreground="{DynamicResource TextSecondary}" />
+                                </StackPanel>
+                                <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="18" FontWeight="Bold"
+                                           Foreground="{DynamicResource BrandPrimaryBrush}"
+                                           Text="{Binding SelectedHeld.Total, StringFormat='{}{0:N0}'}" />
+                            </Grid>
+
+                            <Grid DockPanel.Dock="Bottom" ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="10" Margin="0,14,0,0">
+                                <Button Classes="danger" Padding="14,8"
+                                        Command="{Binding DiscardHeldCommand}"
+                                        CommandParameter="{Binding SelectedHeld}"
+                                        Content="{Binding L[delete]}" />
+                                <Button Grid.Column="1" Classes="outline" Padding="14,8"
+                                        Command="{Binding PrintHeldPreviewCommand}"
+                                        CommandParameter="{Binding SelectedHeld}">
+                                    <StackPanel Orientation="Horizontal" Spacing="7">
+                                        <mi:MaterialIcon Kind="PrinterOutline" Width="16" Height="16" />
+                                        <TextBlock Text="{Binding L[preview]}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Grid.Column="3" Classes="brand" MinWidth="150" Padding="16,10"
+                                        Command="{Binding ResumeSaleCommand}"
+                                        CommandParameter="{Binding SelectedHeld}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <mi:MaterialIcon Kind="Play" Width="16" Height="16" />
+                                        <TextBlock Text="{Binding L[resume]}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+
+                            <Border Background="{DynamicResource AppBg}" CornerRadius="10" Padding="4" ClipToBounds="True">
+                                <ScrollViewer>
+                                    <ItemsControl ItemsSource="{Binding SelectedHeld.Items}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid ColumnDefinitions="*,Auto" Margin="10,7">
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock Text="{Binding ProductName}" TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock FontSize="11" Foreground="{DynamicResource TextMuted}"
+                                                                   Text="{Binding Quantity, StringFormat='{}{0:0.###} x'}" />
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="1" VerticalAlignment="Center" FontWeight="SemiBold"
+                                                               Text="{Binding LineTotal, StringFormat='{}{0:N0}'}" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </Border>
+                        </DockPanel>
+
+                        <StackPanel Grid.Column="2" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10"
+                                    IsVisible="{Binding !HasSelectedHeld}">
+                            <mi:MaterialIcon Kind="GestureTapButton" Width="34" Height="34"
+                                             HorizontalAlignment="Center" Foreground="{DynamicResource TextMuted}" />
+                            <TextBlock Text="{Binding L[select_row_hint]}" Foreground="{DynamicResource TextMuted}"
+                                       HorizontalAlignment="Center" TextWrapping="Wrap" MaxWidth="220" TextAlignment="Center" />
+                        </StackPanel>
+                    </Grid>
                 </DockPanel>
             </Border>
         </Border>
@@ -996,43 +1268,46 @@
             <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="440" MaxHeight="640"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="0" ClipToBounds="True">
-                <ScrollViewer>
-                    <StackPanel Margin="22" Spacing="12">
+                <Grid>
+                    <ScrollViewer>
+                        <StackPanel Margin="22" Spacing="12">
                         <Grid ColumnDefinitions="Auto,16,*">
-                            <Border Width="128" Height="128" CornerRadius="12" ClipToBounds="True" VerticalAlignment="Top"
-                                    Background="{DynamicResource SidebarItemHover}">
-                                <Panel>
-                                    <mi:MaterialIcon Kind="PackageVariantClosed" Width="40" Height="40"
-                                                     HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                     Foreground="{DynamicResource TextMuted}" />
-                                    <ContentControl Content="{Binding DetailProduct}">
-                                        <ContentControl.ContentTemplate>
-                                            <DataTemplate>
-                                                <Image il:ImageLoader.Source="{Binding ImageUrl, Converter={x:Static conv:ImageUrlConverter.Instance}}" Stretch="UniformToFill" />
-                                            </DataTemplate>
-                                        </ContentControl.ContentTemplate>
-                                    </ContentControl>
-                                </Panel>
-                            </Border>
+                            <Button Width="128" Height="128" Padding="0" BorderThickness="0" Background="Transparent"
+                                    VerticalAlignment="Top" Command="{Binding OpenDetailImageCommand}">
+                                <Border CornerRadius="12" ClipToBounds="True" Background="{DynamicResource SidebarItemHover}">
+                                    <Panel>
+                                        <mi:MaterialIcon Kind="PackageVariantClosed" Width="40" Height="40"
+                                                         HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                         Foreground="{DynamicResource TextMuted}" />
+                                        <ContentControl Content="{Binding DetailProduct}">
+                                            <ContentControl.ContentTemplate>
+                                                <DataTemplate>
+                                                    <Image il:ImageLoader.Source="{Binding ImageUrl, Converter={x:Static conv:ImageUrlConverter.Instance}}" Stretch="UniformToFill" />
+                                                </DataTemplate>
+                                            </ContentControl.ContentTemplate>
+                                        </ContentControl>
+                                    </Panel>
+                                </Border>
+                            </Button>
                             <StackPanel Grid.Column="2" Spacing="10">
-                                <TextBlock Text="{Binding DetailProduct.ProductName}" FontSize="17" FontWeight="Bold"
+                                <TextBlock Text="{Binding DetailProductDisplay.ProductName}" FontSize="17" FontWeight="Bold"
                                            TextWrapping="Wrap" Foreground="{DynamicResource TextPrimary}" />
                                 <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
                                     <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding L[category]}" Foreground="{DynamicResource TextSecondary}" />
-                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding DetailProduct.CategoryName}" Foreground="{DynamicResource TextPrimary}" />
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding DetailProductDisplay.CategoryName}" Foreground="{DynamicResource TextPrimary}" />
                                     <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding L[unit]}" Foreground="{DynamicResource TextSecondary}" />
-                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding DetailProduct.UnitName}" Foreground="{DynamicResource TextPrimary}" />
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding DetailProductDisplay.UnitName}" Foreground="{DynamicResource TextPrimary}" />
                                     <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding L[on_hand]}" Foreground="{DynamicResource TextSecondary}" />
-                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding DetailProduct.Quantity, StringFormat='{}{0:N0}'}"
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding DetailProductDisplay.Quantity, StringFormat='{}{0:N0}'}"
                                                FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" />
                                     <TextBlock Grid.Row="3" Grid.Column="0" Text="{Binding L[selling_price]}" Foreground="{DynamicResource TextSecondary}" />
-                                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding DetailProduct.SellingPrice, StringFormat='{}{0:N0}'}"
+                                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding DetailProductDisplay.SellingPrice, StringFormat='{}{0:N0}'}"
                                                FontWeight="Bold" Foreground="{DynamicResource BrandPrimaryBrush}" />
                                     <TextBlock Grid.Row="4" Grid.Column="0" Text="{Binding L[sku_code]}" Foreground="{DynamicResource TextSecondary}"
-                                               IsVisible="{Binding DetailProduct.Code, Converter={x:Static conv:StringNotEmptyConverter.Instance}}" />
-                                    <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding DetailProduct.Code}" Foreground="{DynamicResource TextPrimary}"
+                                               IsVisible="{Binding DetailProductDisplay.Code, Converter={x:Static conv:StringNotEmptyConverter.Instance}}" />
+                                    <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding DetailProductDisplay.Code}" Foreground="{DynamicResource TextPrimary}"
                                                FontWeight="SemiBold"
-                                               IsVisible="{Binding DetailProduct.Code, Converter={x:Static conv:StringNotEmptyConverter.Instance}}" />
+                                               IsVisible="{Binding DetailProductDisplay.Code, Converter={x:Static conv:StringNotEmptyConverter.Instance}}" />
                                     <TextBlock Grid.Row="5" Grid.Column="0" Text="{Binding L[barcode]}" Foreground="{DynamicResource TextSecondary}"
                                                IsVisible="{Binding DetailBarcodes, Converter={x:Static conv:StringNotEmptyConverter.Instance}}" />
                                     <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding DetailBarcodes}" Foreground="{DynamicResource TextPrimary}"
@@ -1118,35 +1393,81 @@
                                 </StackPanel>
                             </Button>
                         </Grid>
+                        </StackPanel>
+                    </ScrollViewer>
+                    <Button Classes="detail-edit" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10"
+                            Command="{Binding EditDetailProductCommand}" IsVisible="{Binding CanManageProducts}"
+                            ToolTip.Tip="{Binding L[edit]}">
+                        <mi:MaterialIcon Kind="Pencil" Width="18" Height="18" />
+                    </Button>
+                </Grid>
+            </Border>
+        </Border>
+
+        <Border Grid.ColumnSpan="3" Background="#30000000" IsVisible="{Binding IsReferenceOpen}"
+                c:OverlayBehaviors.DismissCommand="{Binding CloseReferenceCommand}">
+            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="440" MaxHeight="640"
+                    VerticalAlignment="Center" HorizontalAlignment="Center"
+                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
+                <ScrollViewer>
+                    <StackPanel Margin="22" Spacing="12">
+                        <Grid ColumnDefinitions="Auto,16,*">
+                            <Border Width="128" Height="128" CornerRadius="12" ClipToBounds="True"
+                                    VerticalAlignment="Top" Background="{DynamicResource SidebarItemHover}">
+                                <Panel>
+                                    <mi:MaterialIcon Kind="BookSearchOutline" Width="40" Height="40"
+                                                     HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                     Foreground="{DynamicResource TextMuted}" />
+                                    <Image il:ImageLoader.Source="{Binding ReferenceProductDisplay.ImageUrl, Converter={x:Static conv:ImageUrlConverter.Instance}}"
+                                           Stretch="UniformToFill" />
+                                </Panel>
+                            </Border>
+                            <StackPanel Grid.Column="2" Spacing="10">
+                                <TextBlock Text="{Binding L[catalog_reference_found]}" Classes="caption"
+                                           Foreground="{DynamicResource TextMuted}" />
+                                <TextBlock Text="{Binding ReferenceProductDisplay.Name}" FontSize="17" FontWeight="Bold"
+                                           TextWrapping="Wrap" Foreground="{DynamicResource TextPrimary}" />
+                                <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding L[manufacturer]}" Foreground="{DynamicResource TextSecondary}" />
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ReferenceProductDisplay.Manufacturer}"
+                                               Foreground="{DynamicResource TextPrimary}" />
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding L[category]}" Foreground="{DynamicResource TextSecondary}" />
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ReferenceCategoryText}"
+                                               Foreground="{DynamicResource TextPrimary}" />
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding L[model]}" Foreground="{DynamicResource TextSecondary}" />
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ReferenceProductDisplay.Model}"
+                                               Foreground="{DynamicResource TextPrimary}" />
+                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="{Binding L[unit]}" Foreground="{DynamicResource TextSecondary}" />
+                                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding ReferenceProductDisplay.Unit}"
+                                               Foreground="{DynamicResource TextPrimary}" />
+                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="{Binding L[barcode]}" Foreground="{DynamicResource TextSecondary}" />
+                                    <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding ReferenceProductDisplay.Barcode}"
+                                               FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}" />
+                                </Grid>
+                            </StackPanel>
+                        </Grid>
+
+                        <TextBlock Text="{Binding L[catalog_reference_hint]}" TextWrapping="Wrap" FontSize="12"
+                                   Foreground="{DynamicResource TextMuted}" />
+
+                        <Grid ColumnDefinitions="Auto,8,*" Margin="0,6,0,0">
+                            <Button Grid.Column="0" Classes="outline" MinHeight="46" Padding="16,0"
+                                    Command="{Binding CloseReferenceCommand}" Content="{Binding L[cancel]}" />
+                            <Button Grid.Column="2" Classes="brand" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                    MinHeight="46" Command="{Binding AddReferenceCommand}"
+                                    IsVisible="{Binding CanManageProducts}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <mi:MaterialIcon Kind="PackageVariantPlus" Width="18" Height="18" />
+                                    <TextBlock Text="{Binding L[add]}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
                     </StackPanel>
                 </ScrollViewer>
             </Border>
         </Border>
 
-        <Border Grid.ColumnSpan="3" Background="#30000000" IsVisible="{Binding IsReceiptOpen}"
-                c:OverlayBehaviors.DismissCommand="{Binding CloseReceiptCommand}">
-            <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="360" MaxHeight="640"
-                    VerticalAlignment="Center" HorizontalAlignment="Center"
-                    BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Padding="22"
-                    BoxShadow="0 16 48 0 #44000000">
-                <DockPanel>
-                    <Grid DockPanel.Dock="Bottom" ColumnDefinitions="Auto,8,*" Margin="0,16,0,0">
-                        <Button Grid.Column="0" Classes="outline" MinHeight="46" Padding="16,0"
-                                Command="{Binding CloseReceiptCommand}" Content="{Binding L[close]}" />
-                        <Button Grid.Column="2" Classes="brand" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                                MinHeight="46" Command="{Binding PrintReceiptCommand}">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <mi:MaterialIcon Kind="Printer" Width="18" Height="18" />
-                                <TextBlock Text="{Binding L[print]}" VerticalAlignment="Center" />
-                            </StackPanel>
-                        </Button>
-                    </Grid>
-                    <c:ReceiptCard DataContext="{Binding CurrentReceipt}" />
-                </DockPanel>
-            </Border>
-        </Border>
-
-        <Border Grid.ColumnSpan="3" Background="#30000000" IsVisible="{Binding IsQuickRatesOpen}"
+        <Border Grid.ColumnSpan="3" Background="#30000000" IsVisible="{Binding IsQuickRatesOpen}" c:FormBehaviors.AutoFocus="True"
                 c:OverlayBehaviors.DismissCommand="{Binding CloseQuickRatesCommand}">
             <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="400" MaxHeight="520"
                     VerticalAlignment="Center" HorizontalAlignment="Center"
@@ -1197,7 +1518,7 @@
             </Border>
         </Border>
 
-        <views:QuickProductView Grid.ColumnSpan="3" DataContext="{Binding QuickProduct}" />
+        <views:ProductEditorDialog Grid.ColumnSpan="3" DataContext="{Binding ProductEditor}" />
 
         <views:PrepackView Grid.ColumnSpan="3" DataContext="{Binding Prepack}" />
 

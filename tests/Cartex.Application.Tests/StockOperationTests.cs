@@ -2,7 +2,6 @@ using Cartex.Application.Stocks.Commands;
 using Cartex.Application.StockTransfers.Commands;
 using Cartex.Application.Tests.Common;
 using Cartex.Domain.Common.Exceptions;
-using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
@@ -18,8 +17,8 @@ public class StockOperationTests(DatabaseFixture fixture) : DatabaseTest(fixture
     {
         using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var branch1 = (await db.Branches.FirstAsync(b => b.Name == "Filial 1")).Id;
-        var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Filial 1 ombori")).Id;
+        var branch1 = (await db.Branches.FirstAsync(b => b.Name == "Asosiy filial")).Id;
+        var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Asosiy ombor")).Id;
         var warehouse2 = (await db.Warehouses.Where(w => w.Id != warehouse1).Select(w => w.Id).FirstAsync());
         var businessId = (await db.Businesses.FirstAsync()).Id;
         var adminId = (await db.Users.FirstAsync(u => u.Username == "admin")).Id;

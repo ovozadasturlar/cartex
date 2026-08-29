@@ -52,7 +52,7 @@ export class Orders implements OnInit, OnDestroy {
     if (document.visibilityState !== 'visible') return;
     clearTimeout(this.refreshTimer);
     this.refreshTimer = setTimeout(() => {
-      if (this.enabled() && !this.loading() && !this.busy()) this.load();
+      if (this.enabled() && !this.loading() && !this.busy()) void this.load();
     }, 400);
   };
 
@@ -63,7 +63,9 @@ export class Orders implements OnInit, OnDestroy {
   readonly status = signal('Open');
   readonly statuses = ['', 'Open', 'Confirmed', 'Ready', 'CheckedOut', 'Cancelled'];
   readonly cols = ['code', 'customer', 'warehouse', 'items', 'date', 'status'];
-  readonly canManage = this.auth.hasPermission('sales.create');
+  // RUXSAT-06: savatni ochib ko'rish uchun o'qish huquqi yetarli — serverdagi shart ham shu.
+  readonly canOpen = this.auth.hasPermission('sales.view|sales.pick|sales.create|sales.checkout');
+  readonly canViewLoad = this.auth.hasPermission('sales.view');
 
   async ngOnInit(): Promise<void> {
     document.addEventListener('visibilitychange', this.refresh);
@@ -87,7 +89,7 @@ export class Orders implements OnInit, OnDestroy {
 
   setStatus(value: string): void {
     this.status.set(value);
-    this.load();
+    void this.load();
   }
 
   statusKey(status: string): string {
@@ -99,14 +101,17 @@ export class Orders implements OnInit, OnDestroy {
   }
 
   open(row: CartListItem): void {
-    if (!this.canManage) return;
+    if (!this.canOpen) return;
     this.dialog
       .open(OrderDialog, { data: row.aggregateCode, width: '640px', maxWidth: '94vw', autoFocus: false })
       .afterClosed()
-      .subscribe((changed) => changed && this.load());
+      .subscribe((changed) => {
+        if (changed) void this.load();
+      });
   }
 
   openLoad(): void {
+    if (!this.canViewLoad) return;
     this.dialog.open(LoadDialog, { data: this.status() || undefined, width: '520px', maxWidth: '94vw', autoFocus: false });
   }
 
@@ -203,16 +208,16 @@ export class Orders implements OnInit, OnDestroy {
               <mat-icon>point_of_sale</mat-icon>{{ t('complete_sale') }}
             </button>
           } @else {
-            @if (c.status === 'Open' || c.status === 'Confirmed' || c.status === 'Ready') {
+            @if (canManage && (c.status === 'Open' || c.status === 'Confirmed' || c.status === 'Ready')) {
               <button matButton class="danger" [disabled]="busy()" (click)="cancelOrder(t('success'))">{{ t('cancel') }}</button>
             }
-            @if (c.status === 'Open') {
+            @if (canManage && c.status === 'Open') {
               <button matButton="filled" [disabled]="busy()" (click)="setStatus('Confirmed', t('success'))">{{ t('confirm') }}</button>
             }
-            @if (c.status === 'Confirmed') {
+            @if (canManage && c.status === 'Confirmed') {
               <button matButton="filled" [disabled]="busy()" (click)="setStatus('Ready', t('success'))">{{ t('order_ready') }}</button>
             }
-            @if (c.status === 'Confirmed' || c.status === 'Ready') {
+            @if (canCheckout && (c.status === 'Confirmed' || c.status === 'Ready')) {
               <button matButton="filled" [disabled]="busy()" (click)="startCheckout()">
                 <mat-icon>point_of_sale</mat-icon>{{ t('checkout') }}
               </button>
@@ -228,12 +233,17 @@ export class OrderDialog implements OnInit {
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
   private readonly ref = inject(MatDialogRef<OrderDialog>);
+  private readonly auth = inject(AuthService);
 
   readonly code = inject<string>(MAT_DIALOG_DATA);
   readonly cart = signal<Cart | null>(null);
   readonly busy = signal(true);
   readonly paying = signal(false);
   readonly cols = ['name', 'qty', 'price', 'total'];
+  // RUXSAT-06: holatni o'zgartirish — navbat ishi (`sales.pick`/`sales.create`), to'lovni
+  // yakunlash esa alohida huquq (`sales.checkout`). Serverdagi taqsimot ham aynan shunday.
+  readonly canManage = this.auth.hasPermission('sales.pick|sales.create');
+  readonly canCheckout = this.auth.hasPermission('sales.checkout');
 
   paidCash = 0;
   paidCard = 0;
@@ -251,6 +261,7 @@ export class OrderDialog implements OnInit {
   }
 
   startCheckout(): void {
+    if (!this.canCheckout) return;
     this.paidCash = this.cart()?.total ?? 0;
     this.paidCard = 0;
     this.paidBonus = 0;
@@ -258,6 +269,7 @@ export class OrderDialog implements OnInit {
   }
 
   async setStatus(status: string, message: string): Promise<void> {
+    if (!this.canManage) return;
     this.busy.set(true);
     try {
       await lastValueFrom(this.api.updateStatus(this.code, status));
@@ -270,19 +282,23 @@ export class OrderDialog implements OnInit {
   }
 
   cancelOrder(message: string): void {
+    if (!this.canManage) return;
     this.dialog
       .open(ConfirmDialog, { data: 'order_cancel_confirm', width: '380px' })
       .afterClosed()
-      .subscribe((ok) => ok && this.setStatus('Cancelled', message));
+      .subscribe((ok) => {
+        if (ok) void this.setStatus('Cancelled', message);
+      });
   }
 
   async checkout(message: string): Promise<void> {
+    if (!this.canCheckout) return;
     this.busy.set(true);
     try {
-      const saleId = await lastValueFrom(
+      const sale = await lastValueFrom(
         this.api.checkout(this.code, this.paidCash || 0, this.paidCard || 0, this.paidBonus || 0),
       );
-      this.notify.success(`${message} #${saleId}`);
+      this.notify.success(`${message} #${sale.saleId}`);
       this.ref.close(true);
     } catch (e) {
       this.notify.error(e);

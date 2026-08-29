@@ -8,8 +8,7 @@ namespace Cartex.UI.Services;
 
 public sealed partial class BranchContextService : ObservableObject
 {
-    private readonly IBranchesApi _branchesApi;
-    private readonly IWarehousesApi _warehousesApi;
+    private readonly ISessionsApi _sessionsApi;
 
     public ObservableCollection<BranchDto> Branches { get; } = [];
     public ObservableCollection<WarehouseDto> Warehouses { get; } = [];
@@ -20,46 +19,63 @@ public sealed partial class BranchContextService : ObservableObject
     public long? CurrentBranchId => SelectedBranch?.Id;
     public long? CurrentWarehouseId => SelectedWarehouse?.Id;
     public bool HasMultipleBranches => Branches.Count > 1;
+    public bool HasMultipleWarehouses =>
+        Warehouses.Count > 1;
 
-    public BranchContextService(IBranchesApi branchesApi, IWarehousesApi warehousesApi)
-    {
-        _branchesApi = branchesApi;
-        _warehousesApi = warehousesApi;
-    }
+    public BranchContextService(ISessionsApi sessionsApi) => _sessionsApi = sessionsApi;
 
     public async Task LoadAsync()
     {
         try
         {
-            var branches = await _branchesApi.GetAllAsync();
+            var context = await _sessionsApi.GetContextAsync();
             Branches.Clear();
-            foreach (var b in branches.Where(b => b.IsActive))
-                Branches.Add(b);
+            foreach (var b in context.Branches.Where(b => b.IsActive))
+                Branches.Add(new BranchDto(b.Id, b.Name, null, null, b.IsActive));
+            Warehouses.Clear();
+            foreach (var w in context.Warehouses)
+                Warehouses.Add(new WarehouseDto(w.Id, w.Name, w.BranchId, w.BranchName));
             OnPropertyChanged(nameof(HasMultipleBranches));
-            SelectedBranch = Branches.FirstOrDefault();
+            SelectedBranch = Branches.FirstOrDefault(b => b.Id == context.DefaultBranchId) ?? Branches.FirstOrDefault();
+            SelectedWarehouse = Warehouses.FirstOrDefault(w => w.BranchId == SelectedBranch?.Id);
+            OnPropertyChanged(nameof(HasMultipleWarehouses));
         }
         catch
         {
+            if (!await TrySeedOfflineAsync())
+                throw;
         }
     }
 
-    partial void OnSelectedBranchChanged(BranchDto? value) => _ = LoadWarehousesAsync();
-
-    private async Task LoadWarehousesAsync()
+    // Sovuq-startda server yetib bo'lmasa vakolat ombori kontekst bo'lib xizmat qiladi —
+    // aks holda kassa oflaynda ochilmay qoladi.
+    private async Task<bool> TrySeedOfflineAsync()
     {
+        if (Warehouses.Count > 0) return true;
+        var sync = ServiceLocator.Resolve<OfflineSyncService>();
+        // HUB-03: yo'ldosh rejimida ham ombor kerak — u HUB vakolatidan olinadi.
+        if (!sync.IsEnabled && !sync.IsSatellite) return false;
+        if (sync.ActiveWarehouseId is not { } warehouseId) return false;
+        var store = ServiceLocator.Resolve<OfflineStore>();
+        var warehouseName = await store.GetMetaAsync("offline_warehouse_name") ?? "Ombor";
+        var branchName = await store.GetMetaAsync("offline_branch_name") is { } name
+            && !string.IsNullOrWhiteSpace(name) ? name : warehouseName;
+        long.TryParse(await store.GetMetaAsync("offline_branch_id"), out var branchId);
+        Branches.Clear();
+        if (branchId > 0)
+            Branches.Add(new BranchDto(branchId, branchName, null, null, true));
         Warehouses.Clear();
-        SelectedWarehouse = null;
-        if (SelectedBranch is null) return;
+        Warehouses.Add(new WarehouseDto(warehouseId, warehouseName, branchId, branchName));
+        OnPropertyChanged(nameof(HasMultipleBranches));
+        SelectedBranch = Branches.FirstOrDefault();
+        SelectedWarehouse = Warehouses[0];
+        OnPropertyChanged(nameof(HasMultipleWarehouses));
+        return true;
+    }
 
-        try
-        {
-            var warehouses = await _warehousesApi.GetAllAsync(SelectedBranch.Id);
-            foreach (var w in warehouses)
-                Warehouses.Add(w);
-            SelectedWarehouse = Warehouses.FirstOrDefault();
-        }
-        catch
-        {
-        }
+    partial void OnSelectedBranchChanged(BranchDto? value)
+    {
+        SelectedWarehouse = Warehouses.FirstOrDefault(w => w.BranchId == value?.Id);
+        OnPropertyChanged(nameof(HasMultipleWarehouses));
     }
 }

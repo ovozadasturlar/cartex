@@ -1,3 +1,3 @@
-namespace Cartex.Shared.Models.Suppliers;
+﻿namespace Cartex.Shared.Models.Suppliers;
 
-public record UpdateSupplierRequest(string Name, string? Phone);
+public record UpdateSupplierRequest(string Name, string? Phone, bool AcceptsReturns = false);

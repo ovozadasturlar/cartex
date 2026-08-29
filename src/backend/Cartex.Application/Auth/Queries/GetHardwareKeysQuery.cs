@@ -1,10 +1,8 @@
-using Cartex.Application.Common.Messaging;
-using Cartex.Persistence;
+﻿using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Auth;
 
 namespace Cartex.Application.Auth.Queries;
-
-public record HardwareKeyDto(long Id, long UserId, string Username, string FullName, string Serial, DateTime IssuedAt, bool IsEnabled, DateTime? RevokedAt);
 
 public record GetHardwareKeysQuery : IRequest<IReadOnlyList<HardwareKeyDto>>;
 

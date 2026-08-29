@@ -20,4 +20,6 @@ public record SaleDto(
     string ReceiptToken,
     string? CustomerName,
     string UserName,
-    List<SaleLineDto> Items);
+    List<SaleLineDto> Items,
+    bool CanResendReceipt = false,
+    decimal PaidAdvance = 0);

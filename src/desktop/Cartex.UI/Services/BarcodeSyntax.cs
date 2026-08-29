@@ -4,9 +4,10 @@ using Cartex.Shared.Models.Products;
 
 namespace Cartex.UI.Services;
 
-public static class BarcodeSyntax
+public static partial class BarcodeSyntax
 {
-    private static readonly Regex PackMarker = new(@"-P(\d+(?:\.\d+)?)-", RegexOptions.Compiled);
+    [GeneratedRegex(@"-P(\d+(?:\.\d+)?)-", RegexOptions.None, matchTimeoutMilliseconds: 200)]
+    private static partial Regex PackMarker();
 
     public static List<BarcodeInput> Parse(string text) =>
         text.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
@@ -26,7 +27,7 @@ public static class BarcodeSyntax
 
     private static decimal? EmbeddedQty(string code)
     {
-        var match = PackMarker.Match(code);
+        var match = PackMarker().Match(code);
         return match.Success && decimal.TryParse(match.Groups[1].Value, NumberStyles.Number, CultureInfo.InvariantCulture, out var qty)
             ? qty
             : null;

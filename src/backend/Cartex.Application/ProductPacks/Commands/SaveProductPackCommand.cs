@@ -1,10 +1,9 @@
-using Cartex.Application.Common.Messaging;
-using Cartex.Domain.Common.Exceptions;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Application.Common.Measurement;
 
 using Unit = Cartex.Application.Common.Messaging.Unit;
 
@@ -20,8 +19,16 @@ public sealed class CreateProductPackCommandHandler(IApplicationDbContext db) : 
 {
     public async Task<long> Handle(CreateProductPackCommand request, CancellationToken cancellationToken)
     {
-        if (!await db.Products.AnyAsync(p => p.Id == request.ProductId, cancellationToken))
+        var policy = await db.Products
+            .Where(p => p.Id == request.ProductId)
+            .Select(p => new { AllowsFractional = p.FractionalOverride ?? p.Unit.AllowFractional })
+            .FirstOrDefaultAsync(cancellationToken);
+        if (policy is null)
             throw new NotFoundException("Mahsulot topilmadi.");
+        if (request.Size != decimal.Round(request.Size, 3))
+            throw new BusinessRuleException("Qadoq miqdori 0.001 aniqlikdan oshmaydi.", "quantity_precision_exceeded");
+        if (!policy.AllowsFractional && request.Size != decimal.Truncate(request.Size))
+            throw new BusinessRuleException("Qadoq miqdori faqat butun son bo'lishi kerak.", "quantity_whole_required");
 
         var pack = new ProductPack
         {
@@ -52,8 +59,14 @@ public sealed class UpdateProductPackCommandHandler(IApplicationDbContext db) : 
 {
     public async Task<Unit> Handle(UpdateProductPackCommand request, CancellationToken cancellationToken)
     {
-        var pack = await db.ProductPacks.FirstOrDefaultAsync(p => p.Id == request.Id, cancellationToken)
+        var pack = await db.ProductPacks.Include(p => p.Product).ThenInclude(p => p.Unit).FirstOrDefaultAsync(p => p.Id == request.Id, cancellationToken)
             ?? throw new NotFoundException("Qadoq topilmadi.");
+
+        var allowsFractional = pack.Product.FractionalOverride ?? pack.Product.Unit.AllowFractional;
+        if (request.Size != decimal.Round(request.Size, 3))
+            throw new BusinessRuleException("Qadoq miqdori 0.001 aniqlikdan oshmaydi.", "quantity_precision_exceeded");
+        if (!allowsFractional && request.Size != decimal.Truncate(request.Size))
+            throw new BusinessRuleException("Qadoq miqdori faqat butun son bo'lishi kerak.", "quantity_whole_required");
 
         pack.Name = request.Name.Trim();
         pack.Size = request.Size;

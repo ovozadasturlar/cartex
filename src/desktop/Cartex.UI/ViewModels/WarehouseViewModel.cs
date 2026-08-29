@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.ApiClient.Api;
@@ -25,7 +24,7 @@ public partial class WarehouseViewModel : ViewModelBase, ILoadable, IDisposable
 
     public BranchContextService Branch { get; }
     public bool CanExport => _auth.HasPermission("reports.export");
-    public bool CanAdjust => _auth.HasPermission("stocks.manage");
+    public bool CanAdjust => _auth.HasPermission("stocks.adjust");
 
     public PaginationState Paging { get; } = new();
 
@@ -112,7 +111,7 @@ public partial class WarehouseViewModel : ViewModelBase, ILoadable, IDisposable
                 _suppressReload = true;
                 var categories = await categoriesTask;
                 FilterCategories.Clear();
-                FilterCategories.Add(new CategoryDto(0, L["all"], null, null, null));
+                FilterCategories.Add(new CategoryDto(0, L["all"], null, null, null, FullPath: L["all"]));
                 foreach (var c in categories) FilterCategories.Add(c);
                 FilterCategory = FilterCategories[0];
                 _suppressReload = false;
@@ -184,8 +183,7 @@ public partial class WarehouseViewModel : ViewModelBase, ILoadable, IDisposable
     partial void OnSearchTextChanged(string value)
     {
         if (_suppressReload) return;
-        _searchCts?.Cancel();
-        var cts = _searchCts = new CancellationTokenSource();
+        var cts = Debounce.Restart(ref _searchCts);
         _ = DebouncedSearchAsync(cts.Token);
     }
 
@@ -246,6 +244,9 @@ public partial class WarehouseViewModel : ViewModelBase, ILoadable, IDisposable
         };
         AdjustVm = vm;
     }
+
+    [RelayCommand]
+    private void CloseAdjust() => AdjustVm = null;
 
     private async Task ApplyAdjustAsync(StockOnHandDto item, AdjustStockResult result)
     {

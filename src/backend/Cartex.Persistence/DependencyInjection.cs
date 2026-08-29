@@ -10,11 +10,17 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddPersistence(this IServiceCollection services, string connectionString)
     {
+        services.AddScoped<AuditScopeState>();
         services.AddScoped<IAuditService, AuditService>();
+        services.AddScoped<InventoryReasonState>();
 
         services.AddScoped<ISaveChangesInterceptor, SoftDeleteInterceptor>();
         services.AddScoped<ISaveChangesInterceptor, BranchStampingInterceptor>();
+        services.AddScoped<ISaveChangesInterceptor, InventoryJournalInterceptor>();
         services.AddScoped<ISaveChangesInterceptor, AuditableEntityInterceptor>();
+        services.AddScoped<ISaveChangesInterceptor, EntityAuditInterceptor>();
+        services.AddScoped<ISaveChangesInterceptor, SearchFoldInterceptor>();
+        services.AddScoped<ISaveChangesInterceptor, PriceHistoryInterceptor>();
         services.AddScoped<ISaveChangesInterceptor, DomainEventOutboxInterceptor>();
 
         services.AddDbContext<ApplicationDbContext>((sp, options) =>

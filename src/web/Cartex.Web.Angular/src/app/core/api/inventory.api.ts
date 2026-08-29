@@ -12,6 +12,7 @@ export interface WarehouseOption {
 export interface CategoryOption {
   id: number;
   name: string;
+  fullPath: string | null;
 }
 
 export interface UnitOption {
@@ -21,6 +22,7 @@ export interface UnitOption {
   dimension: string;
   factor: number;
   isEnabled: boolean;
+  isDefault: boolean;
 }
 
 export interface ProductOption {
@@ -92,16 +94,20 @@ export interface SupplyItem {
   productName: string;
   unitName: string;
   quantity: number;
+  unitId: number | null;
   packSize: number;
   purchasePrice: number;
   expiredAt: string | null;
+  entryQuantity: number;
+  entryPrice: number;
 }
 
 export interface SupplyDetail {
   id: number;
   supplyDate: string;
-  supplierId: number;
-  supplierName: string;
+  supplierId: number | null;
+  supplierName: string | null;
+  warehouseId: number;
   warehouseName: string;
   userName: string;
   totalAmount: number;
@@ -110,6 +116,7 @@ export interface SupplyDetail {
   paidTransfer: number;
   paidBank: number;
   currency: string;
+  rate: number;
   items: SupplyItem[];
 }
 
@@ -129,6 +136,15 @@ export interface CreateSupply {
   items: CreateSupplyItem[];
   paidCash: number;
   paidCard: number;
+  idempotencyKey?: string;
+}
+
+export interface UpdateSupply {
+  supplierId: number | null;
+  warehouseId: number;
+  supplyDate: string;
+  items: CreateSupplyItem[];
+  currency: string | null;
 }
 
 export interface StockTransfer {
@@ -188,14 +204,16 @@ export class InventoryApi {
     pageSize: number;
     search?: string;
     categoryId?: number;
+    forSale?: boolean;
   }): Observable<StockOnHandPage> {
-    const params: Record<string, string | number> = {
+    const params: Record<string, string | number | boolean> = {
       warehouseId: q.warehouseId,
       page: q.page,
       pageSize: q.pageSize,
     };
     if (q.search) params['search'] = q.search;
     if (q.categoryId) params['categoryId'] = q.categoryId;
+    if (q.forSale) params['forSale'] = true;
     return this.http.get<StockOnHandPage>('/api/stocks/on-hand', { params });
   }
 
@@ -205,6 +223,10 @@ export class InventoryApi {
 
   expiring(withinDays: number): Observable<ExpiringStock[]> {
     return this.http.get<ExpiringStock[]>('/api/stocks/expiring', { params: { withinDays } });
+  }
+
+  adjustStock(warehouseId: number, variantId: number, countedQuantity: number, reason: string | null): Observable<void> {
+    return this.http.post<void>('/api/stocks/adjust', { warehouseId, variantId, countedQuantity, reason });
   }
 
   supplies(q: ListQuery): Observable<Paged<Supply>> {
@@ -227,6 +249,10 @@ export class InventoryApi {
 
   createSupply(body: CreateSupply): Observable<number> {
     return this.http.post<number>('/api/supplies', body);
+  }
+
+  updateSupply(id: number, body: UpdateSupply): Observable<void> {
+    return this.http.put<void>(`/api/supplies/${id}`, body);
   }
 
   voidSupply(id: number): Observable<void> {

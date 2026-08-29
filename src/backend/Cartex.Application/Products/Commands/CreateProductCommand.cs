@@ -1,12 +1,15 @@
-using Cartex.Application.Common.Finance;
+﻿using Cartex.Application.Common.Finance;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Settings;
-using Cartex.Application.Common.Messaging;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
 using Cartex.Domain.Entities;
 using Cartex.Application.Common.Catalog;
+using Cartex.Application.Barcodes.Commands;
+using Microsoft.Extensions.Configuration;
+using Cartex.Application.Common.Measurement;
+using Cartex.Shared.Models.Products;
 
 namespace Cartex.Application.Products.Commands;
 
@@ -25,9 +28,11 @@ public record CreateProductCommand(
     decimal? VatRate = null,
     decimal? SellingPrice = null,
     string? PriceCurrency = null,
-    long? ManufacturerId = null) : ICommand<long>;
+    long? ManufacturerId = null,
+    bool? AmountEntryEnabled = null,
+    bool? FractionalOverride = null) : ICommand<long>;
 
-public sealed class CreateProductCommandHandler(IApplicationDbContext db, ICurrencyService currency, ISettingsService settingsService) : IRequestHandler<CreateProductCommand, long>
+public sealed class CreateProductCommandHandler(IApplicationDbContext db, ICurrencyService currency, ISettingsService settingsService, IConfiguration configuration, IQuantityPolicyService quantityPolicy) : IRequestHandler<CreateProductCommand, long>
 {
     public async Task<long> Handle(CreateProductCommand request, CancellationToken cancellationToken)
     {
@@ -52,7 +57,9 @@ public sealed class CreateProductCommandHandler(IApplicationDbContext db, ICurre
             Attributes = request.Attributes,
             ImageKey = request.ImageKey,
             IkpuCode = request.IkpuCode,
-            VatRate = request.VatRate
+            VatRate = request.VatRate,
+            AmountEntryEnabled = request.AmountEntryEnabled,
+            FractionalOverride = request.FractionalOverride
         };
 
         db.Products.Add(product);
@@ -66,10 +73,15 @@ public sealed class CreateProductCommandHandler(IApplicationDbContext db, ICurre
             .Select(b => b with { Code = b.Code.Trim() }).DistinctBy(b => b.Code).ToList() ?? [];
         if (inputs.Count > 0)
         {
+            await quantityPolicy.ValidateAsync(inputs.Select(x => (variant.Id, x.PackQty > 0 ? x.PackQty : 1m)), cancellationToken);
             var codes = inputs.Select(b => b.Code).ToList();
-            var existing = await db.Barcodes.Where(b => codes.Contains(b.Code)).Select(b => b.Code).FirstOrDefaultAsync(cancellationToken);
+            var existing = await db.Barcodes
+                .Where(b => codes.Contains(b.Code))
+                .Select(b => new { b.Code, Product = b.Variant.Product.Name })
+                .FirstOrDefaultAsync(cancellationToken);
             if (existing is not null)
-                throw new BusinessRuleException($"Bu barkod allaqachon mavjud: {existing}");
+                throw new BusinessRuleException(
+                    $"Bu barkod «{existing.Product}» mahsulotiga tegishli: {existing.Code}", "barcode_taken");
 
             foreach (var input in inputs)
             {
@@ -77,13 +89,15 @@ public sealed class CreateProductCommandHandler(IApplicationDbContext db, ICurre
                 Barcodes.GeneratedPackCodes.EnsureConsistent(input.Code, packQty);
                 db.Barcodes.Add(new Barcode { VariantId = variant.Id, Code = input.Code, PackQty = packQty });
             }
-
-            await db.SaveChangesAsync(cancellationToken);
         }
+        else
+            db.Barcodes.Add(new Barcode { VariantId = variant.Id, Code = GeneratedBarcodeCode.Build(configuration, variant.Id), PackQty = 1 });
+
+        await db.SaveChangesAsync(cancellationToken);
 
         if (request.SellingPrice is { } sellingPrice)
         {
-            await currency.EnsureAllowedAsync(request.PriceCurrency, cancellationToken);
+            await currency.EnsurePricingAllowedAsync(request.PriceCurrency, cancellationToken);
             await ProductPriceWriter.UpsertAsync(db, variant.Id, null, sellingPrice, cancellationToken, request.PriceCurrency);
             await db.SaveChangesAsync(cancellationToken);
         }

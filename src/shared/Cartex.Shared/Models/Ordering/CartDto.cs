@@ -1,9 +1,84 @@
+using Cartex.Shared.Models.Partners;
+using Cartex.Shared.Models.Sales;
+
 namespace Cartex.Shared.Models.Ordering;
 
-public record CartItemDto(long VariantId, string ProductName, decimal Quantity, decimal UnitPrice, decimal LineTotal);
+public record CartItemDto(
+    long VariantId,
+    string ProductName,
+    decimal Quantity,
+    decimal UnitPrice,
+    decimal LineTotal,
+    string UnitName = "",
+    bool AllowsFractional = false,
+    string? ImageKey = null,
+    decimal? OriginalUnitPrice = null,
+    long? PrepackId = null);
 
-public record CartDto(string AggregateCode, string Status, long WarehouseId, long? CustomerId, string? CustomerName, decimal Total, List<CartItemDto> Items, string? Note);
+public sealed record CartParticipantDto(
+    long RoleDefinitionId,
+    long PartyId,
+    string PartyName,
+    string? PartyPhone,
+    string RoleLabel);
 
-public record CartListDto(long Id, string AggregateCode, string Status, string? CustomerName, string WarehouseName, int ItemCount, DateTime CreatedAt, string? CreatedByName, string? Note, decimal EstimatedTotal);
+public sealed record CartPaymentDto(string Method, string Currency, decimal Amount);
 
-public record UpdateCartStatusRequest(string Status);
+public record CartDto(
+    string AggregateCode,
+    string Status,
+    long WarehouseId,
+    long? CustomerId,
+    string? CustomerName,
+    decimal Total,
+    List<CartItemDto> Items,
+    string? Note,
+    decimal PaidCash = 0,
+    decimal PaidCard = 0,
+    decimal PaidBonus = 0,
+    List<CartParticipantDto>? Participants = null,
+    List<CartPaymentDto>? Payments = null,
+    string? DebtCurrency = null,
+    DateOnly? DebtDueDate = null,
+    decimal CreditAmount = 0,
+    bool UseCustomerAdvance = true,
+    long Id = 0,
+    string Kind = "Queue",
+    int Version = 1,
+    long? CreatedByUserId = null,
+    string? CreatedByName = null,
+    long? ClaimedByUserId = null,
+    string? ClaimedByName = null,
+    DateTime? ClaimedAt = null,
+    long? SaleId = null,
+    DateTime? CancelledAt = null,
+    string? CancellationReason = null,
+    long? RequeuedFromCartId = null,
+    List<string>? AllowedActions = null,
+    decimal DiscountAmount = 0);
+
+public record CartListDto(long Id, string AggregateCode, string Status, string? CustomerName,
+    string WarehouseName, int ItemCount, DateTime CreatedAt, string? CreatedByName,
+    string? Note, decimal EstimatedTotal, string Kind = "Queue", int Version = 1,
+    long? ClaimedByUserId = null, string? ClaimedByName = null, DateTime? ClaimedAt = null,
+    long? SaleId = null, string? CancellationReason = null);
+
+public record UpdateCartStatusRequest(string Status, string? Reason = null);
+
+public record UpdateCartItemsRequest(List<SubmitCartItemRequest> Items, int? ExpectedVersion = null);
+
+public sealed record UpdateCartRequest(long? CustomerId, List<SubmitCartItemRequest> Items)
+{
+    public string? Note { get; init; }
+    public List<ParticipantSelectionRequest>? Participants { get; init; }
+    public List<SalePaymentRequest>? Payments { get; init; }
+    public string? DebtCurrency { get; init; }
+    public DateOnly? DebtDueDate { get; init; }
+    public decimal CreditAmount { get; init; }
+    public bool UseCustomerAdvance { get; init; } = true;
+    public int? ExpectedVersion { get; init; }
+    public decimal? DiscountAmount { get; init; }
+}
+
+public sealed record RequeueCartRequest(string? Note = null, string? IdempotencyKey = null);
+public sealed record RequeueCartResult(string AggregateCode, int Version);

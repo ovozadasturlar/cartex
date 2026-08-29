@@ -1,13 +1,10 @@
-using Cartex.Application.Common.Messaging;
-using FluentValidation;
+﻿using FluentValidation;
 using Cartex.Auth.Services;
-using Cartex.Application.Common.Interfaces;
+using Cartex.Shared.Models.Auth;
 
 namespace Cartex.Application.Auth.Commands;
 
-public record LoginCommand(string Username, string Password, string? DeviceName = null) : IRequest<LoginResponse>;
-
-public record LoginResponse(string Token, string RefreshToken, string FullName, string Role);
+public record LoginCommand(string Username, string Password, string? DeviceName = null, string? DeviceId = null) : IRequest<LoginResponse>;
 
 public sealed class LoginCommandHandler(
     AuthTokenBuilder tokenBuilder,
@@ -24,7 +21,7 @@ public sealed class LoginCommandHandler(
         if (!passwordHasher.Verify(request.Password, user.PasswordHash))
             throw new UnauthorizedAccessException("Invalid username or password.");
 
-        return await tokenBuilder.IssueAsync(user, request.DeviceName, cancellationToken);
+        return await tokenBuilder.IssueAsync(user, request.DeviceName, request.DeviceId, cancellationToken);
     }
 }
 
@@ -34,5 +31,6 @@ public sealed class LoginCommandValidator : AbstractValidator<LoginCommand>
     {
         RuleFor(x => x.Username).NotEmpty();
         RuleFor(x => x.Password).NotEmpty();
+        RuleFor(x => x.DeviceId).MaximumLength(64);
     }
 }

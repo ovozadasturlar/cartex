@@ -1,0 +1,29 @@
+<Project>
+
+  <!--
+    Analyzer-only packages: they run during the build, add no runtime dependency and need no
+    licence. This is the trial-independent half of docs/code-quality.md §3 — the part that keeps
+    working after 2026-10-06, and the only way the MAUI projects get analysed at all, because a
+    net10.0-android project cannot be evaluated without the Android SDK the scan container lacks.
+  -->
+  <!-- Yagona mahsulot versiyasi: desktop, backend, mobil va docker imijlar bir xil raqamda
+       yuradi. Ko'tarish faqat shu yerda (mobil ApplicationDisplayVersion va compose'dagi
+       CARTEX_VERSION bilan birga). -->
+  <PropertyGroup>
+    <Version>0.0.2</Version>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(MSBuildProjectExtension)' == '.csproj'">
+    <PackageReference Include="Roslynator.Analyzers" Version="4.14.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Meziantou.Analyzer" Version="2.0.212">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>

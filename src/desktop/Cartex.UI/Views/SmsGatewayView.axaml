@@ -1,0 +1,139 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Cartex.UI.Controls"
+             xmlns:vm="using:Cartex.UI.ViewModels"
+             x:Class="Cartex.UI.Views.SmsGatewayView"
+             x:DataType="vm:SmsGatewayViewModel"
+             x:CompileBindings="True">
+    <DockPanel Margin="24">
+        <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[sms]}" Subtitle="{Binding L[sms_page_hint]}" Margin="0,0,0,16">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Classes="outline" Command="{Binding RefreshCommand}" Content="{Binding L[refresh]}" />
+                <Button Classes="brand" Command="{Binding SaveSettingsCommand}" Content="{Binding L[save]}" />
+            </StackPanel>
+        </c:PageHeader>
+
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="14" MaxWidth="980" HorizontalAlignment="Left">
+                <Border Classes="warning" Padding="16" IsVisible="{Binding TestMode}">
+                    <TextBlock Text="{Binding L[sms_gateway_test_mode_banner]}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                </Border>
+
+                <Border Classes="card" Padding="18">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="{Binding L[sms_transport_title]}" FontWeight="SemiBold" FontSize="18" />
+                        <ToggleSwitch IsChecked="{Binding Enabled}" Content="{Binding L[enabled]}" />
+                        <ComboBox ItemsSource="{Binding TransportOptions}" SelectedIndex="{Binding TransportMode}" />
+                        <TextBlock Text="{Binding L[sms_aggregator_explanation]}" Classes="hint" TextWrapping="Wrap" />
+                        <Grid ColumnDefinitions="*,12,*,12,*" IsVisible="{Binding ShowAggregatorFields}">
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="{Binding L[login]}" Classes="caption" />
+                                <TextBox Text="{Binding Login}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Spacing="5">
+                                <TextBlock Text="{Binding L[password]}" Classes="caption" />
+                                <TextBox Text="{Binding Password}" PasswordChar="●" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="4" Spacing="5">
+                                <TextBlock Text="{Binding L[sender]}" Classes="caption" />
+                                <TextBox Text="{Binding Sender}" />
+                            </StackPanel>
+                        </Grid>
+                        <StackPanel Spacing="5" IsVisible="{Binding ShowFallbackDelay}" MaxWidth="320" HorizontalAlignment="Left">
+                            <TextBlock Text="{Binding L[sms_gateway_fallback_minutes]}" Classes="caption" />
+                            <NumericUpDown Minimum="1" Maximum="1440" Value="{Binding FallbackAfterMinutes}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="card" Padding="18">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="{Binding L[sms_test_mode_title]}" FontWeight="SemiBold" FontSize="18" />
+                        <ToggleSwitch IsChecked="{Binding TestMode}" Content="{Binding L[sms_gateway_test_mode]}" />
+                        <TextBlock Text="{Binding L[sms_gateway_test_mode_hint]}" Classes="hint" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding L[sms_gateway_allowed_numbers]}" Classes="caption" />
+                        <ItemsControl ItemsSource="{Binding AllowedNumbers}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <Border Background="{DynamicResource AppBg}" CornerRadius="14" Padding="10,4" Margin="0,0,6,6">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <TextBlock Text="{Binding .}" VerticalAlignment="Center" />
+                                            <Button Content="×" Padding="2,0" MinWidth="20" MinHeight="20"
+                                                    Command="{Binding $parent[UserControl].((vm:SmsGatewayViewModel)DataContext).RemoveAllowedNumberCommand}"
+                                                    CommandParameter="{Binding .}" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBox Text="{Binding NewAllowedNumber}" MinHeight="38" MaxWidth="360" HorizontalAlignment="Left"
+                                 PlaceholderText="+998 90 123 45 67">
+                            <TextBox.KeyBindings>
+                                <KeyBinding Gesture="Enter" Command="{Binding AddAllowedNumberCommand}" />
+                            </TextBox.KeyBindings>
+                        </TextBox>
+                    </StackPanel>
+                </Border>
+
+                <TextBlock Text="{Binding L[sms_gateway_devices]}" FontWeight="SemiBold" FontSize="18" />
+                <Border Classes="card" Padding="16" IsVisible="{Binding HasMultipleDevices}">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="{Binding L[sms_sticky_wait_title]}" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding L[sms_sticky_wait_hint]}" Classes="hint" TextWrapping="Wrap" />
+                        <Grid ColumnDefinitions="*,10,*,10,*,10,*">
+                            <StackPanel Spacing="5"><TextBlock Text="{Binding L[sms_gateway_debt]}" Classes="caption" /><NumericUpDown Minimum="0" Maximum="1440" Value="{Binding DebtReminderStickyWaitMinutes}" /></StackPanel>
+                            <StackPanel Grid.Column="2" Spacing="5"><TextBlock Text="{Binding L[sms_gateway_receipt]}" Classes="caption" /><NumericUpDown Minimum="0" Maximum="1440" Value="{Binding ReceiptLinkStickyWaitMinutes}" /></StackPanel>
+                            <StackPanel Grid.Column="4" Spacing="5"><TextBlock Text="{Binding L[sms_gateway_promotion]}" Classes="caption" /><NumericUpDown Minimum="0" Maximum="1440" Value="{Binding PromotionStickyWaitMinutes}" /></StackPanel>
+                            <StackPanel Grid.Column="6" Spacing="5"><TextBlock Text="{Binding L[sms_gateway_manual]}" Classes="caption" /><NumericUpDown Minimum="0" Maximum="1440" Value="{Binding ManualStickyWaitMinutes}" /></StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <ItemsControl ItemsSource="{Binding Devices}" MaxHeight="520">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:SmsGatewayDeviceRow">
+                            <Border Classes="card" Padding="16" Margin="0,0,0,10">
+                                <StackPanel Spacing="10">
+                                    <Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Name}" FontWeight="SemiBold" /><TextBlock Grid.Column="1" Text="{Binding StatusReason}" /></Grid>
+                                    <TextBlock Text="{Binding Sim}" Foreground="{DynamicResource TextMuted}" />
+                                    <Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Consent}" /><TextBlock Grid.Column="1" Text="{Binding Usage}" FontWeight="SemiBold" /></Grid>
+                                    <Grid ColumnDefinitions="Auto,8,Auto,20,Auto,8,Auto,20,Auto,8,Auto">
+                                        <TextBlock Text="{Binding $parent[UserControl].((vm:SmsGatewayViewModel)DataContext).L[sms_gateway_remaining]}" Classes="caption" />
+                                        <TextBlock Grid.Column="2" Text="{Binding Remaining}" FontWeight="SemiBold" />
+                                        <TextBlock Grid.Column="4" Text="{Binding $parent[UserControl].((vm:SmsGatewayViewModel)DataContext).L[sms_gateway_last_sent]}" Classes="caption" />
+                                        <TextBlock Grid.Column="6" Text="{Binding LastSent}" />
+                                        <TextBlock Grid.Column="8" Text="{Binding $parent[UserControl].((vm:SmsGatewayViewModel)DataContext).L[sms_gateway_linked_customers]}" Classes="caption" />
+                                        <TextBlock Grid.Column="10" Text="{Binding LinkedCustomers}" FontWeight="SemiBold" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding QuotaDetail}" Classes="caption" /><TextBlock Grid.Column="1" Text="{Binding $parent[UserControl].((vm:SmsGatewayViewModel)DataContext).L[sms_gateway_owner_readonly]}" Classes="caption" /></Grid>
+                                    <Panel Height="8" IsVisible="{Binding HasQuota}">
+                                        <ProgressBar Minimum="0" Maximum="100" Value="{Binding QuotaProgress}" Foreground="{DynamicResource SuccessBrush}" IsVisible="{Binding IsQuotaSuccess}" />
+                                        <ProgressBar Minimum="0" Maximum="100" Value="{Binding QuotaProgress}" Foreground="{DynamicResource WarningBrush}" IsVisible="{Binding IsQuotaWarning}" />
+                                        <ProgressBar Minimum="0" Maximum="100" Value="{Binding QuotaProgress}" Foreground="{DynamicResource WarningHoverBrush}" IsVisible="{Binding IsQuotaOrange}" />
+                                        <ProgressBar Minimum="0" Maximum="100" Value="{Binding QuotaProgress}" Foreground="{DynamicResource DangerBrush}" IsVisible="{Binding IsQuotaDanger}" />
+                                    </Panel>
+                                    <StackPanel Spacing="4" MaxWidth="240" HorizontalAlignment="Left">
+                                        <TextBlock Text="{Binding $parent[UserControl].((vm:SmsGatewayViewModel)DataContext).L[priority]}" Classes="caption" />
+                                        <NumericUpDown Minimum="0" Maximum="10000" Value="{Binding Priority}" />
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding LastError}" TextWrapping="Wrap" Foreground="{DynamicResource DangerBrush}" />
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <ToggleSwitch IsChecked="{Binding IsEnabled}" Content="{Binding $parent[UserControl].((vm:SmsGatewayViewModel)DataContext).L[enabled]}" />
+                                        <Button Content="{Binding $parent[UserControl].((vm:SmsGatewayViewModel)DataContext).L[save]}" Command="{Binding $parent[UserControl].((vm:SmsGatewayViewModel)DataContext).SaveDeviceCommand}" CommandParameter="{Binding}" />
+                                        <Button Content="{Binding $parent[UserControl].((vm:SmsGatewayViewModel)DataContext).L[sms_gateway_trust]}" Command="{Binding $parent[UserControl].((vm:SmsGatewayViewModel)DataContext).ToggleTrustCommand}" CommandParameter="{Binding}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Button Classes="link" HorizontalAlignment="Left" Command="{Binding OpenNotificationJournalCommand}"
+                        Content="{Binding L[sms_open_notification_control]}" Margin="0,0,0,24" />
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

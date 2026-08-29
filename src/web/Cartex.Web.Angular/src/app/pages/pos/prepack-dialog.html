@@ -1,0 +1,80 @@
+<ng-container *transloco="let t">
+  <h2 mat-dialog-title>{{ t('prepack_title') }}</h2>
+
+  @if (busy()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+
+  <mat-dialog-content>
+    <div class="panes">
+      <section>
+        <div class="finder">
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="grow">
+            <mat-label>{{ t('search') }}</mat-label>
+            <input matInput cdkFocusInitial [(ngModel)]="search" (keyup.enter)="find()" />
+          </mat-form-field>
+          <button matButton="filled" (click)="find()"><mat-icon>search</mat-icon></button>
+        </div>
+
+        <div class="rows">
+          @for (r of results(); track r.variantId) {
+            <button type="button" class="hit" [class.on]="selected()?.variantId === r.variantId" (click)="pick(r)">
+              <span class="name">{{ r.productName }}</span>
+              <span class="meta">{{ r.quantity }} {{ r.unitName }} · {{ r.sellingPrice | cxMoney }}</span>
+            </button>
+          } @empty {
+            <p class="muted">{{ t('search_product_hint') }}</p>
+          }
+        </div>
+
+        @if (selected(); as s) {
+          <div class="form">
+            <p class="picked">{{ s.productName }}</p>
+            <div class="triple">
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>{{ t('qty') }}</mat-label>
+                <input matInput type="number" min="0" step="0.001" [(ngModel)]="quantity" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>{{ t('prepack_count') }}</mat-label>
+                <input matInput type="number" min="1" [(ngModel)]="count" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>{{ t('prepack_expiry') }}</mat-label>
+                <input matInput type="number" min="1" [(ngModel)]="expiresHours" />
+              </mat-form-field>
+            </div>
+            <button matButton="filled" [disabled]="quantity <= 0 || busy()" (click)="create()">
+              <mat-icon>print</mat-icon>{{ t('prepack_create_print') }}
+            </button>
+          </div>
+        }
+      </section>
+
+      <section>
+        <h3>{{ t('prepack_active') }}</h3>
+        <div class="rows">
+          @for (p of active(); track p.id) {
+            <div class="pack">
+              <span class="body">
+                <span class="name">{{ p.productName }}</span>
+                <span class="meta">
+                  {{ p.quantity }} {{ p.unitName }} · {{ p.price | cxMoney }} · {{ p.labelCode }}
+                </span>
+              </span>
+              <button matIconButton (click)="cancel(p)" [attr.aria-label]="t('cancel')">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+          } @empty {
+            <p class="muted">{{ t('no_data') }}</p>
+          }
+        </div>
+      </section>
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button matButton mat-dialog-close>{{ t('close') }}</button>
+  </mat-dialog-actions>
+</ng-container>

@@ -18,4 +18,5 @@ public class Stock : SoftDeleteEntity, IBranchScoped
     public decimal Quantity { get; set; }
     public decimal PurchasePrice { get; set; }
     public DateOnly? ExpiredAt { get; set; }
+    public bool IsDeficit { get; set; }
 }

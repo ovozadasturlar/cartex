@@ -1,5 +1,4 @@
 using Cartex.Application.Common;
-using Cartex.Application.Common.Messaging;
 using Cartex.Auth.Services;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
@@ -23,7 +22,7 @@ public sealed class VerifyStoreOtpCommandHandler(
             throw new ForbiddenException("Onlayn buyurtma o'chirilgan.");
 
         var phone = Phones.Normalize(request.Phone);
-        var customer = (phone is null ? null : await db.Customers.FirstOrDefaultAsync(c => c.Phone == phone, cancellationToken))
+        var customer = (phone is null ? null : await db.Customers.Include(c => c.Party).FirstOrDefaultAsync(c => c.Party.Phone == phone, cancellationToken))
             ?? throw new UnauthorizedAccessException("Kod noto'g'ri yoki eskirgan.");
 
         var now = DateTime.UtcNow;

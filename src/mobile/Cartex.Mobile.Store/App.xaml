@@ -2,10 +2,15 @@
 <Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:conv="clr-namespace:Cartex.Mobile.Store.Converters"
+             xmlns:core="clr-namespace:Cartex.Mobile.Core.Resources.Styles;assembly=Cartex.Mobile.Core"
              x:Class="Cartex.Mobile.Store.App">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
+                <core:CoreColors />
+                <core:CoreTokens />
+                <core:CoreTypography />
+                <core:CoreComponents />
                 <ResourceDictionary Source="Resources/Styles/Colors.xaml" />
                 <ResourceDictionary Source="Resources/Styles/Styles.xaml" />
             </ResourceDictionary.MergedDictionaries>
@@ -13,6 +18,7 @@
             <conv:PositiveConverter x:Key="Positive" />
             <conv:InvertConverter x:Key="Invert" />
             <conv:DotFillConverter x:Key="DotFill" />
+            <conv:OperationNameConverter x:Key="OpName" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -1,19 +1,15 @@
-using Cartex.Application.Common.Extensions;
+﻿using Cartex.Application.Common.Extensions;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Models;
 using Cartex.Domain.Enums;
 using Cartex.Persistence;
-using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Common;
+using Cartex.Shared.Models.Suppliers;
 
 namespace Cartex.Application.Suppliers.Queries;
 
 public record GetSuppliersQuery : FilteringRequest, IRequest<IReadOnlyCollection<SupplierDto>>;
-
-public record SupplierDto(long Id, string Name, string? Phone, decimal Payable)
-{
-    public IReadOnlyList<CurrencyAmountDto> PayableBalances { get; init; } = [];
-}
 
 public sealed class GetSuppliersQueryHandler(
     IApplicationDbContext db,
@@ -31,7 +27,7 @@ public sealed class GetSuppliersQueryHandler(
             .ToPagedListAsync(request,
                 s => new
                 {
-                    Dto = new SupplierDto(s.Id, s.Name, s.Phone, 0m),
+                    Dto = new SupplierDto(s.Id, s.Name, s.Phone, 0m, s.AcceptsReturns),
                     Payables = db.Accounts
                         .Where(a => a.SupplierId == s.Id && a.Type == AccountType.Debt && a.Balance != 0)
                         .Select(a => new CurrencyAmountDto(a.Currency, -a.Balance))

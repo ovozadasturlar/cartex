@@ -53,7 +53,7 @@ public partial class CustomerCreateViewModel(ICustomersApi customersApi, MobileA
     private Task PickOnMapAsync()
     {
         var query = new Dictionary<string, object> { ["picked"] = (Action<double, double>)OnMapPicked };
-        if (HasLocation && Latitude is double lat && Longitude is double lng)
+        if (HasLocation && Latitude is { } lat && Longitude is { } lng)
         {
             query["lat"] = lat;
             query["lng"] = lng;
@@ -124,12 +124,12 @@ public partial class CustomerCreateViewModel(ICustomersApi customersApi, MobileA
         IsBusy = true;
         try
         {
-            decimal.TryParse(CreditLimit.Replace(" ", ""), out var limit);
+            decimal? limit = decimal.TryParse(CreditLimit.Replace(" ", ""), out var parsed) ? parsed : null;
             await customersApi.CreateAsync(new CreateCustomerRequest(
                 Name.Trim(), Phone.Trim(), null, 0,
                 Address: string.IsNullOrWhiteSpace(Address) ? null : Address.Trim(),
                 CreditLimit: limit,
-                AgentId: auth.UserId,
+                AssignedUserId: auth.UserId,
                 Latitude: Latitude,
                 Longitude: Longitude));
             await sync.SyncAsync();

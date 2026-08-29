@@ -4,32 +4,46 @@
   @if (loading()) {
     <mat-progress-bar mode="indeterminate" />
   } @else {
+    <div class="receipt-layout">
     <div class="cx-card form">
       @if (busy()) {
         <mat-progress-bar mode="indeterminate" />
       }
       <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>{{ t('receipt_header') }}</mat-label>
-        <textarea matInput rows="2" [(ngModel)]="headerText" [disabled]="!canManage"
+        <textarea matInput rows="2" [(ngModel)]="headerText" (ngModelChange)="schedulePreview()" [disabled]="!canManage"
                   [placeholder]="t('receipt_header_example')"></textarea>
       </mat-form-field>
       <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>{{ t('receipt_footer') }}</mat-label>
-        <textarea matInput rows="2" [(ngModel)]="footerText" [disabled]="!canManage"
+        <textarea matInput rows="2" [(ngModel)]="footerText" (ngModelChange)="schedulePreview()" [disabled]="!canManage"
                   [placeholder]="t('receipt_footer_example')"></textarea>
       </mat-form-field>
       <mat-form-field appearance="outline" subscriptSizing="dynamic" class="width">
         <mat-label>{{ t('receipt_width') }}</mat-label>
-        <input matInput type="number" min="24" max="64" [(ngModel)]="paperWidth" [disabled]="!canManage" />
+        <mat-select [(ngModel)]="paperWidth" (ngModelChange)="schedulePreview()" [disabled]="!canManage">
+          @for (w of paperWidths; track w) {
+            <mat-option [value]="w">{{ w === 0 ? t('receipt_width_auto_option') : w }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" subscriptSizing="dynamic" class="width">
+        <mat-label>{{ t('receipt_language') }}</mat-label>
+        <mat-select [(ngModel)]="language" (ngModelChange)="schedulePreview()" [disabled]="!canManage">
+          @for (l of languages; track l.code) {
+            <mat-option [value]="l.code">{{ l.name }}</mat-option>
+          }
+        </mat-select>
       </mat-form-field>
       <mat-form-field appearance="outline" subscriptSizing="dynamic" class="width">
         <mat-label>{{ t('paper_format') }}</mat-label>
-        <mat-select [(ngModel)]="paperFormat" [disabled]="!canManage">
+        <mat-select [(ngModel)]="paperFormat" (ngModelChange)="schedulePreview()" [disabled]="!canManage">
           @for (f of paperFormats; track f) {
             <mat-option [value]="f">{{ t('format_' + f.toLowerCase()) }}</mat-option>
           }
         </mat-select>
       </mat-form-field>
+      <p class="hint">{{ t('receipt_width_hint') }}</p>
       <p class="hint">{{ t('receipt_texts_hint') }}</p>
       @if (canManage) {
         <div class="actions">
@@ -39,6 +53,16 @@
           </button>
         </div>
       }
+    </div>
+    <aside class="cx-card preview-card">
+      <h2>{{ t('print_preview') }}</h2>
+      @if (previewBusy()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
+      <div class="paper">
+        <pre>{{ previewText() }}</pre>
+      </div>
+    </aside>
     </div>
   }
 </ng-container>

@@ -8,12 +8,6 @@
     x:DataType="vm:LoginViewModel"
     Shell.NavBarIsVisible="False">
     <Grid>
-        <VerticalStackLayout VerticalOptions="Center" Spacing="16" IsVisible="{Binding IsChecking}">
-            <Image Source="{AppThemeBinding Light=logo_cx.png, Dark=logo_cx_dark.png}"
-                   WidthRequest="96" HeightRequest="66" HorizontalOptions="Center" />
-            <ActivityIndicator IsRunning="{Binding IsChecking}"
-                               Color="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
-        </VerticalStackLayout>
         <Border HorizontalOptions="End" VerticalOptions="Start" Margin="0,14,20,0"
                 StrokeThickness="1" StrokeShape="RoundRectangle 12" Padding="14,7"
                 Stroke="{AppThemeBinding Light={StaticResource Stroke}, Dark={StaticResource StrokeDark}}"
@@ -24,7 +18,7 @@
             <Label Text="{Binding LanguageShort}" FontSize="13" FontAttributes="Bold"
                    TextColor="{AppThemeBinding Light={StaticResource Ink}, Dark={StaticResource InkDark}}" />
         </Border>
-        <ScrollView IsVisible="{Binding IsChecking, Converter={StaticResource Invert}}">
+        <ScrollView>
             <VerticalStackLayout Padding="28,48" VerticalOptions="Center">
                 <Image Source="{AppThemeBinding Light=logo_cx.png, Dark=logo_cx_dark.png}"
                        WidthRequest="96" HeightRequest="66" HorizontalOptions="Center" />
@@ -65,8 +59,13 @@
             </VerticalStackLayout>
         </ScrollView>
         <VerticalStackLayout VerticalOptions="End" Padding="28,0,28,20" Spacing="10">
-            <Border Style="{StaticResource InputWrap}" IsVisible="{Binding IsServerVisible}">
-                <Entry Placeholder="http://server:5015" Text="{Binding ServerUrl}" Keyboard="Url" FontSize="13" />
+            <Border Style="{StaticResource InputWrap}" Padding="14,2,6,2" IsVisible="{Binding IsServerVisible}">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="4">
+                    <Entry Placeholder="http://server:5015" Text="{Binding ServerUrl}" Keyboard="Url" FontSize="13" />
+                    <Button Grid.Column="1" Text="{StaticResource IcScan}" BackgroundColor="Transparent" FontFamily="MDI" FontSize="20"
+                            Padding="8,0" WidthRequest="42" Command="{Binding ScanServerCommand}"
+                            TextColor="{AppThemeBinding Light={StaticResource Muted}, Dark={StaticResource MutedDark}}" />
+                </Grid>
             </Border>
             <Label Text="{Binding ServerText}" Style="{StaticResource MutedLabel}"
                    FontSize="12" HorizontalOptions="Center">

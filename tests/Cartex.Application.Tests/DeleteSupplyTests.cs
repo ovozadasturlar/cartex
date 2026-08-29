@@ -24,8 +24,8 @@ public class DeleteSupplyTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         using (var scope = Fixture.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            branch1 = (await db.Branches.FirstAsync(b => b.Name == "Filial 1")).Id;
-            warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Filial 1 ombori")).Id;
+            branch1 = (await db.Branches.FirstAsync(b => b.Name == "Asosiy filial")).Id;
+            warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Asosiy ombor")).Id;
             businessId = (await db.Businesses.FirstAsync()).Id;
             adminId = (await db.Users.FirstAsync(u => u.Username == "admin")).Id;
 
@@ -65,6 +65,12 @@ public class DeleteSupplyTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         var (branch1, warehouse1, _, _, variantId, supplierId) = await SetupAsync();
         var shiftId = await TestShift.OpenAsync(Fixture);
 
+        using (var scope = Fixture.CreateScope())
+        {
+            var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+            await sender.Send(new AddCashMovementCommand(30_000m, IsPayOut: false));
+        }
+
         decimal cashBefore;
         long supplyId;
         using (var scope = Fixture.CreateScope())
@@ -85,7 +91,7 @@ public class DeleteSupplyTests(DatabaseFixture fixture) : DatabaseTest(fixture)
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
             var detail = await sender.Send(new GetSupplyByIdQuery(supplyId));
             Assert.NotNull(detail);
-            Assert.Equal(80_000m, detail!.TotalAmount);
+            Assert.Equal(80_000m, detail.TotalAmount);
             Assert.Equal(30_000m, detail.PaidCash);
             Assert.Equal(0m, detail.PaidCard);
             var item = Assert.Single(detail.Items);
@@ -114,7 +120,7 @@ public class DeleteSupplyTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         var sender2 = check.ServiceProvider.GetRequiredService<ISender>();
         var report = await sender2.Send(new CloseShiftCommand(shiftId, 0));
         Assert.Equal(0m, report.SupplyPayOut);
-        Assert.Equal(0m, report.ExpectedCash);
+        Assert.Equal(30_000m, report.ExpectedCash);
     }
 
     [Fact]

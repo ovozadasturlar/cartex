@@ -1,12 +1,10 @@
-using Cartex.Persistence;
-using Cartex.Application.Common.Messaging;
+﻿using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Stocks;
 
 namespace Cartex.Application.Stocks.Queries;
 
 public record GetExpiringStocksQuery(int WithinDays = 30) : IRequest<IReadOnlyCollection<ExpiringStockDto>>;
-
-public record ExpiringStockDto(long Id, string ProductName, string WarehouseName, decimal Quantity, DateOnly ExpiredAt);
 
 public sealed class GetExpiringStocksQueryHandler(IApplicationDbContext db) : IRequestHandler<GetExpiringStocksQuery, IReadOnlyCollection<ExpiringStockDto>>
 {

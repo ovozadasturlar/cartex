@@ -48,9 +48,10 @@
         <StackPanel Margin="24" Spacing="16">
             <c:PageHeader Title="{Binding L[shift]}" />
 
-            <Border Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
+            <Border Classes="form" Background="{DynamicResource CardBg}" CornerRadius="12" Padding="20"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                    IsVisible="{Binding NoShift}">
+                    IsVisible="{Binding NoShift}"
+                    c:FormBehaviors.EnterSubmits="{Binding OpenShiftCommand}">
                 <StackPanel Spacing="14">
                     <TextBlock Text="{Binding L[no_open_shift]}" Foreground="{DynamicResource TextSecondary}" />
                     <Grid ColumnDefinitions="Auto,12,240,*,Auto">
@@ -58,6 +59,7 @@
                         <NumericUpDown Grid.Column="2" Value="{Binding OpeningFloat, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" FormatString="N0"
                                        ShowButtonSpinner="False" MinHeight="40" />
                         <Button Grid.Column="4" Classes="brand" MinWidth="160" HorizontalContentAlignment="Center"
+                                IsVisible="{Binding CanOpen}"
                                 Command="{Binding OpenShiftCommand}" Content="{Binding L[open_shift]}" />
                     </Grid>
                     <ItemsControl ItemsSource="{Binding CurrencyRows}" IsVisible="{Binding IsMulticurrency}">
@@ -84,7 +86,7 @@
                             <TextBlock Text="{Binding L[shift]}" FontWeight="SemiBold" FontSize="16"
                                        Foreground="{DynamicResource TextPrimary}" />
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <TextBlock Text="{Binding Current.OpenedAt, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
+                                <TextBlock Text="{Binding CurrentDisplay.OpenedAt, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
                                            Foreground="{DynamicResource TextMuted}" FontSize="13" />
                                 <TextBlock Text="·" Foreground="{DynamicResource TextMuted}" FontSize="13" />
                                 <TextBlock Text="{Binding ShiftDuration}" Foreground="{DynamicResource TextMuted}" FontSize="13" />
@@ -92,7 +94,7 @@
                         </StackPanel>
                         <StackPanel Grid.Column="1" VerticalAlignment="Center">
                             <TextBlock Text="{Binding L[expected_cash]}" Classes="caption" HorizontalAlignment="Right" />
-                            <TextBlock Text="{Binding Current.ExpectedCash, StringFormat='{}{0:N0}'}" FontSize="24" FontWeight="Bold"
+                            <TextBlock Text="{Binding CurrentDisplay.ExpectedCash, StringFormat='{}{0:N0}'}" FontSize="24" FontWeight="Bold"
                                        Foreground="{DynamicResource SuccessBrush}" HorizontalAlignment="Right" />
                         </StackPanel>
                     </Grid>
@@ -104,28 +106,33 @@
                                 <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="10">
                                     <StackPanel Grid.Row="0" Grid.Column="0" Spacing="2">
                                         <TextBlock Text="{Binding L[cash_sales]}" Classes="caption" />
-                                        <TextBlock Text="{Binding Current.CashSales, StringFormat='{}{0:N0}'}" Classes="statval"
-                                                   Classes.dim="{Binding Current.CashSales, Converter={x:Static conv:IsZeroConverter.Instance}}" />
+                                        <TextBlock Text="{Binding CurrentDisplay.CashSales, StringFormat='{}{0:N0}'}" Classes="statval"
+                                                   Classes.dim="{Binding CurrentDisplay.CashSales, Converter={x:Static conv:IsZeroConverter.Instance}}" />
                                     </StackPanel>
                                     <StackPanel Grid.Row="0" Grid.Column="1" Spacing="2">
                                         <TextBlock Text="{Binding L[card_sales]}" Classes="caption" />
-                                        <TextBlock Text="{Binding Current.CardSales, StringFormat='{}{0:N0}'}" Classes="statval"
-                                                   Classes.dim="{Binding Current.CardSales, Converter={x:Static conv:IsZeroConverter.Instance}}" />
+                                        <TextBlock Text="{Binding CurrentDisplay.CardSales, StringFormat='{}{0:N0}'}" Classes="statval"
+                                                   Classes.dim="{Binding CurrentDisplay.CardSales, Converter={x:Static conv:IsZeroConverter.Instance}}" />
                                     </StackPanel>
                                     <StackPanel Grid.Row="1" Grid.Column="0" Spacing="2">
                                         <TextBlock Text="{Binding L[sales_count]}" Classes="caption" />
-                                        <TextBlock Text="{Binding Current.SalesCount, StringFormat='{}{0:N0}'}" Classes="statval"
-                                                   Classes.dim="{Binding Current.SalesCount, Converter={x:Static conv:IsZeroConverter.Instance}}" />
+                                        <TextBlock Text="{Binding CurrentDisplay.SalesCount, StringFormat='{}{0:N0}'}" Classes="statval"
+                                                   Classes.dim="{Binding CurrentDisplay.SalesCount, Converter={x:Static conv:IsZeroConverter.Instance}}" />
                                     </StackPanel>
                                     <StackPanel Grid.Row="1" Grid.Column="1" Spacing="2">
                                         <TextBlock Text="{Binding L[debt_issued]}" Classes="caption" />
-                                        <TextBlock Text="{Binding Current.NewDebtIssued, StringFormat='{}{0:N0}'}" Classes="statval"
-                                                   Classes.dim="{Binding Current.NewDebtIssued, Converter={x:Static conv:IsZeroConverter.Instance}}" />
+                                        <TextBlock Text="{Binding CurrentDisplay.NewDebtIssued, StringFormat='{}{0:N0}'}" Classes="statval"
+                                                   Classes.dim="{Binding CurrentDisplay.NewDebtIssued, Converter={x:Static conv:IsZeroConverter.Instance}}" />
                                     </StackPanel>
                                     <StackPanel Grid.Row="2" Grid.Column="0" Spacing="2">
                                         <TextBlock Text="{Binding L[bonus_used]}" Classes="caption" />
-                                        <TextBlock Text="{Binding Current.BonusUsed, StringFormat='{}{0:N0}'}" Classes="statval"
-                                                   Classes.dim="{Binding Current.BonusUsed, Converter={x:Static conv:IsZeroConverter.Instance}}" />
+                                        <TextBlock Text="{Binding CurrentDisplay.BonusUsed, StringFormat='{}{0:N0}'}" Classes="statval"
+                                                   Classes.dim="{Binding CurrentDisplay.BonusUsed, Converter={x:Static conv:IsZeroConverter.Instance}}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="2" Grid.Column="1" Spacing="2">
+                                        <TextBlock Text="{Binding L[cash_returns]}" Classes="caption" />
+                                        <TextBlock Text="{Binding CurrentDisplay.CashReturns, StringFormat='{}{0:N0}'}" Classes="statval"
+                                                   Classes.dim="{Binding CurrentDisplay.CashReturns, Converter={x:Static conv:IsZeroConverter.Instance}}" />
                                     </StackPanel>
                                 </Grid>
                             </StackPanel>
@@ -136,35 +143,35 @@
                                 <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="10">
                                     <StackPanel Grid.Row="0" Grid.Column="0" Spacing="2">
                                         <TextBlock Text="{Binding L[opening_float]}" Classes="caption" />
-                                        <TextBlock Text="{Binding Current.OpeningFloat, StringFormat='{}{0:N0}'}" Classes="statval"
-                                                   Classes.dim="{Binding Current.OpeningFloat, Converter={x:Static conv:IsZeroConverter.Instance}}" />
+                                        <TextBlock Text="{Binding CurrentDisplay.OpeningFloat, StringFormat='{}{0:N0}'}" Classes="statval"
+                                                   Classes.dim="{Binding CurrentDisplay.OpeningFloat, Converter={x:Static conv:IsZeroConverter.Instance}}" />
                                     </StackPanel>
                                     <StackPanel Grid.Row="0" Grid.Column="1" Spacing="2">
                                         <TextBlock Text="{Binding L[pay_in]}" Classes="caption" />
-                                        <TextBlock Text="{Binding Current.PayIn, StringFormat='{}{0:N0}'}" Classes="statval"
-                                                   Classes.dim="{Binding Current.PayIn, Converter={x:Static conv:IsZeroConverter.Instance}}" />
+                                        <TextBlock Text="{Binding CurrentDisplay.PayIn, StringFormat='{}{0:N0}'}" Classes="statval"
+                                                   Classes.dim="{Binding CurrentDisplay.PayIn, Converter={x:Static conv:IsZeroConverter.Instance}}" />
                                     </StackPanel>
                                     <StackPanel Grid.Row="1" Grid.Column="0" Spacing="2">
                                         <TextBlock Text="{Binding L[pay_out]}" Classes="caption" />
-                                        <TextBlock Text="{Binding Current.PayOut, StringFormat='{}{0:N0}'}" Classes="statval"
-                                                   Classes.dim="{Binding Current.PayOut, Converter={x:Static conv:IsZeroConverter.Instance}}" />
+                                        <TextBlock Text="{Binding CurrentDisplay.PayOut, StringFormat='{}{0:N0}'}" Classes="statval"
+                                                   Classes.dim="{Binding CurrentDisplay.PayOut, Converter={x:Static conv:IsZeroConverter.Instance}}" />
                                     </StackPanel>
                                     <StackPanel Grid.Row="1" Grid.Column="1" Spacing="2">
                                         <TextBlock Text="{Binding L[debt_pay_in]}" Classes="caption" />
-                                        <TextBlock Text="{Binding Current.DebtPayIn, StringFormat='{}{0:N0}'}" Classes="statval"
-                                                   Classes.dim="{Binding Current.DebtPayIn, Converter={x:Static conv:IsZeroConverter.Instance}}" />
+                                        <TextBlock Text="{Binding CurrentDisplay.DebtPayIn, StringFormat='{}{0:N0}'}" Classes="statval"
+                                                   Classes.dim="{Binding CurrentDisplay.DebtPayIn, Converter={x:Static conv:IsZeroConverter.Instance}}" />
                                     </StackPanel>
                                     <StackPanel Grid.Row="2" Grid.Column="0" Spacing="2">
                                         <TextBlock Text="{Binding L[supply_pay_out]}" Classes="caption" />
-                                        <TextBlock Text="{Binding Current.SupplyPayOut, StringFormat='{}{0:N0}'}" Classes="statval"
-                                                   Classes.dim="{Binding Current.SupplyPayOut, Converter={x:Static conv:IsZeroConverter.Instance}}" />
+                                        <TextBlock Text="{Binding CurrentDisplay.SupplyPayOut, StringFormat='{}{0:N0}'}" Classes="statval"
+                                                   Classes.dim="{Binding CurrentDisplay.SupplyPayOut, Converter={x:Static conv:IsZeroConverter.Instance}}" />
                                     </StackPanel>
                                 </Grid>
                             </StackPanel>
                         </Border>
                     </Grid>
 
-                    <Border Classes="inset">
+                    <Border Classes="inset form">
                         <Grid ColumnDefinitions="Auto,12,*,8,220,8,160,8,Auto,8,Auto">
                             <TextBlock Text="{Binding L[cash_movement]}" Classes="caption" VerticalAlignment="Center" />
                             <TextBox Grid.Column="2" Text="{Binding MovementReason}" PlaceholderText="{Binding L[movement_reason]}"
@@ -182,7 +189,8 @@
                         </Grid>
                     </Border>
 
-                    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="0,14,0,0">
+                    <Border Classes="form" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="0,14,0,0"
+                            c:FormBehaviors.EnterSubmits="{Binding CloseShiftCommand}">
                         <StackPanel Spacing="10">
                             <TextBlock Text="{Binding L[counted_cash]}" Classes="caption" FontWeight="SemiBold" />
                             <Grid ColumnDefinitions="60,8,240,12,170,12,*">
@@ -192,7 +200,7 @@
                                                ShowButtonSpinner="False" MinHeight="40" />
                                 <TextBlock Grid.Column="4" VerticalAlignment="Center" FontSize="12"
                                            Foreground="{DynamicResource TextMuted}">
-                                    <Run Text="{Binding L[expected_short]}" /><Run Text=": " /><Run Text="{Binding Current.ExpectedCash, StringFormat='{}{0:N0}'}" />
+                                    <Run Text="{Binding L[expected_short]}" /><Run Text=": " /><Run Text="{Binding CurrentDisplay.ExpectedCash, StringFormat='{}{0:N0}'}" />
                                 </TextBlock>
                                 <TextBlock Grid.Column="6" VerticalAlignment="Center" FontWeight="SemiBold" FontSize="13"
                                            Text="{Binding BaseDifference, Converter={x:Static conv:CashDiffConverter.Instance}}"
@@ -218,6 +226,7 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                             <Button Classes="brand" MinWidth="160" HorizontalAlignment="Right" HorizontalContentAlignment="Center"
+                                    IsVisible="{Binding CanClose}"
                                     Command="{Binding CloseShiftCommand}" Content="{Binding L[close_shift]}" />
                         </StackPanel>
                     </Border>
@@ -320,25 +329,25 @@
                     <Border Classes="inset">
                         <StackPanel Spacing="2">
                             <TextBlock Text="{Binding L[expected_cash]}" Classes="caption" />
-                            <TextBlock Text="{Binding LastReport.ExpectedCash, StringFormat='{}{0:N0}'}" FontSize="18" FontWeight="Bold"
+                            <TextBlock Text="{Binding LastReportDisplay.ExpectedCash, StringFormat='{}{0:N0}'}" FontSize="18" FontWeight="Bold"
                                        Foreground="{DynamicResource TextPrimary}" />
                         </StackPanel>
                     </Border>
                     <Border Grid.Column="2" Classes="inset">
                         <StackPanel Spacing="2">
                             <TextBlock Text="{Binding L[counted_cash]}" Classes="caption" />
-                            <TextBlock Text="{Binding LastReport.CountedCash, StringFormat='{}{0:N0}'}" FontSize="18" FontWeight="Bold"
+                            <TextBlock Text="{Binding LastReportDisplay.CountedCash, StringFormat='{}{0:N0}'}" FontSize="18" FontWeight="Bold"
                                        Foreground="{DynamicResource TextPrimary}" />
                         </StackPanel>
                     </Border>
                     <Border Grid.Column="4" Classes="inset">
                         <StackPanel Spacing="2">
                             <TextBlock Text="{Binding L[difference]}" Classes="caption" />
-                            <TextBlock Text="{Binding LastReport.Difference, StringFormat='{}{0:N0}'}" FontSize="18" FontWeight="Bold"
-                                       Foreground="{Binding LastReport.Difference, Converter={x:Static conv:CashDiffConverter.Instance}, ConverterParameter=brush}" />
-                            <TextBlock Text="{Binding LastReport.Difference, Converter={x:Static conv:CashDiffConverter.Instance}, ConverterParameter=label}"
+                            <TextBlock Text="{Binding LastReportDisplay.Difference, StringFormat='{}{0:N0}'}" FontSize="18" FontWeight="Bold"
+                                       Foreground="{Binding LastReportDisplay.Difference, Converter={x:Static conv:CashDiffConverter.Instance}, ConverterParameter=brush}" />
+                            <TextBlock Text="{Binding LastReportDisplay.Difference, Converter={x:Static conv:CashDiffConverter.Instance}, ConverterParameter=label}"
                                        FontSize="11" FontWeight="SemiBold"
-                                       Foreground="{Binding LastReport.Difference, Converter={x:Static conv:CashDiffConverter.Instance}, ConverterParameter=brush}" />
+                                       Foreground="{Binding LastReportDisplay.Difference, Converter={x:Static conv:CashDiffConverter.Instance}, ConverterParameter=brush}" />
                         </StackPanel>
                     </Border>
                 </Grid>
@@ -348,71 +357,71 @@
                         <TextBlock Text="{Binding L[z_section_sales]}" Classes="caption" FontWeight="SemiBold" />
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Text="{Binding L[cash_sales]}" FontSize="12" Foreground="{DynamicResource TextSecondary}" />
-                            <TextBlock Grid.Column="1" Classes="statval" Text="{Binding LastReport.CashSales, StringFormat='{}{0:N0}'}"
-                                       Classes.dim="{Binding LastReport.CashSales, Converter={x:Static conv:IsZeroConverter.Instance}}" />
+                            <TextBlock Grid.Column="1" Classes="statval" Text="{Binding LastReportDisplay.CashSales, StringFormat='{}{0:N0}'}"
+                                       Classes.dim="{Binding LastReportDisplay.CashSales, Converter={x:Static conv:IsZeroConverter.Instance}}" />
                         </Grid>
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Text="{Binding L[card_sales]}" FontSize="12" Foreground="{DynamicResource TextSecondary}" />
-                            <TextBlock Grid.Column="1" Classes="statval" Text="{Binding LastReport.CardSales, StringFormat='{}{0:N0}'}"
-                                       Classes.dim="{Binding LastReport.CardSales, Converter={x:Static conv:IsZeroConverter.Instance}}" />
+                            <TextBlock Grid.Column="1" Classes="statval" Text="{Binding LastReportDisplay.CardSales, StringFormat='{}{0:N0}'}"
+                                       Classes.dim="{Binding LastReportDisplay.CardSales, Converter={x:Static conv:IsZeroConverter.Instance}}" />
                         </Grid>
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Text="{Binding L[cash_returns]}" FontSize="12" Foreground="{DynamicResource TextSecondary}" />
-                            <TextBlock Grid.Column="1" Classes="statval" Text="{Binding LastReport.CashReturns, StringFormat='{}{0:N0}'}"
-                                       Classes.dim="{Binding LastReport.CashReturns, Converter={x:Static conv:IsZeroConverter.Instance}}" />
+                            <TextBlock Grid.Column="1" Classes="statval" Text="{Binding LastReportDisplay.CashReturns, StringFormat='{}{0:N0}'}"
+                                       Classes.dim="{Binding LastReportDisplay.CashReturns, Converter={x:Static conv:IsZeroConverter.Instance}}" />
                         </Grid>
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Text="{Binding L[card_returns]}" FontSize="12" Foreground="{DynamicResource TextSecondary}" />
-                            <TextBlock Grid.Column="1" Classes="statval" Text="{Binding LastReport.CardReturns, StringFormat='{}{0:N0}'}"
-                                       Classes.dim="{Binding LastReport.CardReturns, Converter={x:Static conv:IsZeroConverter.Instance}}" />
+                            <TextBlock Grid.Column="1" Classes="statval" Text="{Binding LastReportDisplay.CardReturns, StringFormat='{}{0:N0}'}"
+                                       Classes.dim="{Binding LastReportDisplay.CardReturns, Converter={x:Static conv:IsZeroConverter.Instance}}" />
                         </Grid>
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Text="{Binding L[bonus_used]}" FontSize="12" Foreground="{DynamicResource TextSecondary}" />
-                            <TextBlock Grid.Column="1" Classes="statval" Text="{Binding LastReport.BonusUsed, StringFormat='{}{0:N0}'}"
-                                       Classes.dim="{Binding LastReport.BonusUsed, Converter={x:Static conv:IsZeroConverter.Instance}}" />
+                            <TextBlock Grid.Column="1" Classes="statval" Text="{Binding LastReportDisplay.BonusUsed, StringFormat='{}{0:N0}'}"
+                                       Classes.dim="{Binding LastReportDisplay.BonusUsed, Converter={x:Static conv:IsZeroConverter.Instance}}" />
                         </Grid>
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Text="{Binding L[debt_issued]}" FontSize="12" Foreground="{DynamicResource TextSecondary}" />
-                            <TextBlock Grid.Column="1" Classes="statval" Text="{Binding LastReport.NewDebtIssued, StringFormat='{}{0:N0}'}"
-                                       Classes.dim="{Binding LastReport.NewDebtIssued, Converter={x:Static conv:IsZeroConverter.Instance}}" />
+                            <TextBlock Grid.Column="1" Classes="statval" Text="{Binding LastReportDisplay.NewDebtIssued, StringFormat='{}{0:N0}'}"
+                                       Classes.dim="{Binding LastReportDisplay.NewDebtIssued, Converter={x:Static conv:IsZeroConverter.Instance}}" />
                         </Grid>
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Text="{Binding L[sales_count]}" FontSize="12" Foreground="{DynamicResource TextSecondary}" />
-                            <TextBlock Grid.Column="1" Classes="statval" Text="{Binding LastReport.SalesCount, StringFormat='{}{0:N0}'}"
-                                       Classes.dim="{Binding LastReport.SalesCount, Converter={x:Static conv:IsZeroConverter.Instance}}" />
+                            <TextBlock Grid.Column="1" Classes="statval" Text="{Binding LastReportDisplay.SalesCount, StringFormat='{}{0:N0}'}"
+                                       Classes.dim="{Binding LastReportDisplay.SalesCount, Converter={x:Static conv:IsZeroConverter.Instance}}" />
                         </Grid>
                     </StackPanel>
                     <StackPanel Grid.Column="2" Spacing="8">
                         <TextBlock Text="{Binding L[z_section_cash]}" Classes="caption" FontWeight="SemiBold" />
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Text="{Binding L[opening_float]}" FontSize="12" Foreground="{DynamicResource TextSecondary}" />
-                            <TextBlock Grid.Column="1" Classes="statval" Text="{Binding LastReport.OpeningFloat, StringFormat='{}{0:N0}'}"
-                                       Classes.dim="{Binding LastReport.OpeningFloat, Converter={x:Static conv:IsZeroConverter.Instance}}" />
+                            <TextBlock Grid.Column="1" Classes="statval" Text="{Binding LastReportDisplay.OpeningFloat, StringFormat='{}{0:N0}'}"
+                                       Classes.dim="{Binding LastReportDisplay.OpeningFloat, Converter={x:Static conv:IsZeroConverter.Instance}}" />
                         </Grid>
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Text="{Binding L[pay_in]}" FontSize="12" Foreground="{DynamicResource TextSecondary}" />
-                            <TextBlock Grid.Column="1" Classes="statval" Text="{Binding LastReport.PayIn, StringFormat='{}{0:N0}'}"
-                                       Classes.dim="{Binding LastReport.PayIn, Converter={x:Static conv:IsZeroConverter.Instance}}" />
+                            <TextBlock Grid.Column="1" Classes="statval" Text="{Binding LastReportDisplay.PayIn, StringFormat='{}{0:N0}'}"
+                                       Classes.dim="{Binding LastReportDisplay.PayIn, Converter={x:Static conv:IsZeroConverter.Instance}}" />
                         </Grid>
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Text="{Binding L[pay_out]}" FontSize="12" Foreground="{DynamicResource TextSecondary}" />
-                            <TextBlock Grid.Column="1" Classes="statval" Text="{Binding LastReport.PayOut, StringFormat='{}{0:N0}'}"
-                                       Classes.dim="{Binding LastReport.PayOut, Converter={x:Static conv:IsZeroConverter.Instance}}" />
+                            <TextBlock Grid.Column="1" Classes="statval" Text="{Binding LastReportDisplay.PayOut, StringFormat='{}{0:N0}'}"
+                                       Classes.dim="{Binding LastReportDisplay.PayOut, Converter={x:Static conv:IsZeroConverter.Instance}}" />
                         </Grid>
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Text="{Binding L[debt_pay_in]}" FontSize="12" Foreground="{DynamicResource TextSecondary}" />
-                            <TextBlock Grid.Column="1" Classes="statval" Text="{Binding LastReport.DebtPayIn, StringFormat='{}{0:N0}'}"
-                                       Classes.dim="{Binding LastReport.DebtPayIn, Converter={x:Static conv:IsZeroConverter.Instance}}" />
+                            <TextBlock Grid.Column="1" Classes="statval" Text="{Binding LastReportDisplay.DebtPayIn, StringFormat='{}{0:N0}'}"
+                                       Classes.dim="{Binding LastReportDisplay.DebtPayIn, Converter={x:Static conv:IsZeroConverter.Instance}}" />
                         </Grid>
                         <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Text="{Binding L[supply_pay_out]}" FontSize="12" Foreground="{DynamicResource TextSecondary}" />
-                            <TextBlock Grid.Column="1" Classes="statval" Text="{Binding LastReport.SupplyPayOut, StringFormat='{}{0:N0}'}"
-                                       Classes.dim="{Binding LastReport.SupplyPayOut, Converter={x:Static conv:IsZeroConverter.Instance}}" />
+                            <TextBlock Grid.Column="1" Classes="statval" Text="{Binding LastReportDisplay.SupplyPayOut, StringFormat='{}{0:N0}'}"
+                                       Classes.dim="{Binding LastReportDisplay.SupplyPayOut, Converter={x:Static conv:IsZeroConverter.Instance}}" />
                         </Grid>
                     </StackPanel>
                 </Grid>
 
-                <ItemsControl ItemsSource="{Binding LastReport.Currencies}">
+                <ItemsControl ItemsSource="{Binding LastReportDisplay.Currencies}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="0,10,0,0" Margin="0,2,0,0">

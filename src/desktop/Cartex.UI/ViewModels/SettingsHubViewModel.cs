@@ -9,10 +9,14 @@ namespace Cartex.UI.ViewModels;
 public partial class SettingsHubViewModel : ViewModelBase, ILoadable
 {
     private readonly AuthService _authService;
+    private readonly IDialogService _dialogService;
+    private PeriodicTimer? _retryTimer;
+    private int _retryAttempt;
 
     [ObservableProperty] private ViewModelBase? _currentSection;
     [ObservableProperty] private MenuItem? _selectedSection;
     [ObservableProperty] private bool _isSidebarCollapsed = SettingsService.Instance.SettingsSidebarCollapsed;
+    [ObservableProperty] private bool _isDialogOpen;
 
     public double SidebarWidth => IsSidebarCollapsed ? 64 : 248;
 
@@ -27,9 +31,10 @@ public partial class SettingsHubViewModel : ViewModelBase, ILoadable
 
     public ObservableCollection<MenuSection> Sections { get; } = [];
 
-    public SettingsHubViewModel(AuthService authService)
+    public SettingsHubViewModel(AuthService authService, IDialogService dialogService)
     {
         _authService = authService;
+        _dialogService = dialogService;
         LocalizationManager.Instance.LanguageChanged += RefreshTitles;
     }
 
@@ -48,7 +53,7 @@ public partial class SettingsHubViewModel : ViewModelBase, ILoadable
             var section = new MenuSection { Key = key, Title = L[titleKey] };
             foreach (var def in NavRegistry.SettingsPages.Where(d => d.SectionKey == key))
             {
-                if (def.Permission is not null && !_authService.HasPermission(def.Permission))
+                if (!def.IsAvailable(_authService.HasPermission))
                     continue;
                 section.Items.Add(new MenuItem
                 {
@@ -68,10 +73,75 @@ public partial class SettingsHubViewModel : ViewModelBase, ILoadable
     {
         if (oldValue is not null) oldValue.IsActive = false;
         if (newValue is null) return;
+        if (oldValue is not null)
+        {
+            CurrentSection?.OnNavigatedFrom();
+            _dialogService.CloseOverlay();
+        }
         newValue.IsActive = true;
         ServiceLocator.Resolve<Cartex.ApiClient.PageRequestScope>().CancelPending();
         CurrentSection = (ViewModelBase)ServiceLocator.Resolve(newValue.ViewModelType);
-        MainViewModel.StartPageLoad(CurrentSection);
+        _ = LoadSectionAsync(CurrentSection);
+    }
+
+    private async Task LoadSectionAsync(ViewModelBase section)
+    {
+        CancelRetry();
+        try
+        {
+            await MainViewModel.LoadPageAsync(section);
+            _retryAttempt = 0;
+        }
+        catch (Exception exception) when (ApiErrors.IsCancelled(exception))
+        {
+        }
+        catch (Exception exception)
+        {
+            if (CurrentSection != section) return;
+            var status = new PageStatusViewModel(
+                L["page_load_failed_title"],
+                ApiErrors.Describe(exception),
+                false,
+                () => RetrySectionAsync(section));
+            CurrentSection = status;
+            ScheduleRetry(section, status);
+        }
+    }
+
+    private async Task RetrySectionAsync(ViewModelBase section)
+    {
+        CancelRetry();
+        CurrentSection = section;
+        await LoadSectionAsync(section);
+    }
+
+    private void ScheduleRetry(ViewModelBase section, PageStatusViewModel status)
+    {
+        CancelRetry();
+        var delay = TimeSpan.FromSeconds(Math.Min(Math.Pow(2, _retryAttempt++), 30));
+        var timer = _retryTimer = new PeriodicTimer(delay);
+        _ = RetryAfterAsync(timer, section, status);
+    }
+
+    private async Task RetryAfterAsync(
+        PeriodicTimer timer,
+        ViewModelBase section,
+        PageStatusViewModel status)
+    {
+        try
+        {
+            if (await timer.WaitForNextTickAsync() && CurrentSection == status)
+                await RetrySectionAsync(section);
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+    }
+
+    private void CancelRetry()
+    {
+        _retryTimer?.Dispose();
+        _retryTimer = null;
     }
 
     private void RefreshTitles()
@@ -91,5 +161,19 @@ public partial class SettingsHubViewModel : ViewModelBase, ILoadable
     {
         var item = Sections.SelectMany(s => s.Items).FirstOrDefault(i => i.Key == key);
         if (item is not null) SelectedSection = item;
+    }
+
+    public void SelectNotificationJournal()
+    {
+        SelectByKey("notification_journal");
+        if (CurrentSection is NotificationJournalViewModel journal)
+            journal.SelectSmsChannel();
+    }
+
+    public override void OnNavigatedFrom()
+    {
+        CancelRetry();
+        CurrentSection?.OnNavigatedFrom();
+        _dialogService.CloseOverlay();
     }
 }

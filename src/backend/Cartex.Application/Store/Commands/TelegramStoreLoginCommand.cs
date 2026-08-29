@@ -3,7 +3,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Cartex.Application.Common.Interfaces;
-using Cartex.Application.Common.Messaging;
 using Cartex.Application.Common.Settings;
 using Cartex.Domain.Authorization;
 using Cartex.Domain.Common;
@@ -36,7 +35,8 @@ public sealed class TelegramStoreLoginCommandHandler(
         var fields = ValidateInitData(request.InitData, protector.Unprotect(cfg.BotToken));
         var telegramId = ExtractUserId(fields);
 
-        var customer = await db.Customers.FirstOrDefaultAsync(c => c.TelegramChatId == telegramId, cancellationToken)
+        var customer = await db.Customers.Include(c => c.Party)
+            .FirstOrDefaultAsync(c => c.TelegramChatId == telegramId, cancellationToken)
             ?? throw new UnauthorizedAccessException("Telegram hisobi bog'lanmagan.");
 
         return await tokenBuilder.IssueAsync(customer, request.DeviceName, cancellationToken);

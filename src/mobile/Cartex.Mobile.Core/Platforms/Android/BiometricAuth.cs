@@ -22,7 +22,14 @@ public sealed class BiometricAuth : IBiometricAuth
             }
             try
             {
-                var prompt = new BiometricPrompt(activity, ContextCompat.GetMainExecutor(activity), new Callback(tcs));
+                var executor = ContextCompat.GetMainExecutor(activity);
+                if (executor is null)
+                {
+                    tcs.TrySetResult(false);
+                    return;
+                }
+
+                var prompt = new BiometricPrompt(activity, executor, new Callback(tcs));
                 var info = new BiometricPrompt.PromptInfo.Builder()
                     .SetTitle(title)
                     .SetAllowedAuthenticators(BiometricManager.Authenticators.BiometricWeak)

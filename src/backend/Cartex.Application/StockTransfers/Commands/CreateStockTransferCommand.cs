@@ -1,16 +1,16 @@
-using Cartex.Application.Common.Messaging;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
 using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
+using Cartex.Application.Common.Measurement;
 
 namespace Cartex.Application.StockTransfers.Commands;
 
 public record CreateStockTransferCommand(long FromWarehouseId, long ToWarehouseId, long VariantId, decimal Quantity) : ICommand<long>;
 
-public sealed class CreateStockTransferCommandHandler(IApplicationDbContext db, ICurrentUser currentUser) : IRequestHandler<CreateStockTransferCommand, long>
+public sealed class CreateStockTransferCommandHandler(IApplicationDbContext db, ICurrentUser currentUser, IQuantityPolicyService quantityPolicy) : IRequestHandler<CreateStockTransferCommand, long>
 {
     public async Task<long> Handle(CreateStockTransferCommand request, CancellationToken cancellationToken)
     {
@@ -18,6 +18,11 @@ public sealed class CreateStockTransferCommandHandler(IApplicationDbContext db, 
 
         var fromWarehouse = await db.Warehouses.FirstOrDefaultAsync(w => w.Id == request.FromWarehouseId, cancellationToken)
             ?? throw new NotFoundException("Source warehouse not found.");
+
+        if (!await db.Warehouses.AnyAsync(w => w.Id == request.ToWarehouseId, cancellationToken))
+            throw new NotFoundException("Destination warehouse not found.", "warehouse_not_found");
+
+        await quantityPolicy.ValidateAsync([(request.VariantId, request.Quantity)], cancellationToken);
 
         var transfer = new StockTransfer
         {

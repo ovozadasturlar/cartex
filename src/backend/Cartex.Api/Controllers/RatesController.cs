@@ -1,21 +1,22 @@
-using Cartex.Application.Rates.Commands;
+﻿using Cartex.Application.Rates.Commands;
 using Cartex.Application.Rates.Queries;
 using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
 using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Cartex.Shared.Models.Rates;
 
 namespace Cartex.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-[RequiresFeature(FeatureCatalog.Multicurrency)]
 public class RatesController(ISender sender) : ControllerBase
 {
     [HttpGet]
-    [HasPermission(AppPermissions.Rates.Manage)]
+    [RequiresFeature(FeatureCatalog.Multicurrency)]
+    [HasPermission(AppPermissions.Rates.View)]
     public async Task<ActionResult<IReadOnlyCollection<RateDto>>> GetCurrent()
     {
         var result = await sender.Send(new GetCurrentRatesQuery());
@@ -23,7 +24,8 @@ public class RatesController(ISender sender) : ControllerBase
     }
 
     [HttpGet("{code}/history")]
-    [HasPermission(AppPermissions.Rates.Manage)]
+    [RequiresFeature(FeatureCatalog.Multicurrency)]
+    [HasPermission(AppPermissions.Rates.View)]
     public async Task<ActionResult<IReadOnlyCollection<RateDto>>> GetHistory(string code)
     {
         var result = await sender.Send(new GetRateHistoryQuery(code));
@@ -31,24 +33,29 @@ public class RatesController(ISender sender) : ControllerBase
     }
 
     [HttpPost]
-    [HasPermission(AppPermissions.Rates.Manage)]
+    [RequiresFeature(FeatureCatalog.Multicurrency)]
+    [HasPermission(AppPermissions.Rates.Edit)]
     public async Task<ActionResult<long>> Set(SetExchangeRateCommand command)
     {
         var id = await sender.Send(command);
         return Ok(id);
     }
 
+    // Narx ko'rsatish uchun zarur reference ma'lumot: har qanday xodim o'qiy oladi,
+    // aks holda oddiy sotuvchi klientlari 403 olib ishlay olmaydi.
     [HttpGet("currencies")]
     public async Task<ActionResult<IReadOnlyCollection<CurrencyDto>>> GetCurrencies([FromQuery] bool onlyEnabled = false) =>
         Ok(await sender.Send(new GetCurrenciesQuery(onlyEnabled)));
 
     [HttpPost("currencies")]
-    [HasPermission(AppPermissions.Currencies.Manage)]
+    [RequiresFeature(FeatureCatalog.Multicurrency)]
+    [HasPermission(AppPermissions.Currencies.Create)]
     public async Task<ActionResult<long>> CreateCurrency(CreateCurrencyCommand command) =>
         Ok(await sender.Send(command));
 
     [HttpPut("currencies/{code}")]
-    [HasPermission(AppPermissions.Currencies.Manage)]
+    [RequiresFeature(FeatureCatalog.Multicurrency)]
+    [HasPermission(AppPermissions.Currencies.Edit)]
     public async Task<IActionResult> UpdateCurrency(string code, UpdateCurrencyCommand command)
     {
         await sender.Send(command with { Code = code });
@@ -56,7 +63,8 @@ public class RatesController(ISender sender) : ControllerBase
     }
 
     [HttpDelete("currencies/{code}")]
-    [HasPermission(AppPermissions.Currencies.Manage)]
+    [RequiresFeature(FeatureCatalog.Multicurrency)]
+    [HasPermission(AppPermissions.Currencies.Delete)]
     public async Task<IActionResult> DeleteCurrency(string code)
     {
         await sender.Send(new DeleteCurrencyCommand(code));

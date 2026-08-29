@@ -1,8 +1,14 @@
+import { SalesPolicy } from './api/settings.api';
+
 export interface NavItem {
   labelKey: string;
   icon: string;
   route: string;
   permission: string | null;
+  feature?: string;
+  /// BRAK-06: ruxsat va modul yetarli bo'lmagan bo'limlar uchun do'kon siyosati kaliti.
+  policy?: keyof SalesPolicy;
+  requiresMultipleWarehouses?: boolean;
 }
 
 export interface NavSection {
@@ -10,38 +16,145 @@ export interface NavSection {
   items: NavItem[];
 }
 
+/// RUXSAT-04a: imkoniyat bitta joyda aniqlanadi. Menyu (shell) va marshrut qorovullari
+/// (landingGuard) bir xil qoidadan foydalanishi shart - aks holda bir ekranda yashiringan
+/// bo'lim boshqasida (mas. saqlangan boshlang'ich sahifa sifatida) ko'rinib qolishi mumkin.
+export function isNavItemOpen(
+  item: NavItem,
+  hasPermission: (permission: string) => boolean,
+  hasFeature: (expression: string | undefined) => boolean,
+  hasPolicy: (policy: NavItem['policy']) => boolean,
+  warehouseCount: number,
+): boolean {
+  return (item.permission === null || hasPermission(item.permission))
+    && hasFeature(item.feature)
+    && hasPolicy(item.policy)
+    && (!item.requiresMultipleWarehouses || warehouseCount > 1);
+}
+
+/// Telefonning pastki panelidagi tartib. Ro'yxat menyu tartibidan farq qiladi: kichik ekranda
+/// avval kunlik ish (kassa, savdo, mijoz, mahsulot), keyin ko'rsatkichlar keladi. Bu yerda
+/// bo'lmagan sahifa telefonda yo'qolmaydi — "Ko'proq" menyusidan ochiladi.
+export const PHONE_NAV_ORDER: string[] = [
+  '/pos',
+  '/dashboard',
+  '/sales',
+  '/customers',
+  '/products',
+  '/shift',
+];
+
+/// Telefonning pastki paneli 4 ta joydan iborat. Tanlov foydalanuvchiga moslashadi: avval
+/// `PHONE_NAV_ORDER` dagi, unga **ochiq** bo'lgan sahifalar olinadi, joy qolsa menyudagi
+/// qolganlari qo'shiladi. Shunda hisobot ruxsati yo'q kassir ham, egasi ham o'ziga kerakli
+/// to'rttani ko'radi va hech bir sahifa yo'qolmaydi — qolgani "Ko'proq" menyusida.
+export function phoneNavItems(open: NavItem[], slots = 4): NavItem[] {
+  const ordered = PHONE_NAV_ORDER
+    .map((route) => open.find((item) => item.route === route))
+    .filter((item): item is NavItem => item !== undefined);
+  return [...ordered, ...open.filter((item) => !ordered.includes(item))].slice(0, slots);
+}
+
 export const NAV_SECTIONS: NavSection[] = [
   {
     labelKey: null,
     items: [
-      { labelKey: 'dashboard', icon: 'space_dashboard', route: '/dashboard', permission: 'reports.view' },
-      { labelKey: 'pos', icon: 'point_of_sale', route: '/pos', permission: 'sales.create' },
+      {
+        labelKey: 'dashboard',
+        icon: 'space_dashboard',
+        route: '/dashboard',
+        feature: 'reports',
+        permission: 'reports.view',
+      },
+      {
+        labelKey: 'pos',
+        icon: 'point_of_sale',
+        route: '/pos',
+        permission: 'sales.create|sales.checkout|sales.pick|sales.view',
+      },
     ],
   },
   {
     labelKey: 'section_sales',
     items: [
-      { labelKey: 'shift', icon: 'schedule', route: '/shift', permission: 'sales.create' },
+      { labelKey: 'shift', icon: 'schedule', route: '/shift', permission: 'shifts.view' },
       { labelKey: 'sale_history', icon: 'receipt_long', route: '/sales', permission: 'sales.view' },
-      { labelKey: 'orders', icon: 'shopping_basket', route: '/orders', permission: 'sales.view' },
+      { labelKey: 'returns', icon: 'keyboard_return', route: '/returns', permission: 'returns.view' },
+      {
+        labelKey: 'orders',
+        icon: 'shopping_basket',
+        route: '/orders',
+        permission: 'sales.view|sales.pick|sales.create|sales.checkout',
+        feature: 'ordering',
+      },
       { labelKey: 'customers', icon: 'group', route: '/customers', permission: 'customers.view' },
     ],
   },
   {
     labelKey: 'section_inventory',
     items: [
-      { labelKey: 'products', icon: 'inventory_2', route: '/products', permission: 'products.view' },
+      {
+        labelKey: 'products',
+        icon: 'inventory_2',
+        route: '/products',
+        permission: 'products.view',
+      },
       { labelKey: 'inventory', icon: 'warehouse', route: '/warehouse', permission: 'stocks.view' },
-      { labelKey: 'supplies', icon: 'local_shipping', route: '/supplies', permission: 'supplies.view' },
-      { labelKey: 'transfers', icon: 'swap_horiz', route: '/transfers', permission: 'stock_transfers.view' },
+      {
+        labelKey: 'supplies',
+        icon: 'local_shipping',
+        route: '/supplies',
+        feature: 'supplies',
+        permission: 'supplies.view',
+      },
+      {
+        labelKey: 'suppliers',
+        icon: 'contact_phone',
+        route: '/suppliers',
+        feature: 'suppliers',
+        permission: 'suppliers.view',
+      },
+      {
+        labelKey: 'barcode_print',
+        icon: 'barcode_reader',
+        route: '/barcode-print',
+        permission: 'products.printBarcode',
+      },
+      {
+        labelKey: 'transfers',
+        icon: 'swap_horiz',
+        route: '/transfers',
+        feature: 'stock_transfers',
+        permission: 'stock_transfers.view',
+        requiresMultipleWarehouses: true,
+      },
+      {
+        labelKey: 'write_offs',
+        icon: 'delete_sweep',
+        route: '/write-offs',
+        permission: 'stocks.view|stocks.writeOff',
+        policy: 'trackWriteOff',
+      },
     ],
   },
   {
     labelKey: 'section_finance',
     items: [
-      { labelKey: 'accounts', icon: 'account_balance_wallet', route: '/accounts', permission: 'accounts.view' },
-      { labelKey: 'transactions', icon: 'sync_alt', route: '/transactions', permission: 'transactions.view' },
-      { labelKey: 'reports', icon: 'insights', route: '/reports', permission: 'reports.view' },
+      {
+        labelKey: 'accounts',
+        icon: 'account_balance_wallet',
+        route: '/accounts',
+        feature: 'accounts',
+        permission: 'accounts.view',
+      },
+      {
+        labelKey: 'transactions',
+        icon: 'sync_alt',
+        route: '/transactions',
+        feature: 'accounts',
+        permission: 'transactions.view',
+      },
+      { labelKey: 'reports', icon: 'insights', route: '/reports', permission: 'reports.view', feature: 'reports' },
     ],
   },
 ];
@@ -50,50 +163,179 @@ export const SETTINGS_SECTIONS: NavSection[] = [
   {
     labelKey: 'section_catalog',
     items: [
-      { labelKey: 'categories', icon: 'category', route: '/settings/categories', permission: 'categories.manage' },
-      { labelKey: 'units', icon: 'straighten', route: '/settings/units', permission: 'products.manage' },
-      { labelKey: 'product_types', icon: 'style', route: '/settings/product-types', permission: 'products.manage' },
-      { labelKey: 'manufacturers', icon: 'factory', route: '/settings/manufacturers', permission: 'products.manage' },
+      {
+        labelKey: 'categories',
+        icon: 'category',
+        route: '/settings/categories',
+        permission: 'categories.view',
+      },
+      { labelKey: 'units', icon: 'straighten', route: '/settings/units', permission: 'units.view' },
+      {
+        labelKey: 'product_types',
+        icon: 'style',
+        route: '/settings/product-types',
+        permission: 'product_types.view',
+      },
+      {
+        labelKey: 'manufacturers',
+        icon: 'factory',
+        route: '/settings/manufacturers',
+        permission: 'manufacturers.view',
+      },
+      {
+        labelKey: 'product_reference',
+        icon: 'menu_book',
+        route: '/settings/catalog',
+        permission: 'settings.integrations',
+      },
     ],
   },
   {
     labelKey: 'settings_org',
     items: [
-      { labelKey: 'business', icon: 'store', route: '/settings/business', permission: 'business.manage' },
-      { labelKey: 'branch', icon: 'apartment', route: '/settings/branches', permission: 'branches.manage' },
-      { labelKey: 'warehouse', icon: 'home_storage', route: '/settings/warehouses', permission: 'warehouses.manage' },
-      { labelKey: 'suppliers', icon: 'contact_phone', route: '/settings/suppliers', permission: 'suppliers.manage' },
+      {
+        labelKey: 'business',
+        icon: 'store',
+        route: '/settings/business',
+        permission: 'business.edit',
+      },
+      {
+        labelKey: 'sales_policy',
+        icon: 'balance',
+        route: '/settings/sales-policy',
+        permission: 'settings.salesPolicy',
+      },
+      {
+        labelKey: 'modules',
+        icon: 'toggle_on',
+        route: '/settings/modules',
+        permission: 'business.edit',
+      },
+      {
+        labelKey: 'branch',
+        icon: 'apartment',
+        route: '/settings/branches',
+        permission: 'branches.view',
+      },
+      {
+        labelKey: 'warehouse',
+        icon: 'home_storage',
+        route: '/settings/warehouses',
+        permission: 'warehouses.view',
+      },
     ],
   },
   {
     labelKey: 'settings_access',
     items: [
-      { labelKey: 'users', icon: 'manage_accounts', route: '/settings/users', permission: 'users.view' },
-      { labelKey: 'roles', icon: 'shield_person', route: '/settings/roles', permission: 'roles.view' },
+      {
+        labelKey: 'users',
+        icon: 'manage_accounts',
+        route: '/settings/users',
+        permission: 'users.view',
+      },
+      {
+        labelKey: 'roles',
+        icon: 'shield_person',
+        route: '/settings/roles',
+        permission: 'roles.view',
+      },
+      {
+        labelKey: 'permissions_matrix',
+        icon: 'admin_panel_settings',
+        route: '/settings/permissions-matrix',
+        permission: 'roles.assignPermissions',
+      },
     ],
   },
   {
     labelKey: 'settings_system',
     items: [
-      { labelKey: 'loyalty', icon: 'loyalty', route: '/settings/loyalty', permission: 'loyalty.view' },
-      { labelKey: 'expense_categories', icon: 'payments', route: '/settings/expense-categories', permission: 'business.manage' },
-      { labelKey: 'receipt_settings', icon: 'receipt', route: '/settings/receipt-settings', permission: 'settings.receipt' },
-      { labelKey: 'exchange_rates', icon: 'currency_exchange', route: '/settings/rates', permission: 'rates.manage' },
-      { labelKey: 'audit', icon: 'history', route: '/settings/audit', permission: 'audit.view' },
+      {
+        labelKey: 'loyalty',
+        icon: 'loyalty',
+        route: '/settings/loyalty',
+        permission: 'loyalty.view',
+        feature: 'loyalty',
+      },
+      {
+        labelKey: 'expense_categories',
+        icon: 'payments',
+        route: '/settings/expense-categories',
+        permission: 'expense_categories.view',
+      },
+      {
+        labelKey: 'receipt_settings',
+        icon: 'receipt',
+        route: '/settings/receipt-settings',
+        permission: 'settings.receipt',
+      },
+      {
+        labelKey: 'printing',
+        icon: 'print',
+        route: '/settings/printing',
+        permission: 'printing.routes.view|printing.jobs.viewOwn|printing.jobs.viewBranch',
+        feature: 'remote_printing',
+      },
+      {
+        labelKey: 'exchange_rates',
+        icon: 'currency_exchange',
+        route: '/settings/rates',
+        permission: 'rates.view',
+        feature: 'multicurrency',
+      },
+      { labelKey: 'audit', icon: 'history', route: '/settings/audit', permission: 'audit.view', feature: 'audit' },
+      {
+        labelKey: 'reminders',
+        icon: 'notifications_active',
+        route: '/settings/reminders',
+        permission: 'notifications.view',
+      },
+      {
+        labelKey: 'notification_journal',
+        icon: 'mark_email_read',
+        route: '/settings/notification-journal',
+        permission: 'notifications.journal.view',
+      },
+      {
+        labelKey: 'sms_gateway',
+        icon: 'sms',
+        route: '/settings/sms-gateway',
+        permission: 'sms.gateway.edit',
+      },
+      {
+        labelKey: 'devices',
+        icon: 'devices',
+        route: '/settings/devices',
+        permission: 'devices.view',
+      },
     ],
   },
   {
     labelKey: 'settings_developer',
     items: [
-      { labelKey: 'tariff_features', icon: 'workspace_premium', route: '/settings/license', permission: 'features.manage' },
-      { labelKey: 'integrations', icon: 'hub', route: '/settings/integrations', permission: 'settings.integrations' },
+      {
+        labelKey: 'tariff_features',
+        icon: 'workspace_premium',
+        route: '/settings/license',
+        permission: 'features.view',
+      },
+      {
+        labelKey: 'integrations',
+        icon: 'hub',
+        route: '/settings/integrations',
+        permission: 'settings.integrations',
+      },
+      {
+        labelKey: 'hardware_keys',
+        icon: 'usb',
+        route: '/settings/hardware-keys',
+        permission: 'keys.view',
+      },
     ],
   },
   {
     labelKey: 'section_account',
-    items: [
-      { labelKey: 'security', icon: 'lock', route: '/settings/security', permission: null },
-      { labelKey: 'devices', icon: 'devices', route: '/settings/devices', permission: 'devices.manage' },
-    ],
+    items: [{ labelKey: 'security', icon: 'lock', route: '/settings/security', permission: null }],
   },
 ];

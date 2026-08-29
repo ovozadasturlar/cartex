@@ -13,6 +13,7 @@ export interface CatalogProduct {
   barcodes: string[];
   productTypeId: number | null;
   manufacturerId: number | null;
+  isEnabled: boolean;
   attributes: string | null;
   imageKey: string | null;
   code: string | null;
@@ -22,6 +23,11 @@ export interface CatalogProduct {
   onHand: number;
   imageUrl: string | null;
   priceCurrency: string | null;
+  dimension: string | null;
+  allowsAmountEntry: boolean;
+  priceSymbol: string | null;
+  priceSymbolPosition: string | null;
+  priceDecimalDigits: number | null;
 }
 
 export interface BarcodeInput {
@@ -44,6 +50,8 @@ export interface SaveProductRequest {
   sellingPrice: number | null;
   priceCurrency: string | null;
   manufacturerId: number | null;
+  amountEntryEnabled: boolean;
+  confirmUnitDimensionChange?: boolean;
 }
 
 export interface ProductsTotals {
@@ -52,8 +60,6 @@ export interface ProductsTotals {
 }
 
 export type ImportRowAction = 'Create' | 'Existing' | 'Skip';
-
-export type ImportStockMode = 'None' | 'Supply' | 'Opening';
 
 export interface ImportRow {
   row: number;
@@ -70,6 +76,8 @@ export interface ImportRow {
   minStock: number | null;
   ikpu: string | null;
   vat: number | null;
+  imageUrl: string | null;
+  currency: string | null;
   variantId: number | null;
   action: ImportRowAction;
   errors: string[];
@@ -87,12 +95,6 @@ export interface ImportPreview {
 
 export interface ImportRequest {
   rows: ImportRow[];
-  stockMode: ImportStockMode;
-  warehouseId: number | null;
-  supplierId: number | null;
-  supplyDate: string | null;
-  paidCash: number;
-  paidCard: number;
   updatePrices: boolean;
   createMissingCategories: boolean;
 }
@@ -101,8 +103,8 @@ export interface ImportResult {
   created: number;
   existing: number;
   barcodesGenerated: number;
-  supplyId: number | null;
-  stockAdjusted: number;
+  imagesSet: number;
+  imagesFailed: number;
 }
 
 export interface Category {
@@ -111,6 +113,12 @@ export interface Category {
   description: string | null;
   parentId: number | null;
   parentName: string | null;
+  sortOrder: number;
+  fullPath: string | null;
+  descendantProductCount: number;
+  depth: number;
+  isMatch: boolean;
+  productCount: number;
 }
 
 export interface Unit {
@@ -122,6 +130,7 @@ export interface Unit {
   isSystem: boolean;
   isEnabled: boolean;
   isDefault: boolean;
+  allowFractional: boolean;
 }
 
 export interface ProductType {
@@ -142,9 +151,22 @@ export interface Barcode {
   packQty: number;
 }
 
+export interface ProductVariant {
+  id: number;
+  productId: number;
+  name: string | null;
+  code: string | null;
+  attributes: string | null;
+  imageKey: string | null;
+  isDefault: boolean;
+  barcodes: { id: number; code: string; packQty: number }[];
+}
+
 export interface BusinessInfo {
   currency: string;
   multicurrency: boolean;
+  pricingMulticurrency: boolean;
+  salesMulticurrency: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -157,9 +179,29 @@ export class ProductsCatalogApi {
       .pipe(map(toPaged));
   }
 
-  totals(search?: string): Observable<ProductsTotals> {
+  variants(productId: number): Observable<ProductVariant[]> {
+    return this.http.get<ProductVariant[]>(`/api/products/${productId}/variants`);
+  }
+
+  createVariant(productId: number, body: { name: string | null; code: string | null }): Observable<number> {
+    return this.http.post<number>(`/api/products/${productId}/variants`, { ...body, attributes: null, imageKey: null, barcodes: null });
+  }
+
+  updateVariant(id: number, body: { name: string | null; code: string | null }): Observable<void> {
+    return this.http.put<void>(`/api/products/variants/${id}`, { ...body, attributes: null, imageKey: null, barcodes: null });
+  }
+
+  deleteVariant(id: number): Observable<void> {
+    return this.http.delete<void>(`/api/products/variants/${id}`);
+  }
+
+  totals(search?: string, minPrice?: number, maxPrice?: number): Observable<ProductsTotals> {
     return this.http.get<ProductsTotals>('/api/products/totals', {
-      params: search ? { Search: search } : {},
+      params: {
+        ...(search ? { Search: search } : {}),
+        ...(minPrice !== undefined ? { MinPrice: minPrice } : {}),
+        ...(maxPrice !== undefined ? { MaxPrice: maxPrice } : {}),
+      },
     });
   }
 
@@ -169,6 +211,14 @@ export class ProductsCatalogApi {
 
   update(id: number, r: SaveProductRequest): Observable<void> {
     return this.http.put<void>(`/api/products/${id}`, r);
+  }
+
+  setState(id: number, isEnabled: boolean): Observable<void> {
+    return this.http.put<void>(`/api/products/${id}/state`, { isEnabled });
+  }
+
+  delete(id: number): Observable<void> {
+    return this.http.delete<void>(`/api/products/${id}`);
   }
 
   previewImport(file: File, mapping?: string): Observable<ImportPreview> {
@@ -192,8 +242,8 @@ export class ProductsCatalogApi {
 export class CategoriesApi {
   private readonly http = inject(HttpClient);
 
-  all(): Observable<Category[]> {
-    return this.http.get<Category[]>('/api/categories');
+  all(search?: string): Observable<Category[]> {
+    return this.http.get<Category[]>('/api/categories', { params: search ? { Search: search } : {} });
   }
 
   create(r: { name: string; parentId: number | null; description: string | null }): Observable<number> {
@@ -202,6 +252,14 @@ export class CategoriesApi {
 
   update(id: number, r: { name: string; parentId: number | null; description: string | null }): Observable<void> {
     return this.http.put<void>(`/api/categories/${id}`, r);
+  }
+
+  move(id: number, r: { parentId: number | null; sortOrder: number }): Observable<void> {
+    return this.http.put<void>(`/api/categories/${id}/move`, r);
+  }
+
+  merge(id: number, targetId: number): Observable<number> {
+    return this.http.post<number>(`/api/categories/${id}/merge`, { targetId });
   }
 }
 
@@ -213,11 +271,11 @@ export class UnitsApi {
     return this.http.get<Unit[]>('/api/units');
   }
 
-  create(r: { name: string; shortName: string; dimension: string; factor: number }): Observable<number> {
+  create(r: { name: string; shortName: string; dimension: string; factor: number; allowFractional?: boolean }): Observable<number> {
     return this.http.post<number>('/api/units', r);
   }
 
-  update(id: number, r: { name: string; shortName: string; dimension: string; factor: number }): Observable<void> {
+  update(id: number, r: { name: string; shortName: string; dimension: string; factor: number; allowFractional?: boolean }): Observable<void> {
     return this.http.put<void>(`/api/units/${id}`, r);
   }
 
@@ -293,6 +351,10 @@ export class StorageApi {
     const form = new FormData();
     form.append('file', file, file.name);
     return this.http.post<{ key: string }>('/api/storage/upload', form);
+  }
+
+  uploadFromUrl(url: string): Observable<{ key: string }> {
+    return this.http.post<{ key: string }>('/api/storage/from-url', { url });
   }
 }
 

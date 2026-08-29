@@ -11,9 +11,14 @@
 		<MauiXamlInflator>SourceGen</MauiXamlInflator>
 		<ApplicationTitle>Cartex Agent</ApplicationTitle>
 		<ApplicationId>uz.cartex.agent</ApplicationId>
-		<ApplicationDisplayVersion>0.0.1</ApplicationDisplayVersion>
-		<ApplicationVersion>1</ApplicationVersion>
+		<ApplicationDisplayVersion>0.0.2</ApplicationDisplayVersion>
+		<ApplicationVersion>2</ApplicationVersion>
 		<SupportedOSPlatformVersion>24.0</SupportedOSPlatformVersion>
+		<NoWarn>$(NoWarn);XA4301</NoWarn>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+		<RuntimeIdentifiers Condition="'$(Configuration)' != 'Debug'">android-arm;android-arm64;android-x86;android-x64</RuntimeIdentifiers>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -27,14 +32,10 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
-		<PackageReference Include="BarcodeScanning.Native.Maui" Version="3.0.4" />
-		<PackageReference Include="sqlite-net-pcl" Version="1.9.172" />
-		<PackageReference Include="SQLitePCLRaw.bundle_green" Version="2.1.11" />
+		<PackageReference Include="BarcodeScanning.Native.Maui" Version="3.0.6" />
+		<PackageReference Include="sqlite-net-pcl" Version="1.11.285" />
 	</ItemGroup>
 
-	<ItemGroup>
-		<NuGetAuditSuppress Include="https://github.com/advisories/GHSA-2m69-gcr7-jv3q" />
-	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\Cartex.Mobile.Core\Cartex.Mobile.Core.csproj" />

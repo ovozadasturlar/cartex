@@ -7,7 +7,9 @@ public enum AccountType
     Transfer,
     Bank,
     Bonus,
-    Debt
+    Debt,
+    CustomerAdvance,
+    RewardRecovery
 }
 
 public enum OperationType
@@ -21,14 +23,132 @@ public enum OperationType
     CashIn,
     CashOut,
     Change,
-    CustomerCredit
+    CustomerLoan,
+    CustomerPayment,
+    CustomerAdvance,
+    CustomerRefund,
+    SaleReturn,
+    CashbackRecovery,
+    PartnerRewardCash,
+    PartnerRewardBonus,
+    DebtWriteOff,
+    SupplierClaim
+}
+
+public enum CustomerPaymentAllocationKind
+{
+    Payment,
+    WriteOff
 }
 
 public enum PaymentMethod
 {
     Cash,
     Card,
-    Bonus
+    Bonus,
+    Transfer,
+    Bank
+}
+
+public enum BusinessDocumentStatus
+{
+    Posted,
+    Voided
+}
+
+public enum ReturnItemCondition
+{
+    Sellable,
+    Opened,
+    Damaged,
+    Defective
+}
+
+public enum InventoryDisposition
+{
+    SellableRestock,
+    Quarantine,
+    Scrap,
+    SupplierClaim
+}
+
+public enum StockWriteOffReason
+{
+    Broken,
+    Expired,
+    Lost,
+    Stolen
+}
+
+public enum ReturnSettlementMethod
+{
+    ReduceDebt,
+    Cash,
+    Card,
+    Bonus,
+    CustomerAdvance,
+    NoCharge
+}
+
+public enum InventoryLocationKind
+{
+    External,
+    Warehouse,
+    Customer,
+    Quarantine,
+    Scrap,
+    SupplierClaim
+}
+
+public enum InventoryMovementKind
+{
+    SaleIssue,
+    SaleVoid,
+    SaleReturn,
+    SupplyReceipt,
+    Transfer,
+    Adjustment,
+    PartnerReward,
+    WriteOff,
+    Opening
+}
+
+public enum PartnerRewardMode
+{
+    Points,
+    Cash,
+    Bonus,
+    Product
+}
+
+public enum PartnerRewardBasis
+{
+    NetRevenue,
+    NetMargin,
+    FixedPerUnit,
+    FixedPerSale
+}
+
+public enum PartnerRewardTrigger
+{
+    Sale,
+    Settlement,
+    Payment
+}
+
+public enum PartnerRewardState
+{
+    Pending,
+    Earned,
+    Reversed,
+    Redeemed
+}
+
+public enum ParticipantAttributionSource
+{
+    Direct,
+    CaseInherited,
+    CartInherited
 }
 
 public enum ShiftStatus
@@ -48,7 +168,8 @@ public enum SaleStatus
 {
     Completed,
     Returned,
-    PartialReturn
+    PartialReturn,
+    Voided
 }
 
 public enum CashbackScope
@@ -118,18 +239,14 @@ public enum PrepackStatus
     Expired
 }
 
-public enum SmsStatus
-{
-    Sent,
-    Failed,
-    Delivered,
-    Undelivered
-}
-
 public enum CartKind
 {
     Queue,
-    Order
+    Order,
+
+    /// Oldindan chop etish uchun saqlangan savat: server proformani shundan chiqaradi,
+    /// lekin u navbatda ko'rinmaydi va kassani tozalamaydi (NAVBAT-07).
+    Proforma
 }
 
 public enum CartStatus
@@ -139,4 +256,23 @@ public enum CartStatus
     Ready,
     CheckedOut,
     Cancelled
+}
+
+/// Whether a partner agreed to appear on the shop's public page. A single bool cannot tell
+/// "we never asked" from "they said no" from "they took it back", and publishing a real person's
+/// name is not a place to guess.
+public enum PublicConsentState
+{
+    NotAsked,
+    Granted,
+    Declined,
+    Withdrawn
+}
+
+/// Who put the consent on record. A shop employee ticking a box and the person themselves saying
+/// yes in their own app are not the same weight of evidence, and self-service is coming.
+public enum PublicConsentSource
+{
+    Staff,
+    SelfService
 }

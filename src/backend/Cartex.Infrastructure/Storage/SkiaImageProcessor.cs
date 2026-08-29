@@ -8,7 +8,11 @@ public sealed class SkiaImageProcessor : IImageProcessor
     private const int DisplaySide = 1200;
     private const int ThumbSide = 240;
 
-    public ProcessedImage? Process(Stream original)
+    public ProcessedImage? Process(Stream original) => ProcessCore(original, monochrome: false);
+
+    public ProcessedImage? ProcessMonochrome(Stream original) => ProcessCore(original, monochrome: true);
+
+    private static ProcessedImage? ProcessCore(Stream original, bool monochrome)
     {
         using var data = SKData.Create(original);
         if (data is null)
@@ -23,6 +27,12 @@ public sealed class SkiaImageProcessor : IImageProcessor
             return null;
 
         var bitmap = Orient(decoded, codec.EncodedOrigin);
+        if (monochrome)
+        {
+            var converted = ToMonochrome(bitmap);
+            if (!ReferenceEquals(bitmap, decoded)) bitmap.Dispose();
+            bitmap = converted;
+        }
         try
         {
             var alpha = HasAlpha(bitmap);
@@ -35,6 +45,21 @@ public sealed class SkiaImageProcessor : IImageProcessor
             if (!ReferenceEquals(bitmap, decoded))
                 bitmap.Dispose();
         }
+    }
+
+    private static SKBitmap ToMonochrome(SKBitmap source)
+    {
+        var target = new SKBitmap(source.Width, source.Height, SKColorType.Rgba8888, source.AlphaType);
+        for (var y = 0; y < source.Height; y++)
+        for (var x = 0; x < source.Width; x++)
+        {
+            var color = source.GetPixel(x, y);
+            var luminance = (int)Math.Round(color.Red * 0.299 + color.Green * 0.587 + color.Blue * 0.114);
+            // A small contrast lift keeps thin logo strokes legible on thermal paper.
+            var gray = (byte)Math.Clamp((luminance - 128) * 1.15 + 128, 0, 255);
+            target.SetPixel(x, y, new SKColor(gray, gray, gray, color.Alpha));
+        }
+        return target;
     }
 
     private static bool HasAlpha(SKBitmap bitmap)

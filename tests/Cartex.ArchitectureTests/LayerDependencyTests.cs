@@ -1,5 +1,4 @@
 using System.Reflection;
-using Cartex.Application;
 using Cartex.Auth.Services;
 using Cartex.Domain.Entities;
 using Cartex.Infrastructure.Web;
@@ -11,7 +10,6 @@ namespace Cartex.ArchitectureTests;
 
 public class LayerDependencyTests
 {
-    private const string Domain = "Cartex.Domain";
     private const string Application = "Cartex.Application";
     private const string Persistence = "Cartex.Persistence";
     private const string Auth = "Cartex.Auth";

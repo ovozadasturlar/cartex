@@ -1,12 +1,10 @@
-using Cartex.Persistence;
-using Cartex.Application.Common.Messaging;
+﻿using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.ExpenseCategories;
 
 namespace Cartex.Application.ExpenseCategories.Queries;
 
 public record GetExpenseCategoriesQuery : IRequest<IReadOnlyCollection<ExpenseCategoryDto>>;
-
-public record ExpenseCategoryDto(long Id, string Name);
 
 public sealed class GetExpenseCategoriesQueryHandler(IApplicationDbContext db) : IRequestHandler<GetExpenseCategoriesQuery, IReadOnlyCollection<ExpenseCategoryDto>>
 {

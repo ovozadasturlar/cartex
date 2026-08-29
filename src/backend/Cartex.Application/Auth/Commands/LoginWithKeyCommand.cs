@@ -1,13 +1,13 @@
-using Cartex.Application.Common.Messaging;
-using FluentValidation;
+﻿using FluentValidation;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Settings;
 using Cartex.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Cartex.Shared.Models.Auth;
 
 namespace Cartex.Application.Auth.Commands;
 
-public record LoginWithKeyCommand(string KeyContent, string Serial, string? DeviceName = null) : IRequest<LoginResponse>;
+public record LoginWithKeyCommand(string KeyContent, string Serial, string? DeviceName = null, string? DeviceId = null) : IRequest<LoginResponse>;
 
 public sealed class LoginWithKeyCommandHandler(
     AuthTokenBuilder tokenBuilder,
@@ -36,7 +36,7 @@ public sealed class LoginWithKeyCommandHandler(
         if (!key.IsEnabled)
             throw new ForbiddenException("Kalit o'chirilgan.");
 
-        return await tokenBuilder.IssueAsync(user, request.DeviceName, cancellationToken);
+        return await tokenBuilder.IssueAsync(user, request.DeviceName, request.DeviceId, cancellationToken);
     }
 }
 
@@ -46,5 +46,6 @@ public sealed class LoginWithKeyCommandValidator : AbstractValidator<LoginWithKe
     {
         RuleFor(x => x.KeyContent).NotEmpty();
         RuleFor(x => x.Serial).NotEmpty();
+        RuleFor(x => x.DeviceId).MaximumLength(64);
     }
 }

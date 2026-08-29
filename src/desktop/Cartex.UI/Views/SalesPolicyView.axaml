@@ -1,0 +1,444 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="using:Cartex.UI.Converters"
+             xmlns:vm="using:Cartex.UI.ViewModels"
+             x:Class="Cartex.UI.Views.SalesPolicyView"
+             x:DataType="vm:SalesPolicyViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.field">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+        </Style>
+        <Style Selector="TextBlock.hint">
+            <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
+            <Setter Property="FontSize" Value="11.5" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="{DynamicResource AppBg}" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="16" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
+        <!-- Ro'yxatdagi har qator: chapda nom va izoh, o'ngda qat'iy joydagi kalit.
+             Kalitning yozuvi olib tashlandi — "Yoqilgan"/"O'chiq" so'zlari uzunligi turlicha
+             bo'lgani uchun kalit holatga qarab o'ngga-chapga sakrardi. Holatni endi
+             kalitning o'zi va ostidagi izoh ko'rsatadi. -->
+        <Style Selector="Border.row">
+            <Setter Property="Padding" Value="0,10" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+        </Style>
+        <Style Selector="Border.row:nth-last-child(1)">
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style Selector="Border.row ToggleSwitch">
+            <Setter Property="OnContent" Value="" />
+            <Setter Property="OffContent" Value="" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="16,0,0,0" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel Margin="20">
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,14">
+            <StackPanel Spacing="2" VerticalAlignment="Center">
+                <TextBlock Text="{Binding L[sales_policy]}" Classes="h2" />
+                <TextBlock Text="{Binding L[sales_policy_hint]}" Classes="hint" />
+            </StackPanel>
+            <Button Grid.Column="1" Classes="brand" Content="{Binding L[save]}"
+                    Command="{Binding SaveCommand}" IsVisible="{Binding CanEdit}" />
+        </Grid>
+
+        <ScrollViewer>
+            <StackPanel Spacing="14" MaxWidth="900" HorizontalAlignment="Left">
+
+                <Border Classes="card">
+                    <StackPanel>
+                        <TextBlock Text="{Binding L[optional_capabilities]}" Classes="section" Margin="0,0,0,4" />
+
+                        <Border Classes="row">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding L[allow_debt_write_off]}" Classes="field" />
+                                    <TextBlock Text="{Binding AllowDebtWriteOffHint}" Classes="hint" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowDebtWriteOff}" />
+                            </Grid>
+                        </Border>
+
+                        <Border Classes="row">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding L[print_money_documents]}" Classes="field" />
+                                    <TextBlock Text="{Binding PrintMoneyDocumentsHint}" Classes="hint" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding PrintMoneyDocuments}" />
+                            </Grid>
+                        </Border>
+
+                        <Border Classes="row">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding L[print_cart_proforma]}" Classes="field" />
+                                    <TextBlock Text="{Binding PrintCartProformaHint}" Classes="hint" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding PrintCartProforma}" />
+                            </Grid>
+                        </Border>
+
+                        <Border Classes="row">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding L[allow_consolidated_act]}" Classes="field" />
+                                    <TextBlock Text="{Binding AllowConsolidatedActHint}" Classes="hint" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowConsolidatedAct}" />
+                            </Grid>
+                        </Border>
+
+                        <Border Classes="row">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding L[allow_sale_queue]}" Classes="field" />
+                                    <TextBlock Text="{Binding AllowSaleQueueHint}" Classes="hint" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowSaleQueue}" />
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="card">
+                    <StackPanel>
+                        <TextBlock Text="{Binding L[currency_policy_section]}" Classes="section" Margin="0,0,0,4" />
+
+                        <TextBlock Text="{Binding L[multicurrency_not_in_tariff]}" Classes="hint" Margin="0,4,0,6"
+                                   IsVisible="{Binding !MulticurrencyLicensed}" />
+
+                        <Border Classes="row">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="{Binding L[multicurrency_pricing_policy]}" Classes="field"
+                                           VerticalAlignment="Center" />
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding PricingMulticurrencyEnabled, Mode=OneWay}"
+                                              IsEnabled="{Binding CanTogglePricingMulticurrency}"
+                                              Command="{Binding TogglePricingMulticurrencyCommand}" />
+                            </Grid>
+                        </Border>
+
+                        <Border Classes="row">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="{Binding L[multicurrency_sales_policy]}" Classes="field"
+                                           VerticalAlignment="Center" />
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding SalesMulticurrencyEnabled, Mode=OneWay}"
+                                              IsEnabled="{Binding CanToggleSalesMulticurrency}"
+                                              Command="{Binding ToggleSalesMulticurrencyCommand}" />
+                            </Grid>
+                        </Border>
+
+                        <TextBlock Text="{Binding L[currency_rates_reminder]}" Classes="hint" Margin="0,8,0,0"
+                                   IsVisible="{Binding MulticurrencyLicensed}" />
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="card">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="{Binding L[sales_policy_limits]}" Classes="section" />
+                        <Grid ColumnDefinitions="*,12,*,12,*">
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="{Binding L[max_discount]}" Classes="hint" />
+                                <NumericUpDown Value="{Binding MaxDiscountPercent}"
+                                               Minimum="0" Maximum="100" Increment="1" FormatString="0.##" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Spacing="5">
+                                <TextBlock Text="{Binding L[max_write_off_amount]}" Classes="hint" />
+                                <NumericUpDown Value="{Binding MaxDebtWriteOffAmount}"
+                                               Minimum="0" Increment="1000" FormatString="N0" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="4" Spacing="5">
+                                <TextBlock Text="{Binding L[max_write_off_percent]}" Classes="hint" />
+                                <NumericUpDown Value="{Binding MaxDebtWriteOffPercent}"
+                                               Minimum="0" Maximum="100" Increment="1" FormatString="0.##" />
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Text="{Binding L[limit_zero_hint]}" Classes="hint" />
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="card">
+                    <StackPanel>
+                        <TextBlock Text="{Binding L[sale_requirements]}" Classes="section" Margin="0,0,0,10" />
+                        <StackPanel Spacing="5">
+                            <TextBlock Text="{Binding L[customer_requirement]}" Classes="field" />
+                            <ComboBox ItemsSource="{Binding CustomerRequirements}" SelectedIndex="{Binding CustomerRequirementIndex}"
+                                      HorizontalAlignment="Stretch" MinHeight="38" />
+                            <TextBlock Text="{Binding L[customer_requirement_hint]}" Classes="hint" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="card">
+                    <StackPanel>
+                        <TextBlock Text="{Binding L[returns_policy]}" Classes="section" Margin="0,0,0,4" />
+
+                        <Border Classes="row">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding L[allow_return_on_voided_sale]}" Classes="field" />
+                                    <TextBlock Text="{Binding AllowReturnOnVoidedSaleHint}" Classes="hint" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowReturnOnVoidedSale}" />
+                            </Grid>
+                        </Border>
+
+                        <Border Classes="row">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding L[allow_free_return_lines]}" Classes="field" />
+                                    <TextBlock Text="{Binding AllowFreeReturnLinesHint}" Classes="hint" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowFreeReturnLines}" />
+                            </Grid>
+                        </Border>
+
+                        <Border Classes="row">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding L[require_return_reason]}" Classes="field" />
+                                    <TextBlock Text="{Binding RequireReturnReasonHint}" Classes="hint" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding RequireReturnReason}" />
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="card">
+                    <StackPanel>
+                        <TextBlock Text="{Binding L[catalog_price_section]}" Classes="section" Margin="0,0,0,4" />
+
+                        <Border Classes="row">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding L[update_catalog_price_on_sale]}" Classes="field" />
+                                    <TextBlock Text="{Binding UpdateCatalogPriceOnSaleHint}" Classes="hint" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding UpdateCatalogPriceOnSale}" />
+                            </Grid>
+                        </Border>
+
+                        <StackPanel Spacing="5" Margin="0,12,0,0" IsVisible="{Binding UpdateCatalogPriceOnSale}">
+                            <TextBlock Text="{Binding L[max_price_increase_percent]}" Classes="hint" />
+                            <NumericUpDown Value="{Binding MaxPriceIncreasePercent}"
+                                           Minimum="0" Increment="1" FormatString="0.##" HorizontalAlignment="Left" Width="220" />
+                            <TextBlock Text="{Binding L[catalog_price_hint]}" Classes="hint" />
+                        </StackPanel>
+
+                        <StackPanel Spacing="5" Margin="0,12,0,0">
+                            <TextBlock Text="{Binding L[price_drift_window]}" Classes="hint" />
+                            <NumericUpDown Value="{Binding PriceDriftWindowMinutes}"
+                                           Minimum="0" Maximum="1440" Increment="15" FormatString="0"
+                                           HorizontalAlignment="Left" Width="220" />
+                            <TextBlock Text="{Binding L[price_drift_window_hint]}" Classes="hint" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="card">
+                    <StackPanel>
+                        <TextBlock Text="{Binding L[debt_and_shift]}" Classes="section" Margin="0,0,0,10" />
+                        <Grid ColumnDefinitions="*,12,*" Margin="0,0,0,4">
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="{Binding L[shift_policy]}" Classes="hint" />
+                                <ComboBox ItemsSource="{Binding ShiftPolicies}" SelectedIndex="{Binding ShiftPolicyIndex}"
+                                          HorizontalAlignment="Stretch" MinHeight="38" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Spacing="5">
+                                <TextBlock Text="{Binding L[stale_rate_days]}" Classes="hint" />
+                                <NumericUpDown Value="{Binding StaleRateDays, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
+                                               Minimum="1" Maximum="30" Increment="1" FormatString="0" />
+                            </StackPanel>
+                        </Grid>
+
+                        <Border Classes="row">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding L[allow_debt_sales]}" Classes="field" />
+                                    <TextBlock Text="{Binding AllowDebtSalesHint}" Classes="hint" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowDebtSales}" />
+                            </Grid>
+                        </Border>
+
+                        <Border Classes="row" IsVisible="{Binding AllowDebtSales}">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding L[credit_limit_enforcement]}" Classes="field" />
+                                    <TextBlock Text="{Binding CreditLimitEnforcementHint}" Classes="hint" />
+                                </StackPanel>
+                                <ComboBox Grid.Column="1" ItemsSource="{Binding CreditLimitEnforcements}"
+                                          SelectedIndex="{Binding CreditLimitEnforcementIndex}"
+                                          MinWidth="180" MinHeight="38" VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+
+                        <Border Classes="row" IsVisible="{Binding AllowDebtSales}">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding L[require_debt_due_date]}" Classes="field" />
+                                    <TextBlock Text="{Binding RequireDebtDueDateHint}" Classes="hint" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding RequireDebtDueDate}" />
+                            </Grid>
+                        </Border>
+
+                        <Border Classes="row">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding L[allow_customer_credit]}" Classes="field" />
+                                    <TextBlock Text="{Binding AllowCustomerCreditHint}" Classes="hint" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowCustomerCredit}" />
+                            </Grid>
+                        </Border>
+
+                        <Border Classes="row">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding L[allow_retroactive_cashback]}" Classes="field" />
+                                    <TextBlock Text="{Binding AllowRetroactiveCashbackHint}" Classes="hint" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowRetroactiveCashback}" />
+                            </Grid>
+                        </Border>
+
+                        <Border Classes="row">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding L[allow_customer_loans]}" Classes="field" />
+                                    <TextBlock Text="{Binding AllowCustomerLoansHint}" Classes="hint" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowCustomerLoans}" />
+                            </Grid>
+                        </Border>
+
+                        <StackPanel Spacing="5" Margin="0,12,0,0" IsVisible="{Binding AllowCustomerLoans}">
+                            <TextBlock Text="{Binding L[max_customer_loan]}" Classes="hint" />
+                            <NumericUpDown Value="{Binding MaxCustomerLoan}"
+                                           Minimum="0" Increment="1000" FormatString="N0" HorizontalAlignment="Left" Width="220" />
+                        </StackPanel>
+
+                        <StackPanel Spacing="5" Margin="0,12,0,0" IsVisible="{Binding AllowDebtSales}">
+                            <TextBlock Text="{Binding L[default_credit_limit]}" Classes="hint" />
+                            <NumericUpDown Value="{Binding DefaultCreditLimit}" Minimum="0" Increment="100000"
+                                           FormatString="N0" HorizontalAlignment="Left" Width="220"
+                                           PlaceholderText="{Binding L[unlimited]}" />
+                            <TextBlock Text="{Binding L[default_credit_limit_hint]}" Classes="hint" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="card">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="{Binding L[sale_correction]}" Classes="section" />
+                        <Grid ColumnDefinitions="*,12,*">
+                            <StackPanel Spacing="5">
+                                <TextBlock Text="{Binding L[sale_correction_window]}" Classes="hint" />
+                                <ComboBox ItemsSource="{Binding CorrectionWindows}" SelectedIndex="{Binding CorrectionWindowIndex}"
+                                          HorizontalAlignment="Stretch" MinHeight="38" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Spacing="5" IsVisible="{Binding ShowCorrectionDays}">
+                                <TextBlock Text="{Binding L[sale_correction_days]}" Classes="hint" />
+                                <NumericUpDown Value="{Binding SaleCorrectionDays, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
+                                               Minimum="1" Maximum="365" Increment="1" FormatString="0" />
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Text="{Binding L[sale_correction_hint]}" Classes="hint" />
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="card">
+                    <StackPanel>
+                        <TextBlock Text="{Binding L[stock_and_catalog]}" Classes="section" Margin="0,0,0,10" />
+                        <StackPanel Spacing="5" Margin="0,0,0,4">
+                            <TextBlock Text="{Binding L[default_min_stock]}" Classes="hint" />
+                            <NumericUpDown Value="{Binding DefaultMinStock, Converter={x:Static conv:EmptyToZeroConverter.Instance}}"
+                                           Minimum="0" Increment="1" FormatString="0.###" HorizontalAlignment="Left" Width="220" />
+                        </StackPanel>
+
+                        <Border Classes="row">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding L[require_supplier]}" Classes="field" />
+                                    <TextBlock Text="{Binding RequireSupplierHint}" Classes="hint" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding RequireSupplier}" />
+                            </Grid>
+                        </Border>
+
+                        <Border Classes="row">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding L[show_out_of_stock]}" Classes="field" />
+                                    <TextBlock Text="{Binding ShowOutOfStockHint}" Classes="hint" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding ShowOutOfStock}" />
+                            </Grid>
+                        </Border>
+
+                        <Border Classes="row">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding L[show_unlisted_products]}" Classes="field" />
+                                    <TextBlock Text="{Binding ShowUnlistedProductsHint}" Classes="hint" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding ShowUnlistedProducts}" />
+                            </Grid>
+                        </Border>
+
+                        <Border Classes="row">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding L[allow_insufficient_stock_sales]}" Classes="field" />
+                                    <TextBlock Text="{Binding AllowInsufficientStockSalesHint}" Classes="hint" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowInsufficientStockSales}" />
+                            </Grid>
+                        </Border>
+
+                        <Border Classes="row">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding L[allow_negative_stock_offline]}" Classes="field" />
+                                    <TextBlock Text="{Binding AllowNegativeStockOfflineHint}" Classes="hint" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding AllowNegativeStockWhenOffline}" />
+                            </Grid>
+                        </Border>
+
+                        <Border Classes="row">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding L[track_write_off]}" Classes="field" />
+                                    <TextBlock Text="{Binding TrackWriteOffHint}" Classes="hint" TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" IsChecked="{Binding TrackWriteOff}" />
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

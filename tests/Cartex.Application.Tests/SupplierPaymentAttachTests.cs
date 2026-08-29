@@ -1,4 +1,4 @@
-using Cartex.Application.Suppliers.Commands;
+﻿using Cartex.Application.Suppliers.Commands;
 using Cartex.Application.Suppliers.Queries;
 using Cartex.Application.Supplies.Commands;
 using Cartex.Application.Supplies.Queries;
@@ -10,20 +10,24 @@ using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Cartex.Shared.Models.Supplies;
+using Cartex.Shared.Models.Suppliers;
 
 namespace Cartex.Application.Tests;
 
 [Collection("database")]
 public class SupplierPaymentAttachTests(DatabaseFixture fixture) : DatabaseTest(fixture)
 {
-    private static DateOnly Today => DateOnly.FromDateTime(DateTime.UtcNow.Date);
+    // GetSupplierPaymentsQuery treats the date as local, so a UTC date silently queries the
+    // wrong day whenever the two calendars disagree (00:00-05:00 in UTC+5).
+    private static DateOnly Today => DateOnly.FromDateTime(DateTime.Now.Date);
 
     private async Task<(long warehouseId, long variantId)> SetupAsync()
     {
         using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var branch1 = (await db.Branches.FirstAsync(b => b.Name == "Filial 1")).Id;
-        var warehouseId = (await db.Warehouses.FirstAsync(w => w.Name == "Filial 1 ombori")).Id;
+        var branch1 = (await db.Branches.FirstAsync(b => b.Name == "Asosiy filial")).Id;
+        var warehouseId = (await db.Warehouses.FirstAsync(w => w.Name == "Asosiy ombor")).Id;
         var businessId = (await db.Businesses.FirstAsync()).Id;
         var adminId = (await db.Users.FirstAsync(u => u.Username == "admin")).Id;
         var productId = (await db.Products.FirstAsync(p => p.Name == "Smesitel oshxona Zegor")).Id;

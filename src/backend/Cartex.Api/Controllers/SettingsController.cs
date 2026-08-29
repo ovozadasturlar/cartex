@@ -1,14 +1,15 @@
-using Cartex.Application.Settings.Commands;
+﻿using Cartex.Application.Settings.Commands;
 using Cartex.Application.Settings.Queries;
 using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
 using Cartex.Shared.Models.Settings;
+using Cartex.Shared.Models.Catalog;
+using Cartex.Application.Catalog.Commands;
+using Cartex.Application.Catalog.Queries;
 using Cartex.Application.Common.Messaging;
+using Cartex.Domain.Common.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-
-using SmsMessageDto = Cartex.Application.Settings.Queries.SmsMessageDto;
-using SmsStatsDto = Cartex.Application.Settings.Queries.SmsStatsDto;
 
 namespace Cartex.Api.Controllers;
 
@@ -19,7 +20,7 @@ public class SettingsController(ISender sender) : ControllerBase
 {
     [HttpGet]
     [HasPermission(AppPermissions.Settings.Integrations)]
-    public async Task<ActionResult<Cartex.Application.Settings.Queries.SettingsDto>> Get() =>
+    public async Task<ActionResult<SettingsDto>> Get() =>
         Ok(await sender.Send(new GetSettingsQuery()));
 
     [HttpPut("telegram")]
@@ -62,16 +63,6 @@ public class SettingsController(ISender sender) : ControllerBase
         return NoContent();
     }
 
-    [HttpGet("sms/journal")]
-    [HasPermission(AppPermissions.Settings.Integrations)]
-    public async Task<ActionResult<IReadOnlyCollection<SmsMessageDto>>> GetSmsJournal([FromQuery] GetSmsJournalQuery query) =>
-        Ok(await sender.Send(query));
-
-    [HttpGet("sms/stats")]
-    [HasPermission(AppPermissions.Settings.Integrations)]
-    public async Task<ActionResult<SmsStatsDto>> GetSmsStats([FromQuery] GetSmsStatsQuery query) =>
-        Ok(await sender.Send(query));
-
     [HttpPut("notification")]
     [HasPermission(AppPermissions.Settings.Integrations)]
     public async Task<IActionResult> UpdateNotification(UpdateNotificationSettingsCommand command)
@@ -81,10 +72,88 @@ public class SettingsController(ISender sender) : ControllerBase
     }
 
     [HttpGet("receipt")]
-    public async Task<ActionResult<Cartex.Application.Settings.Queries.ReceiptSettingsDto>> GetReceipt()
+    public async Task<ActionResult<ReceiptSettingsDto>> GetReceipt()
     {
         var result = await sender.Send(new GetReceiptSettingsQuery());
         return Ok(result);
+    }
+
+    [HttpPost("receipt/preview")]
+    [HasPermission(AppPermissions.Settings.Receipt)]
+    public ActionResult<object> PreviewReceipt(ReceiptSettingsDto settings)
+    {
+        var receipt = new Cartex.Shared.Models.Sales.ReceiptDto(
+            "preview-1048",
+            "Cartex Market",
+            "Chilonzor",
+            "Toshkent shahri",
+            null,
+            new DateTime(2026, 8, 24, 14, 30, 0),
+            84_000,
+            0,
+            84_000,
+            0,
+            0,
+            0,
+            0,
+            0,
+            "Akmal",
+            [
+                new Cartex.Shared.Models.Sales.ReceiptItemDto(
+                    Cartex.Shared.Localization.ReceiptTexts.Get("sample_item_one", settings.Language),
+                    2,
+                    Cartex.Shared.Localization.ReceiptTexts.Get("unit_piece", settings.Language),
+                    12_500,
+                    25_000),
+                new Cartex.Shared.Models.Sales.ReceiptItemDto(
+                    Cartex.Shared.Localization.ReceiptTexts.Get("sample_item_two", settings.Language),
+                    1,
+                    Cartex.Shared.Localization.ReceiptTexts.Get("unit_piece", settings.Language),
+                    8_000,
+                    8_000),
+                new Cartex.Shared.Models.Sales.ReceiptItemDto(
+                    Cartex.Shared.Localization.ReceiptTexts.Get("sample_item_three", settings.Language),
+                    1.5m,
+                    Cartex.Shared.Localization.ReceiptTexts.Get("unit_piece", settings.Language),
+                    14_000,
+                    21_000),
+                new Cartex.Shared.Models.Sales.ReceiptItemDto(
+                    Cartex.Shared.Localization.ReceiptTexts.Get("sample_item_five", settings.Language),
+                    2,
+                    Cartex.Shared.Localization.ReceiptTexts.Get("unit_piece", settings.Language),
+                    15_000,
+                    30_000)
+            ],
+            [new Cartex.Shared.Models.Sales.ReceiptPaymentDto("Cash", "UZS", 84_000, 1, 84_000)],
+            1048,
+            "Dilshod",
+            "+998 90 555 12 34",
+            null,
+            settings.Language,
+            "+998 71 200 00 00");
+        var options = new Cartex.Application.Common.Settings.ReceiptSettings
+        {
+            HeaderText = settings.HeaderText,
+            FooterText = settings.FooterText,
+            PaperWidth = settings.PaperWidth,
+            PaperFormat = settings.PaperFormat,
+            ShowBusinessName = settings.ShowBusinessName,
+            ShowBranchName = settings.ShowBranchName,
+            ShowAddress = settings.ShowAddress,
+            ShowPhone = settings.ShowPhone,
+            ShowCashier = settings.ShowCashier,
+            ShowCustomer = settings.ShowCustomer,
+            ShowReceiptNumber = settings.ShowReceiptNumber,
+            ShowPaymentDetails = settings.ShowPaymentDetails,
+            ShowQrCode = settings.ShowQrCode,
+            ShowElectronicLink = settings.ShowElectronicLink,
+            ShowLogo = settings.ShowLogo,
+            ShowCustomerPhone = settings.ShowCustomerPhone,
+            ShowCustomerEmail = settings.ShowCustomerEmail,
+            Language = settings.Language,
+            PublicReceiptBaseUrl = settings.PublicReceiptBaseUrl
+        };
+        return Ok(new { text = Cartex.Infrastructure.Notifications.ReceiptTextRenderer.Render(receipt, options) });
     }
 
     [HttpPut("receipt")]
@@ -95,9 +164,34 @@ public class SettingsController(ISender sender) : ControllerBase
         return NoContent();
     }
 
+    [HttpGet("proforma")]
+    public async Task<ActionResult<ProformaSettingsDto>> GetProforma() =>
+        Ok(await sender.Send(new GetProformaSettingsQuery()));
+
+    [HttpPut("proforma")]
+    [HasPermission(AppPermissions.Settings.Receipt)]
+    public async Task<IActionResult> UpdateProforma(UpdateProformaSettingsCommand command)
+    {
+        await sender.Send(command);
+        return NoContent();
+    }
+
+    [HttpGet("barcode-label")]
+    [HasPermission(AppPermissions.Printing.BarcodePrint)]
+    public async Task<ActionResult<BarcodeLabelSettingsDto>> GetBarcodeLabel() =>
+        Ok(await sender.Send(new GetBarcodeLabelSettingsQuery()));
+
+    [HttpPut("barcode-label")]
+    [HasPermission(AppPermissions.Settings.BarcodeLabel)]
+    public async Task<IActionResult> UpdateBarcodeLabel(UpdateBarcodeLabelSettingsCommand command)
+    {
+        await sender.Send(command);
+        return NoContent();
+    }
+
     [HttpGet("login-methods")]
     [HasPermission(AppPermissions.Settings.Security)]
-    public async Task<ActionResult<Cartex.Application.Settings.Queries.LoginMethodsSettingsDto>> GetLoginMethods()
+    public async Task<ActionResult<LoginMethodsSettingsDto>> GetLoginMethods()
     {
         var result = await sender.Send(new GetLoginMethodsSettingsQuery());
         return Ok(result);
@@ -111,27 +205,63 @@ public class SettingsController(ISender sender) : ControllerBase
         return NoContent();
     }
 
+    // Readable by any signed-in user on purpose: every seller's till needs the discount ceiling
+    // and the debt rules to behave the same way the server will. Writing is the owner's call.
     [HttpGet("sales-policy")]
-    public async Task<ActionResult<Cartex.Application.Settings.Queries.SalesPolicyDto>> GetSalesPolicy()
+    public async Task<ActionResult<SalesPolicyDto>> GetSalesPolicy()
     {
         var result = await sender.Send(new GetSalesPolicyQuery());
         return Ok(result);
     }
 
     [HttpPut("sales-policy")]
-    [HasPermission(AppPermissions.Business.Manage)]
-    public async Task<IActionResult> UpdateSalesPolicy(UpdateSalesPolicyCommand command)
+    [HasPermission(AppPermissions.Settings.SalesPolicy)]
+    public async Task<IActionResult> UpdateSalesPolicy(SalesPolicyDto policy)
     {
-        await sender.Send(command);
+        await sender.Send(new UpdateSalesPolicyCommand(policy));
         return NoContent();
     }
 
     [HttpGet("storage")]
     [HasPermission(AppPermissions.Settings.Integrations)]
-    public async Task<ActionResult<Cartex.Application.Settings.Queries.StorageSettingsDto>> GetStorage()
+    public async Task<ActionResult<StorageSettingsDto>> GetStorage()
     {
         var result = await sender.Send(new GetStorageSettingsQuery());
         return Ok(result);
+    }
+
+    [HttpGet("catalog")]
+    [HasPermission(AppPermissions.Settings.Integrations)]
+    public async Task<ActionResult<CatalogSettingsDto>> GetCatalogSettings() =>
+        Ok(await sender.Send(new GetCatalogSettingsQuery()));
+
+    [HttpPut("catalog")]
+    [HasPermission(AppPermissions.Settings.Integrations)]
+    public async Task<IActionResult> UpdateCatalogSettings(CatalogSettingsDto settings)
+    {
+        await sender.Send(new UpdateCatalogSettingsCommand(settings));
+        return NoContent();
+    }
+
+    [HttpPost("catalog/pack")]
+    [HasPermission(AppPermissions.Settings.Integrations)]
+    [RequestSizeLimit(512L * 1024 * 1024)]
+    public async Task<ActionResult<CatalogPackDto>> UploadCatalogPack(IFormFile? pack, IFormFile? manifest)
+    {
+        if (pack is null || manifest is null)
+            throw new BusinessRuleException("Paket (.db) va manifest (.json) fayllari birga yuklanadi.", "catalog_pack_files_missing");
+
+        await using var packContent = pack.OpenReadStream();
+        await using var manifestContent = manifest.OpenReadStream();
+        return Ok(await sender.Send(new UploadCatalogPackCommand(packContent, manifestContent)));
+    }
+
+    [HttpDelete("catalog/pack")]
+    [HasPermission(AppPermissions.Settings.Integrations)]
+    public async Task<IActionResult> DeleteCatalogPack()
+    {
+        await sender.Send(new DeleteCatalogPackCommand());
+        return NoContent();
     }
 
     [HttpPut("storage")]
@@ -160,7 +290,7 @@ public class SettingsController(ISender sender) : ControllerBase
 
     [HttpGet("cloud-bridge")]
     [HasPermission(AppPermissions.Settings.Integrations)]
-    public async Task<ActionResult<Cartex.Application.Settings.Queries.CloudBridgeSettingsDto>> GetCloudBridge()
+    public async Task<ActionResult<CloudBridgeSettingsDto>> GetCloudBridge()
     {
         var result = await sender.Send(new GetCloudBridgeSettingsQuery());
         return Ok(result);
@@ -175,15 +305,15 @@ public class SettingsController(ISender sender) : ControllerBase
     }
 
     [HttpGet("reminder")]
-    [HasPermission(AppPermissions.Notifications.Manage)]
-    public async Task<ActionResult<Cartex.Application.Settings.Queries.ReminderSettingsDto>> GetReminder()
+    [HasPermission(AppPermissions.Notifications.View)]
+    public async Task<ActionResult<ReminderSettingsDto>> GetReminder()
     {
         var result = await sender.Send(new GetReminderSettingsQuery());
         return Ok(result);
     }
 
     [HttpPut("reminder")]
-    [HasPermission(AppPermissions.Notifications.Manage)]
+    [HasPermission(AppPermissions.Notifications.Edit)]
     public async Task<IActionResult> UpdateReminder(UpdateReminderSettingsCommand command)
     {
         await sender.Send(command);

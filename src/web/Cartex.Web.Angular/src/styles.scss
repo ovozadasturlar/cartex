@@ -300,6 +300,10 @@ body:has(.cdk-overlay-backdrop.cdk-overlay-dark-backdrop) app-shell .content {
   &.cx-toast-err .mdc-snackbar__surface {
     border-left: 4px solid var(--cx-danger);
   }
+
+  &.cx-toast-warn .mdc-snackbar__surface {
+    border-left: 4px solid var(--cx-warning);
+  }
 }
 
 .cx-seg {
@@ -373,4 +377,146 @@ body:has(.cdk-overlay-backdrop.cdk-overlay-dark-backdrop) app-shell .content {
   .qnote { font-size: 11.5px; font-style: italic; color: var(--cx-text-3); }
   .qplay { color: var(--cx-brand); }
   .qcancel { color: var(--cx-danger); }
+}
+
+.danger,
+.mat-mdc-button.danger {
+  color: var(--cx-danger) !important;
+}
+
+@media (width <= 767px) {
+  .cdk-overlay-pane.mat-mdc-dialog-panel {
+    width: min(100% - 20px, 680px) !important;
+    max-width: calc(100vw - 20px) !important;
+  }
+
+  .mat-mdc-dialog-container .mdc-dialog__surface {
+    max-height: calc(100dvh - 24px);
+  }
+
+  .mat-mdc-dialog-content {
+    max-height: calc(100dvh - 150px);
+    padding-inline: 16px !important;
+  }
+
+  [mat-dialog-actions] {
+    padding-inline: 12px !important;
+    flex-wrap: wrap;
+  }
+
+  .cx-table-card {
+    max-width: 100%;
+  }
+
+  .mat-mdc-paginator-container {
+    justify-content: center !important;
+    padding-inline: 4px !important;
+  }
+
+  .mat-mdc-paginator-page-size-label,
+  .mat-mdc-paginator-page-size-select {
+    display: none;
+  }
+
+  .cx-page-header {
+    align-items: flex-start !important;
+  }
+}
+
+
+/// Brauzerning standart scrollbari qalin va o'zining trek foni bilan keladi; desktop
+/// ilovada esa u shunchaki yupqa dumaloq chiziq. Ikkalasi bir xil ko'rinishi uchun
+/// veb tomon shu ko'rinishga keltiriladi.
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--cx-scrollbar) transparent;
+}
+
+body {
+  --cx-scrollbar: #cbd5e1;
+}
+
+body.dark {
+  --cx-scrollbar: #3a4049;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--cx-scrollbar);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--cx-text-3);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Kamera skaneri butun ekranni egallaydi: ramka ichidagi tasvir imkon qadar katta bo'lsin. */
+.cx-scanner-panel .mat-mdc-dialog-container,
+.cx-scanner-panel .mat-mdc-dialog-surface {
+  height: 100%;
+  padding: 0;
+  border-radius: 0;
+  background: #000;
+}
+
+/* Skaner ekranga o'zi biriktiriladi: dialog qutisining o'lchamini CDK ichki uslub bilan
+   belgilaydi va u kichik ekranda chetidan joy qoldiradi — kamera tasviri esa butun ekranni
+   egallashi kerak. */
+.cx-scanner-panel cx-scanner-dialog {
+  position: fixed;
+  inset: 0;
+  display: block;
+  z-index: 1;
+}
+
+/* Telefon: pastdagi panel balandligi bir joyda turadi — sahifalar shunga qarab joy qoldiradi. */
+/* Pastdagi panel balandligi va chap menyu eni: suzuvchi tugmalar shu ikkisiga tayanadi,
+   shuning uchun ular global e'lon qilinadi. Telefonda menyu ustma-ust ochiladi, ya'ni joy
+   egallamaydi. */
+:root {
+  --cx-bottom-nav: 0px;
+  --cx-side-rail: 64px;
+}
+
+@media (width <= 767px) {
+  :root {
+    --cx-bottom-nav: 66px;
+    --cx-side-rail: 0px;
+  }
+
+  /* Telefonda jadval kataklari ixchamlashadi — shunda ustunlar ekranga sig'adi. */
+  .cx-table-card table.mat-mdc-table {
+    --mat-table-row-item-label-text-size: 12.5px;
+    --mat-table-header-headline-size: 12px;
+  }
+
+  .cx-table-card .mat-mdc-cell,
+  .cx-table-card .mat-mdc-header-cell {
+    padding: 0 6px;
+  }
+
+  /* Jadval kichik ekranga sig'masa, sahifa emas, jadvalning o'zi surilsin. */
+  .cx-card table.mat-mdc-table,
+  table.mat-mdc-table {
+    min-width: 0;
+  }
+
+  .mat-mdc-table-sticky {
+    position: static !important;
+  }
 }

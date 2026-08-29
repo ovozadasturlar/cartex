@@ -12,7 +12,7 @@ public class AccountConfiguration : IEntityTypeConfiguration<Account>
         builder.Property(x => x.Name).HasMaxLength(60);
         builder.Property(x => x.Type).HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.Currency).HasMaxLength(3);
-        builder.Property(x => x.Balance).HasPrecision(18, 2);
+        builder.Property(x => x.Balance).HasPrecision(18, 4);
 
         builder.HasOne(x => x.Branch)
             .WithMany()
@@ -41,6 +41,9 @@ public class AccountConfiguration : IEntityTypeConfiguration<Account>
             .IsUnique()
             .HasFilter("\"supplier_id\" IS NOT NULL");
 
+        builder.HasIndex(x => new { x.Type, x.Balance })
+            .HasFilter("\"customer_id\" IS NOT NULL");
+
         builder.HasIndex(x => x.CreatedAt);
     }
 }
@@ -50,13 +53,15 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
     public void Configure(EntityTypeBuilder<Transaction> builder)
     {
         builder.ToTable("transactions");
-        builder.Property(x => x.Amount).HasPrecision(18, 2);
+        builder.Property(x => x.Amount).HasPrecision(18, 4);
         builder.Property(x => x.Currency).HasMaxLength(3);
         builder.Property(x => x.Rate).HasPrecision(18, 6);
         builder.Property(x => x.OperationType).HasConversion<string>().HasMaxLength(30);
         builder.Property(x => x.IdempotencyKey).HasMaxLength(64);
         builder.HasIndex(x => new { x.UserId, x.IdempotencyKey }).IsUnique().HasFilter("\"idempotency_key\" IS NOT NULL");
         builder.HasIndex(x => x.CreatedAt);
+        builder.HasIndex(x => new { x.BranchId, x.CreatedAt });
+        builder.HasIndex(x => new { x.OperationType, x.CreatedAt });
 
         builder.HasOne(x => x.FromAccount)
             .WithMany()
@@ -79,6 +84,32 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(x => x.ShiftId);
+
+        builder.HasOne(x => x.CustomerPaymentDocument)
+            .WithMany(x => x.Transactions)
+            .HasForeignKey(x => x.CustomerPaymentDocumentId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(x => x.CustomerReturnDocument)
+            .WithMany(x => x.Transactions)
+            .HasForeignKey(x => x.CustomerReturnDocumentId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(x => x.CustomerRefundDocument)
+            .WithMany(x => x.Transactions)
+            .HasForeignKey(x => x.CustomerRefundDocumentId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(x => x.PartnerRedemptionDocument)
+            .WithMany(x => x.Transactions)
+            .HasForeignKey(x => x.PartnerRedemptionDocumentId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(x => x.StockWriteOffDocument)
+            .WithMany(x => x.Transactions)
+            .HasForeignKey(x => x.StockWriteOffDocumentId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(x => x.StockWriteOffDocumentId);
+        builder.HasIndex(x => x.CustomerPaymentDocumentId);
+        builder.HasIndex(x => x.CustomerReturnDocumentId);
+        builder.HasIndex(x => x.CustomerRefundDocumentId);
+        builder.HasIndex(x => x.PartnerRedemptionDocumentId);
     }
 }
 
@@ -127,6 +158,9 @@ public class CurrencyConfiguration : IEntityTypeConfiguration<Currency>
         builder.ToTable("currencies");
         builder.Property(x => x.Code).HasMaxLength(3).IsRequired();
         builder.Property(x => x.Name).HasMaxLength(40);
+        builder.Property(x => x.Symbol).HasMaxLength(8).HasDefaultValue("");
+        builder.Property(x => x.SymbolPosition).HasMaxLength(8).HasDefaultValue("Suffix");
+        builder.Property(x => x.DecimalDigits).HasDefaultValue(2);
         builder.HasIndex(x => x.Code).IsUnique();
     }
 }
@@ -136,10 +170,11 @@ public class ShiftConfiguration : IEntityTypeConfiguration<Shift>
     public void Configure(EntityTypeBuilder<Shift> builder)
     {
         builder.ToTable("shifts");
-        builder.Property(x => x.OpeningFloat).HasPrecision(18, 2);
-        builder.Property(x => x.CountedCash).HasPrecision(18, 2);
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(15);
         builder.HasIndex(x => new { x.UserId, x.BranchId, x.Status });
+        builder.HasIndex(x => new { x.UserId, x.BranchId })
+            .IsUnique()
+            .HasFilter("\"status\" = 'Open' AND \"is_deleted\" = false");
 
         builder.HasOne(x => x.User)
             .WithMany()

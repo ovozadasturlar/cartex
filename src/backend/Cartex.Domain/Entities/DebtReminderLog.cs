@@ -8,4 +8,6 @@ public class DebtReminderLog : BaseEntity
     public DateTime SentAt { get; set; } = DateTime.UtcNow;
     public decimal Balance { get; set; }
     public int DaysOverdue { get; set; }
+    public string Purpose { get; set; } = "debt_reminder";
+    public DateOnly? DueDate { get; set; }
 }

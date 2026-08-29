@@ -1,5 +1,3 @@
-using System.IO;
-using System.Net.Http;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -31,23 +29,14 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
     [ObservableProperty] private string _address = string.Empty;
     [ObservableProperty] private string? _logoImageKey;
     [ObservableProperty] private Bitmap? _logoPreview;
+    [ObservableProperty] private string? _monochromeLogoImageKey;
+    [ObservableProperty] private Bitmap? _monochromeLogoPreview;
+    [ObservableProperty] private bool _isMonochromeLogoCustom;
 
     public ObservableCollection<string> Currencies { get; } = new(CurrencyCatalog.All);
-    public ObservableCollection<string> ShiftPolicies { get; } = [];
-    private static readonly string[] ShiftPolicyCodes = ["Off", "CashOnly", "AllSales"];
-
-    [ObservableProperty] private int _shiftPolicyIndex = 1;
-    [ObservableProperty] private decimal _maxDiscountPercent;
-    [ObservableProperty] private decimal _defaultMinStock;
-    [ObservableProperty] private decimal _staleRateDays = 3;
-    [ObservableProperty] private bool _allowDebtSales = true;
-    [ObservableProperty] private bool _allowCustomerCredit;
-    [ObservableProperty] private bool _requireDebtDueDate = true;
-    [ObservableProperty] private bool _requireSupplier;
     [ObservableProperty] private bool _qrLoginEnabled;
     [ObservableProperty] private decimal _qrRefreshSeconds = 120;
     [ObservableProperty] private bool _keyLoginEnabled = true;
-    private bool _policyLoaded;
     private bool _loginLoaded;
 
     private readonly ISettingsApi _settingsApi;
@@ -68,22 +57,6 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
 
     public async Task LoadAsync()
     {
-        ShiftPolicies.Clear();
-        foreach (var code in ShiftPolicyCodes) ShiftPolicies.Add(L[$"shift_policy_{code.ToLowerInvariant()}"]);
-        try
-        {
-            var policy = await _settingsApi.GetSalesPolicyAsync();
-            ShiftPolicyIndex = Math.Max(0, Array.IndexOf(ShiftPolicyCodes, policy.ShiftPolicy));
-            MaxDiscountPercent = policy.MaxDiscountPercent;
-            DefaultMinStock = policy.DefaultMinStock;
-            StaleRateDays = policy.StaleRateDays;
-            AllowDebtSales = policy.AllowDebtSales;
-            AllowCustomerCredit = policy.AllowCustomerCredit;
-            RequireDebtDueDate = policy.RequireDebtDueDate;
-            RequireSupplier = policy.RequireSupplier;
-            _policyLoaded = true;
-        }
-        catch { }
         if (CanManageSecurity)
         try
         {
@@ -106,7 +79,9 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
             Telegram = b.Telegram ?? string.Empty;
             Website = b.Website ?? string.Empty;
             LogoImageKey = b.LogoImageKey;
+            MonochromeLogoImageKey = b.MonochromeLogoImageKey;
             LogoPreview = await LoadBitmapAsync(b.LogoImageKey);
+            MonochromeLogoPreview = await LoadBitmapAsync(b.MonochromeLogoImageKey ?? b.LogoImageKey);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
     }
@@ -133,9 +108,32 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
             using (_busy.Begin(L["loading"]))
             await using (picked.Content)
             {
-                var result = await _storageApi.UploadAsync(new StreamPart(picked.Content, picked.FileName, picked.ContentType));
-                LogoImageKey = result.Key;
-                LogoPreview = await LoadBitmapAsync(result.Key);
+                var result = await _storageApi.UploadLogoAsync(new StreamPart(picked.Content, picked.FileName, picked.ContentType));
+                LogoImageKey = result.ColorKey;
+                MonochromeLogoImageKey = result.MonochromeKey;
+                IsMonochromeLogoCustom = false;
+                LogoPreview = await LoadBitmapAsync(result.ColorKey);
+                MonochromeLogoPreview = await LoadBitmapAsync(result.MonochromeKey);
+            }
+        }
+        catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
+    }
+
+    [RelayCommand]
+    private async Task PickMonochromeLogo()
+    {
+        try
+        {
+            var picked = await _filePicker.PickImageAsync();
+            if (picked is null) return;
+            using (_busy.Begin(L["loading"]))
+            await using (picked.Content)
+            {
+                var result = await _storageApi.UploadAsync(
+                    new StreamPart(picked.Content, picked.FileName, picked.ContentType));
+                MonochromeLogoImageKey = result.Key;
+                MonochromeLogoPreview = await LoadBitmapAsync(result.Key);
+                IsMonochromeLogoCustom = true;
             }
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }
@@ -157,16 +155,13 @@ public partial class BusinessSettingsViewModel : ViewModelBase, ILoadable
                     string.IsNullOrWhiteSpace(Address) ? null : Address.Trim(),
                     LogoImageKey,
                     string.IsNullOrWhiteSpace(Telegram) ? null : Telegram.Trim(),
-                    string.IsNullOrWhiteSpace(Website) ? null : Website.Trim()));
-                if (_policyLoaded)
-                    await _settingsApi.UpdateSalesPolicyAsync(new UpdateSalesPolicyRequest(
-                        ShiftPolicyCodes[Math.Clamp(ShiftPolicyIndex, 0, 2)], MaxDiscountPercent, DefaultMinStock, (int)StaleRateDays,
-                        AllowDebtSales, AllowCustomerCredit, RequireDebtDueDate, RequireSupplier));
+                    string.IsNullOrWhiteSpace(Website) ? null : Website.Trim(),
+                    MonochromeLogoImageKey));
                 if (_loginLoaded)
                     await _settingsApi.UpdateLoginMethodsAsync(new UpdateLoginMethodsRequest(
                         QrLoginEnabled, (int)Math.Clamp(QrRefreshSeconds, 30, 600), KeyLoginEnabled));
             }
-            ServiceLocator.Resolve<ReferenceCache>().Invalidate(CacheKeys.Business, CacheKeys.SalesPolicy);
+            ServiceLocator.Resolve<ReferenceCache>().Invalidate(CacheKeys.Business);
             _toast.Success(L["success"]);
         }
         catch (Exception ex) { _toast.Error(ApiErrors.Describe(ex)); }

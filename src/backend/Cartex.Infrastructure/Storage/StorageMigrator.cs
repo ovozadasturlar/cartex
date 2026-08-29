@@ -16,7 +16,7 @@ public sealed class StorageMigrator(IServiceScopeFactory scopes, IConfiguration 
         [".gif"] = "image/gif",
     };
 
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private volatile StorageMigrationStatus _status = new(false, null, 0, 0, 0, null, null);
 
     public StorageMigrationStatus Status => _status;

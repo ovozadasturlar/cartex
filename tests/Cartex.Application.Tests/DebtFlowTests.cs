@@ -1,3 +1,5 @@
+using Cartex.Application.Common.Interfaces;
+using Cartex.Application.Common.Settings;
 using Cartex.Application.Customers.Commands;
 using Cartex.Application.Sales.Commands;
 using Cartex.Application.Tests.Common;
@@ -18,13 +20,20 @@ public class DebtFlowTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     {
         using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var branch1 = (await db.Branches.FirstAsync(b => b.Name == "Filial 1")).Id;
-        var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Filial 1 ombori")).Id;
+        var branch1 = (await db.Branches.FirstAsync(b => b.Name == "Asosiy filial")).Id;
+        var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Asosiy ombor")).Id;
         var businessId = (await db.Businesses.FirstAsync()).Id;
         var adminId = (await db.Users.FirstAsync(u => u.Username == "admin")).Id;
         var productId = (await db.Products.FirstAsync(p => p.Name == "Smesitel oshxona Zegor")).Id;
         var variantId = (await db.ProductVariants.FirstAsync(v => v.ProductId == productId)).Id;
         return (branch1, warehouse1, businessId, adminId, variantId);
+    }
+
+    private async Task AllowCustomerCreditAsync()
+    {
+        using var scope = Fixture.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<ISettingsService>()
+            .SetAsync(SettingKeys.SalesPolicy, new SalesPolicySettings { AllowCustomerCredit = true });
     }
 
     private async Task<long> CreateCustomerAsync(decimal creditLimit = 10_000_000m)
@@ -45,7 +54,16 @@ public class DebtFlowTests(DatabaseFixture fixture) : DatabaseTest(fixture)
     {
         using var scope = Fixture.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        return (await db.Accounts.FirstAsync(a => a.CustomerId == customerId && a.Type == AccountType.Debt)).Balance;
+        return (await db.Accounts.FirstOrDefaultAsync(a =>
+            a.CustomerId == customerId && a.Type == AccountType.Debt))?.Balance ?? 0m;
+    }
+
+    private async Task<decimal> AdvanceBalanceAsync(long customerId)
+    {
+        using var scope = Fixture.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        return (await db.Accounts.FirstOrDefaultAsync(a =>
+            a.CustomerId == customerId && a.Type == AccountType.CustomerAdvance))?.Balance ?? 0m;
     }
 
     private async Task<decimal> BranchBalanceAsync(long branch, AccountType type)
@@ -123,11 +141,13 @@ public class DebtFlowTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         Assert.Equal(cardBefore + debt, await BranchBalanceAsync(branch1, AccountType.Card));
     }
 
+    // QARZ-03, QARZ-20: haqdorlik yoniq — qarz yopiladi, ortgani avansga tushadi.
     [Fact]
-    public async Task Repay_more_than_debt_throws_and_keeps_balance()
+    public async Task Repay_more_than_debt_closes_debt_and_credits_advance()
     {
         var (branch1, warehouse1, businessId, adminId, variantId) = await SetupAsync();
         Fixture.CurrentUser.AsAdmin(adminId, businessId, branch1);
+        await AllowCustomerCreditAsync();
         await TestShift.OpenAsync(Fixture);
 
         var customerId = await CreateCustomerAsync();
@@ -137,11 +157,11 @@ public class DebtFlowTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         using (var scope = Fixture.CreateScope())
         {
             var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            await Assert.ThrowsAsync<BusinessRuleException>(() =>
-                sender.Send(new RepayCustomerDebtCommand(customerId, debt + 1m, false)));
+            await sender.Send(new RepayCustomerDebtCommand(customerId, debt + 1m, false));
         }
 
-        Assert.Equal(debt, await DebtBalanceAsync(customerId));
+        Assert.Equal(0m, await DebtBalanceAsync(customerId));
+        Assert.Equal(1m, await AdvanceBalanceAsync(customerId));
     }
 
     [Fact]
@@ -159,7 +179,8 @@ public class DebtFlowTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         }
 
         Assert.Equal(50_000m, await DebtBalanceAsync(debtorId));
-        Assert.Equal(-30_000m, await DebtBalanceAsync(creditorId));
+        Assert.Equal(0m, await DebtBalanceAsync(creditorId));
+        Assert.Equal(30_000m, await AdvanceBalanceAsync(creditorId));
     }
 
     [Fact]
@@ -177,7 +198,8 @@ public class DebtFlowTests(DatabaseFixture fixture) : DatabaseTest(fixture)
                 CreditLimit: 30_000m, OpeningBalance: -20_000m));
         }
 
-        Assert.Equal(-20_000m, await DebtBalanceAsync(customerId));
+        Assert.Equal(0m, await DebtBalanceAsync(customerId));
+        Assert.Equal(20_000m, await AdvanceBalanceAsync(customerId));
 
         using (var scope = Fixture.CreateScope())
         {
@@ -186,6 +208,7 @@ public class DebtFlowTests(DatabaseFixture fixture) : DatabaseTest(fixture)
         }
 
         Assert.Equal(25_000m, await DebtBalanceAsync(customerId));
+        Assert.Equal(0m, await AdvanceBalanceAsync(customerId));
     }
 
     [Fact]

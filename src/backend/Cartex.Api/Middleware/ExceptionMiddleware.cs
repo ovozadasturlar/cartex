@@ -2,6 +2,7 @@ using System.Text.Json;
 using Cartex.Domain.Common.Exceptions;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Cartex.Api.Middleware;
 
@@ -21,20 +22,29 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
 
     private async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
-        var (statusCode, title, extensions) = exception switch
+        if (exception is OperationCanceledException || context.RequestAborted.IsCancellationRequested)
+        {
+            logger.LogDebug("Request was canceled by the client: {Path}", context.Request.Path);
+            return;
+        }
+
+        var (statusCode, code, title, extensions) = exception switch
         {
             ValidationException validationEx => (
                 StatusCodes.Status400BadRequest,
+                "validation_error",
                 "Validation failed",
                 (object?)validationEx.Errors.Select(e => new { field = e.PropertyName, error = e.ErrorMessage })
             ),
-            NotFoundException => (StatusCodes.Status404NotFound, exception.Message, null),
-            ConflictException => (StatusCodes.Status409Conflict, exception.Message, null),
-            DbUpdateException => (StatusCodes.Status409Conflict, "The operation conflicts with existing data. Retry.", null),
-            ForbiddenException => (StatusCodes.Status403Forbidden, exception.Message, null),
-            BusinessRuleException => (StatusCodes.Status400BadRequest, exception.Message, null),
-            UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Unauthorized", null),
-            _ => (StatusCodes.Status500InternalServerError, "An internal error occurred", null)
+            NotFoundException domainEx => (StatusCodes.Status404NotFound, domainEx.Code, exception.Message, null),
+            ConflictException domainEx => (StatusCodes.Status409Conflict, domainEx.Code, exception.Message, null),
+            DbUpdateException { InnerException: PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } } =>
+                (StatusCodes.Status409Conflict, "unique_conflict", "The operation conflicts with existing data. Retry.", null),
+            DbUpdateException => (StatusCodes.Status500InternalServerError, "database_error", "An internal data error occurred", null),
+            ForbiddenException domainEx => (StatusCodes.Status403Forbidden, domainEx.Code, exception.Message, null),
+            BusinessRuleException domainEx => (StatusCodes.Status400BadRequest, domainEx.Code, exception.Message, null),
+            UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "unauthorized", "Unauthorized", null),
+            _ => (StatusCodes.Status500InternalServerError, "internal_error", "An internal error occurred", null)
         };
 
         if (statusCode == StatusCodes.Status500InternalServerError)
@@ -44,9 +54,12 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
         {
             ["type"] = $"https://httpstatuses.io/{statusCode}",
             ["title"] = title,
-            ["status"] = statusCode
+            ["status"] = statusCode,
+            ["code"] = code,
+            ["correlationId"] = context.TraceIdentifier
         };
         if (extensions is not null) problem["errors"] = extensions;
+        if (exception is DomainException { Details: { } details }) problem["details"] = details;
 
         context.Response.ContentType = "application/problem+json";
         context.Response.StatusCode = statusCode;

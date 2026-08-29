@@ -25,7 +25,7 @@
                     Margin="16,0,0,0" MinHeight="36" Command="{Binding LoadReportCommand}" />
         </Grid>
 
-        <ProgressBar DockPanel.Dock="Top" IsIndeterminate="True" IsVisible="{Binding IsLoading}"
+        <ProgressBar DockPanel.Dock="Top" IsIndeterminate="{Binding IsLoading}" IsVisible="{Binding IsLoading}"
                      Height="4" Margin="0,0,0,8" />
 
         <TabControl SelectedIndex="{Binding SelectedTabIndex}">
@@ -249,7 +249,9 @@
             <TabItem Header="{Binding L[sales_breakdown]}">
                 <ScrollViewer>
                     <StackPanel Spacing="16">
-                        <Grid ColumnDefinitions="*,*,*,*">
+                        <!-- HIS-03: pulning har bir kelish yo'li ko'rsatiladi, aks holda
+                             ustunlar yig'indisi daromadga yetmaydi va sababi ko'rinmaydi. -->
+                        <Grid ColumnDefinitions="*,*,*,*,*,*">
                             <Border Classes="card" Grid.Column="0" Margin="0,0,8,0">
                                 <StackPanel Spacing="8" HorizontalAlignment="Center">
                                     <TextBlock Text="{Binding L[cash]}" Classes="muted" HorizontalAlignment="Center" />
@@ -271,10 +273,24 @@
                                                HorizontalAlignment="Center" Foreground="{DynamicResource WarningBrush}" />
                                 </StackPanel>
                             </Border>
-                            <Border Classes="card" Grid.Column="3" Margin="8,0,0,0">
+                            <Border Classes="card" Grid.Column="3" Margin="8,0,8,0">
+                                <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding L[advance]}" Classes="muted" HorizontalAlignment="Center" />
+                                    <TextBlock Text="{Binding PayAdvance, StringFormat={}{0:N0}}" FontSize="22" FontWeight="Bold"
+                                               HorizontalAlignment="Center" Foreground="{DynamicResource InfoBrush}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Classes="card" Grid.Column="4" Margin="8,0,8,0">
                                 <StackPanel Spacing="8" HorizontalAlignment="Center">
                                     <TextBlock Text="{Binding L[debt]}" Classes="muted" HorizontalAlignment="Center" />
                                     <TextBlock Text="{Binding PayDebt, StringFormat={}{0:N0}}" FontSize="22" FontWeight="Bold"
+                                               HorizontalAlignment="Center" Foreground="{DynamicResource DangerBrush}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Classes="card" Grid.Column="5" Margin="8,0,0,0">
+                                <StackPanel Spacing="8" HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding L[returned]}" Classes="muted" HorizontalAlignment="Center" />
+                                    <TextBlock Text="{Binding PayReturned, StringFormat={}-{0:N0}}" FontSize="22" FontWeight="Bold"
                                                HorizontalAlignment="Center" Foreground="{DynamicResource DangerBrush}" />
                                 </StackPanel>
                             </Border>
@@ -311,8 +327,15 @@
                                     <DataGrid ItemsSource="{Binding SalesByCategory}" AutoGenerateColumns="False" IsReadOnly="True"
                                               GridLinesVisibility="Horizontal" HeadersVisibility="Column" MaxHeight="300">
                                         <DataGrid.Columns>
-                                            <DataGridTextColumn Width="*" Binding="{Binding CategoryName}"
-                                                                Header="{Binding [category], Source={x:Static svc:LocalizationManager.Instance}}" />
+                                            <DataGridTemplateColumn Width="*"
+                                                                    Header="{Binding [category], Source={x:Static svc:LocalizationManager.Instance}}">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding CategoryName}" TextTrimming="PrefixCharacterEllipsis"
+                                                                   VerticalAlignment="Center" Margin="12,0" />
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
                                             <DataGridTextColumn Width="Auto" Binding="{Binding Quantity, StringFormat='{}{0:N0}'}"
                                                                 Header="{Binding [quantity], Source={x:Static svc:LocalizationManager.Instance}}" />
                                             <DataGridTextColumn Width="Auto" Binding="{Binding Revenue, StringFormat='{}{0:N0}'}"
@@ -372,7 +395,7 @@
         </TabControl>
     </DockPanel>
 
-        <Border IsVisible="{Binding IsBonusOpen}" Background="#30000000"
+        <Border IsVisible="{Binding IsBonusOpen}" Background="#30000000" c:FormBehaviors.AutoFocus="True"
                 c:OverlayBehaviors.DismissCommand="{Binding CancelBonusCommand}">
             <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="420"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
@@ -380,7 +403,7 @@
                 <StackPanel Margin="24" Spacing="14">
                     <TextBlock Text="{Binding L[give_bonus]}" FontSize="18" FontWeight="Bold"
                                Foreground="{DynamicResource TextPrimary}" />
-                    <TextBlock Text="{Binding BonusCustomer.CustomerName}" Foreground="{DynamicResource TextSecondary}" />
+                    <TextBlock Text="{Binding BonusCustomerDisplay.CustomerName}" Foreground="{DynamicResource TextSecondary}" />
                     <StackPanel Spacing="5">
                         <TextBlock Text="{Binding L[amount]}" Foreground="{DynamicResource TextSecondary}" FontSize="12.5" />
                         <NumericUpDown Value="{Binding BonusAmount, Converter={x:Static conv:EmptyToZeroConverter.Instance}}" Minimum="0" Increment="1000" FormatString="N0" />

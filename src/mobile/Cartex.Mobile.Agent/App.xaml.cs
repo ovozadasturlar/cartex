@@ -27,6 +27,7 @@ public partial class App : Application
 			_sleptAt = null;
 			if (Shell.Current is not { } shell || shell.CurrentState.Location.OriginalString.Contains("login")) return;
 			_ = services.GetRequiredService<MobileAuthService>().ValidateSessionAsync();
+			_ = services.GetRequiredService<AccessState>().RefreshAsync();
 			if (slept.TotalMinutes >= 5)
 				_ = services.GetRequiredService<SyncService>().SyncAsync();
 			if (AppLock.PinEnabled && slept.TotalSeconds >= AppLock.LockAfterSeconds
@@ -36,16 +37,22 @@ public partial class App : Application
 		return window;
 	}
 
-	private static void OnSessionInvalidated() => MainThread.BeginInvokeOnMainThread(async () =>
+	private static void OnSessionInvalidated() => MainThread.BeginInvokeOnMainThread(() => _ = HandleSessionInvalidatedAsync());
+
+	private static async Task HandleSessionInvalidatedAsync()
 	{
-		if (Shell.Current is not { } shell || shell.CurrentState.Location.OriginalString.Contains("login")) return;
-		AppLock.Disable();
-		await shell.GoToAsync("//login");
 		try
 		{
+			if (Shell.Current is not { } shell || shell.CurrentState.Location.OriginalString.Contains("login")) return;
+			AppLock.Disable();
+			IPlatformApplication.Current!.Services.GetRequiredService<AccessState>().Clear();
+			await shell.GoToAsync("//login");
 			if (shell.CurrentPage is { } page)
-				await page.DisplayAlert(Loc.Instance["session_ended_title"], Loc.Instance["session_ended_msg"], Loc.Instance["ok"]);
+				await page.DisplayAlertAsync(Loc.Instance["session_ended_title"], Loc.Instance["session_ended_msg"], Loc.Instance["ok"]);
 		}
-		catch { }
-	});
+		catch (Exception exception)
+		{
+			System.Diagnostics.Debug.WriteLine(exception);
+		}
+	}
 }

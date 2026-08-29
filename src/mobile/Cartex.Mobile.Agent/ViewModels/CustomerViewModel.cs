@@ -55,7 +55,7 @@ public partial class CustomerViewModel(AgentDb db, ICustomersApi customersApi, S
         _longitude = c.Longitude;
         HasDebt = c.DebtBalance > 0;
         DebtText = HasDebt ? BuildDebtText(c, currency) : Loc.Instance["no_debt"];
-        LimitText = c.CreditLimit > 0 ? $"{c.CreditLimit:N0} {currency}" : "—";
+        LimitText = c.CreditLimit is { } limit ? $"{limit:N0} {currency}" : Loc.Instance["unlimited"];
         OrdersCount = (await db.GetOrdersAsync()).Count(o => o.CustomerId == _customerId).ToString();
         StaleText = string.Format(Loc.Instance["status_fmt"], await db.GetMetaAsync("last_sync") ?? "—");
         _ = LoadHistoryAsync();
@@ -145,7 +145,7 @@ public partial class CustomerViewModel(AgentDb db, ICustomersApi customersApi, S
     {
         if (IsBusy) return;
         var page = Shell.Current.CurrentPage;
-        if (!await page.DisplayAlert(Loc.Instance["delete_customer"], Loc.Instance["delete_customer_confirm"],
+        if (!await page.DisplayAlertAsync(Loc.Instance["delete_customer"], Loc.Instance["delete_customer_confirm"],
                 Loc.Instance["delete_customer"], Loc.Instance["cancel"]))
             return;
         IsBusy = true;

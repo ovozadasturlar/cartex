@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Xunit;
 
 namespace Cartex.Api.IntegrationTests;
@@ -15,6 +16,7 @@ public class OrderingLifecycleTests(CartexApiFactory factory)
     {
         var client = await AuthHelper.LoginAsync(factory, "developer", "developer123");
         (await client.PutAsJsonAsync("/api/features/ordering", new { isEnabled = true })).EnsureSuccessStatusCode();
+        (await client.PutAsJsonAsync("/api/features/modules/ordering", new { isEnabled = true })).EnsureSuccessStatusCode();
         return client;
     }
 
@@ -56,10 +58,31 @@ public class OrderingLifecycleTests(CartexApiFactory factory)
     [Fact]
     public async Task Features_enabled_endpoint_is_available_to_seller()
     {
-        var developer = await DeveloperAsync(factory);
+        await DeveloperAsync(factory);
         var seller = await AuthHelper.LoginAsync(factory, "seller", "seller123");
         var enabled = await seller.GetFromJsonAsync<List<string>>("/api/features/enabled");
         Assert.NotNull(enabled);
         Assert.Contains("ordering", enabled);
+    }
+
+    [Fact]
+    public async Task Invalid_cart_references_return_stable_problem_details()
+    {
+        var client = await DeveloperAsync(factory);
+        var warehouses = await client.GetFromJsonAsync<List<IdName>>("/api/warehouses");
+
+        using var response = await client.PostAsJsonAsync("/api/ordering/carts", new
+        {
+            warehouseId = warehouses![0].Id,
+            customerId = (long?)null,
+            items = new[] { new { variantId = long.MaxValue, quantity = 1m } }
+        });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        using var problem = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("variant_not_found", problem.RootElement.GetProperty("code").GetString());
+        var correlationId = problem.RootElement.GetProperty("correlationId").GetString();
+        Assert.False(string.IsNullOrWhiteSpace(correlationId));
+        Assert.Equal(correlationId, response.Headers.GetValues("X-Correlation-Id").Single());
     }
 }

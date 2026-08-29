@@ -3,9 +3,11 @@
              xmlns:c="using:Cartex.UI.Controls"
              xmlns:svc="using:Cartex.UI.Services"
              xmlns:conv="using:Cartex.UI.Converters"
+             xmlns:vm="using:Cartex.UI.ViewModels"
              xmlns:mi="using:Material.Icons.Avalonia"
              x:Class="Cartex.UI.Views.AuditView"
-             x:CompileBindings="False">
+             x:DataType="vm:AuditViewModel"
+             x:CompileBindings="True">
 
     <DockPanel Margin="24">
         <c:PageHeader DockPanel.Dock="Top" Title="{Binding L[audit]}" Margin="0,0,0,16">
@@ -29,9 +31,21 @@
             <ComboBox ItemsSource="{Binding UserOptions}" SelectedItem="{Binding SearchUser}"
                       PlaceholderText="{Binding L[user]}" MinWidth="150" MinHeight="36" />
             <ComboBox ItemsSource="{Binding TableOptions}" SelectedItem="{Binding SearchTable}"
-                      PlaceholderText="{Binding L[table_name]}" MinWidth="140" MinHeight="36" />
+                      PlaceholderText="{Binding L[table_name]}" MinWidth="140" MinHeight="36">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding Converter={x:Static conv:AuditTableConverter.Instance}}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
             <ComboBox ItemsSource="{Binding ActionOptions}" SelectedItem="{Binding SearchAction}"
-                      PlaceholderText="{Binding L[action]}" MinWidth="140" MinHeight="36" />
+                      PlaceholderText="{Binding L[action]}" MinWidth="140" MinHeight="36">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding Converter={x:Static conv:AuditActionConverter.Instance}}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
             <Button Classes="brand" Command="{Binding RefreshCommand}">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <mi:MaterialIcon Kind="Magnify" Width="17" Height="17" />
@@ -44,7 +58,8 @@
             <Border Background="{DynamicResource CardBg}" CornerRadius="12"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" ClipToBounds="True">
                 <DataGrid ItemsSource="{Binding Logs}" AutoGenerateColumns="False" IsReadOnly="True"
-                          GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+                          GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                          c:GridDoubleClick.Command="{Binding OpenDetailCommand}">
                     <DataGrid.Columns>
                         <DataGridTextColumn Width="Auto" Binding="{Binding CreatedAt, Mode=OneWay, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
                                             Header="{Binding [time], Source={x:Static svc:LocalizationManager.Instance}}" />
@@ -52,9 +67,9 @@
                                             Header="{Binding [user], Source={x:Static svc:LocalizationManager.Instance}}" />
                         <DataGridTextColumn Width="Auto" Binding="{Binding Client, Mode=OneWay, Converter={x:Static conv:ClientDisplayConverter.Instance}}"
                                             Header="{Binding [client], Source={x:Static svc:LocalizationManager.Instance}}" />
-                        <DataGridTextColumn Width="Auto" Binding="{Binding Action}"
+                        <DataGridTextColumn Width="Auto" Binding="{Binding Action, Converter={x:Static conv:AuditActionConverter.Instance}}"
                                             Header="{Binding [action], Source={x:Static svc:LocalizationManager.Instance}}" />
-                        <DataGridTextColumn Width="*" Binding="{Binding TableName}"
+                        <DataGridTextColumn Width="*" Binding="{Binding TableName, Converter={x:Static conv:AuditTableConverter.Instance}}"
                                             Header="{Binding [table_name], Source={x:Static svc:LocalizationManager.Instance}}" />
                         <DataGridTextColumn Width="Auto" Binding="{Binding RecordId}"
                                             Header="{Binding [record_id], Source={x:Static svc:LocalizationManager.Instance}}" />

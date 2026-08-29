@@ -9,8 +9,8 @@ public class LicensePolicyTests
     public void FreeMode_AllowsCoreWriteOperations()
     {
         Assert.Contains(AppPermissions.Sales.Create, LicensePolicy.FreeModeAllowed);
-        Assert.Contains(AppPermissions.Supplies.Manage, LicensePolicy.FreeModeAllowed);
-        Assert.Contains(AppPermissions.Customers.Manage, LicensePolicy.FreeModeAllowed);
+        Assert.Contains(AppPermissions.Supplies.Create, LicensePolicy.FreeModeAllowed);
+        Assert.Contains(AppPermissions.Customers.Edit, LicensePolicy.FreeModeAllowed);
     }
 
     [Fact]

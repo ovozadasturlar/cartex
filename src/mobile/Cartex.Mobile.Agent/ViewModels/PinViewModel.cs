@@ -1,4 +1,3 @@
-using Cartex.Mobile.Agent.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Cartex.Mobile.Core;
@@ -19,7 +18,7 @@ public partial class PinViewModel(IBiometricAuth biometric) : ObservableObject, 
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
     {
-        _setup = query.TryGetValue("setup", out var v) && v?.ToString() == "1";
+        _setup = query.TryGetValue("setup", out var v) && v.ToString() == "1";
     }
 
     public async Task AppearAsync()

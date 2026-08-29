@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -8,17 +8,21 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTableModule } from '@angular/material/table';
+import { Router } from '@angular/router';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import { InventoryApi, Supplier, SupplierTotals } from '../../core/api/inventory.api';
-import { CxDatePipe, CxMoneyPipe } from '../../core/format';
+import { AuthService } from '../../core/auth.service';
+import { CxDatePipe, CxMoneyPipe, newUuid } from '../../core/format';
 import { LedgerEntry } from '../../core/models';
 import { NotifyService } from '../../core/notify.service';
 import { Paged } from '../../core/paging';
 import { EmptyState } from '../../shared/empty-state';
+import { downloadCsv } from '../../core/csv-export';
 import { PageHeader } from '../../shared/page-header';
 import { PagingBar } from '../../shared/paging-bar';
 import { StatCard } from '../../shared/stat-card';
+import { LayoutService } from '../../core/layout.service';
 
 @Component({
   selector: 'app-suppliers',
@@ -40,19 +44,50 @@ import { StatCard } from '../../shared/stat-card';
   styleUrl: './suppliers.scss',
 })
 export class Suppliers implements OnInit {
+  private readonly router = inject(Router);
+
+  /// Ro'yxatdagi qator bosilganda o'sha yetkazib beruvchining profili ochiladi.
+  open(supplier: Supplier): void {
+    void this.router.navigate(['/suppliers', supplier.id]);
+  }
+
   private readonly api = inject(InventoryApi);
   private readonly notify = inject(NotifyService);
   private readonly dialog = inject(MatDialog);
+  private readonly auth = inject(AuthService);
+  private readonly transloco = inject(TranslocoService);
   private searchTimer?: ReturnType<typeof setTimeout>;
 
   readonly loading = signal(true);
   readonly busy = signal(false);
   readonly totals = signal<SupplierTotals | null>(null);
   readonly paged = signal<Paged<Supplier> | null>(null);
+  readonly canExport = this.auth.hasPermission('reports.export');
+
+  async exportCsv(): Promise<void> {
+    if (!this.canExport) return;
+    const t = (key: string): string => this.transloco.translate(key);
+    try {
+      const all = await lastValueFrom(this.api.suppliers({ page: 0, pageSize: 0, sortBy: 'Name' }));
+      downloadCsv(t('suppliers'), all.items, [
+        { header: t('name'), value: (x) => x.name },
+        { header: t('phone'), value: (x) => x.phone },
+        { header: t('payable'), value: (x) => x.payable },
+      ]);
+    } catch (e) {
+      this.notify.error(e);
+    }
+  }
   readonly search = signal('');
   readonly page = signal(1);
   readonly pageSize = signal(20);
-  readonly cols = ['name', 'phone', 'payable', 'actions'];
+  private readonly layout = inject(LayoutService);
+  readonly cols = computed(() => this.layout.isPhone()
+    ? ['name', 'payable', 'actions']
+    : ['name', 'phone', 'payable', 'actions']);
+  readonly canCreate = this.auth.hasPermission('suppliers.create');
+  readonly canEdit = this.auth.hasPermission('suppliers.edit');
+  readonly canPay = this.auth.hasPermission('suppliers.pay');
 
   async ngOnInit(): Promise<void> {
     await Promise.all([this.load(), this.loadTotals()]);
@@ -64,39 +99,41 @@ export class Suppliers implements OnInit {
     this.searchTimer = setTimeout(() => {
       this.search.set(value.trim());
       this.page.set(1);
-      this.load();
+      void this.load();
     }, 350);
   }
 
   onPage(e: { page: number; pageSize: number }): void {
     this.page.set(e.page);
     this.pageSize.set(e.pageSize);
-    this.load();
+    void this.load();
   }
 
   async openEdit(supplier?: Supplier): Promise<void> {
+    if (supplier ? !this.canEdit : !this.canCreate) return;
     const ref = this.dialog.open(SupplierEditDialog, {
       data: supplier ?? null,
       width: '420px',
       maxWidth: '94vw',
-      autoFocus: false,
+      autoFocus: 'first-tabbable',
     });
     if (await lastValueFrom(ref.afterClosed())) {
-      this.load();
-      this.loadTotals();
+      void this.load();
+      void this.loadTotals();
     }
   }
 
   async openPayDebt(supplier: Supplier): Promise<void> {
+    if (!this.canPay) return;
     const ref = this.dialog.open(SupplierPayDebtDialog, {
       data: supplier,
       width: '420px',
       maxWidth: '94vw',
-      autoFocus: false,
+      autoFocus: 'first-tabbable',
     });
     if (await lastValueFrom(ref.afterClosed())) {
-      this.load();
-      this.loadTotals();
+      void this.load();
+      void this.loadTotals();
     }
   }
 
@@ -105,7 +142,7 @@ export class Suppliers implements OnInit {
       data: supplier,
       width: '640px',
       maxWidth: '94vw',
-      autoFocus: false,
+      autoFocus: 'first-tabbable',
     });
   }
 
@@ -148,7 +185,7 @@ export class Suppliers implements OnInit {
         <div class="fields">
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
             <mat-label>{{ t('name') }}</mat-label>
-            <input matInput [(ngModel)]="name" />
+            <input matInput cdkFocusInitial [(ngModel)]="name" />
           </mat-form-field>
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
             <mat-label>{{ t('phone') }}</mat-label>
@@ -255,7 +292,7 @@ export class SupplierPayDebtDialog {
     if (this.amount <= 0) return;
     this.saving.set(true);
     try {
-      await lastValueFrom(this.api.paySupplierDebt(this.supplier.id, this.amount, this.method, crypto.randomUUID()));
+      await lastValueFrom(this.api.paySupplierDebt(this.supplier.id, this.amount, this.method, newUuid()));
       this.notify.success(this.transloco.translate('success'));
       this.ref.close(true);
     } catch (e) {
@@ -354,18 +391,18 @@ export class SupplierLedgerDialog implements OnInit {
   private readonly pageSize = 20;
 
   ngOnInit(): void {
-    this.load();
+    void this.load();
   }
 
   prev(): void {
     if (this.page() === 1) return;
     this.page.update((p) => p - 1);
-    this.load();
+    void this.load();
   }
 
   next(): void {
     this.page.update((p) => p + 1);
-    this.load();
+    void this.load();
   }
 
   private async load(): Promise<void> {

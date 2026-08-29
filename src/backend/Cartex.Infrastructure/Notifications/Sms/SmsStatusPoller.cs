@@ -19,7 +19,8 @@ public sealed class SmsStatusPoller(
         {
             try { await PollAsync(stoppingToken); }
             catch (Exception ex) { logger.LogWarning(ex, "SMS status poll error"); }
-            await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
+            try { await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken); }
+            catch (TaskCanceledException) { break; }
         }
     }
 
@@ -37,12 +38,16 @@ public sealed class SmsStatusPoller(
             return;
 
         var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
-        var cutoff = DateTime.UtcNow.AddHours(-48);
-        var pending = await db.SmsMessages
-            .Where(m => m.Status == SmsStatus.Sent && m.ProviderMessageId != null
-                && m.Provider == provider.Name && m.CreatedAt > cutoff)
-            .OrderBy(m => m.Id)
-            .Take(50)
+        var cutoff = DateTime.UtcNow.AddHours(-72);
+        var pending = await db.NotificationDeliveryAttempts
+            .Include(a => a.NotificationDelivery)
+            .Where(a => a.NotificationDelivery.Channel == NotificationChannel.Sms
+                && a.Status == NotificationDeliveryStatus.Accepted
+                && a.ProviderMessageId != null
+                && a.Provider == provider.Name
+                && a.StartedAt > cutoff)
+            .OrderBy(a => a.Id)
+            .Take(100)
             .ToListAsync(ct);
         if (pending.Count == 0)
             return;
@@ -50,14 +55,22 @@ public sealed class SmsStatusPoller(
         var protector = scope.ServiceProvider.GetRequiredService<ISecretProtector>();
         var password = string.IsNullOrWhiteSpace(cfg.Password) ? "" : protector.Unprotect(cfg.Password);
 
-        foreach (var message in pending)
+        foreach (var attempt in pending)
         {
-            var status = await provider.GetStatusAsync(cfg, password, message.ProviderMessageId!, ct);
-            if (status is null)
+            var status = await provider.GetStatusAsync(cfg, password, attempt.ProviderMessageId!, ct);
+            if (status is not (NotificationDeliveryStatus.Delivered or NotificationDeliveryStatus.Undelivered))
                 continue;
-            message.Status = status.Value;
-            if (status == SmsStatus.Delivered)
-                message.DeliveredAt = DateTime.UtcNow;
+
+            var now = DateTime.UtcNow;
+            attempt.Status = status.Value;
+            attempt.CompletedAt = now;
+            attempt.NotificationDelivery.Status = status.Value;
+            attempt.NotificationDelivery.CompletedAt = now;
+            if (status == NotificationDeliveryStatus.Delivered)
+            {
+                attempt.DeliveredAt = now;
+                attempt.NotificationDelivery.DeliveredAt = now;
+            }
         }
 
         await db.SaveChangesAsync(ct);

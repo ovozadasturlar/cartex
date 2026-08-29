@@ -17,7 +17,7 @@ public sealed class AccessControlService(IApplicationDbContext db, ICurrentUser 
         var userId = currentUser.UserId ?? throw new ForbiddenException("Not authenticated.");
 
         var roles = await db.Roles
-            .Where(r => r.UserRoles.Any(ur => ur.UserId == userId))
+            .Where(r => r.IsActive && r.UserRoles.Any(ur => ur.UserId == userId))
             .Select(r => new
             {
                 r.Level,
@@ -82,12 +82,16 @@ public sealed class AccessControlService(IApplicationDbContext db, ICurrentUser 
     public async Task EnsureCanAssignRolesAsync(IReadOnlyCollection<long> roleIds, CancellationToken cancellationToken)
     {
         var ctx = await GetContextAsync(cancellationToken);
-        if (ctx.AccessAll) return;
 
         var roles = await db.Roles
             .Where(r => roleIds.Contains(r.Id))
-            .Select(r => new { r.Name, r.AccessAll, r.Level })
+            .Select(r => new { r.Name, r.AccessAll, r.Level, r.IsActive })
             .ToListAsync(cancellationToken);
+
+        if (roles.Count != roleIds.Distinct().Count() || roles.Any(r => !r.IsActive))
+            throw new BusinessRuleException("Inactive or missing roles cannot be assigned.");
+
+        if (ctx.AccessAll) return;
 
         if (roles.Any(r => r.AccessAll || r.Level >= ctx.Level))
             throw new ForbiddenException("You cannot assign roles at or above your own level.");
@@ -112,7 +116,7 @@ public sealed class AccessControlService(IApplicationDbContext db, ICurrentUser 
     {
         var hasOther = await db.Users.AnyAsync(u =>
             u.Id != excludingUserId && u.IsActive &&
-            u.UserRoles.Any(ur => ur.Role.Level >= AppRoles.AdminLevel && !ur.Role.AccessAll),
+            u.UserRoles.Any(ur => ur.Role.IsActive && ur.Role.Level >= AppRoles.AdminLevel && !ur.Role.AccessAll),
             cancellationToken);
 
         if (!hasOther)

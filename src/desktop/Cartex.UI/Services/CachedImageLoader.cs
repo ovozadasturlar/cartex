@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Threading.Tasks;
 using AsyncImageLoader.Loaders;
 using Avalonia.Media.Imaging;
 

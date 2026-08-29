@@ -1,3 +1,4 @@
+using Cartex.Mirror;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -56,6 +57,9 @@ app.MapGet("/r/{token}/pdf", async (string token) =>
 
 app.Run();
 
-public sealed record ReceiptPush(string Token, string? Html, string? PdfBase64);
+namespace Cartex.Mirror
+{
+    public sealed record ReceiptPush(string Token, string? Html, string? PdfBase64);
+}
 
 public partial class Program;

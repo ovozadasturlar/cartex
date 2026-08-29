@@ -2,8 +2,10 @@ using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Messaging;
 using Cartex.Application.Common.Settings;
 using Cartex.Application.Sales.Queries;
-using Cartex.Domain.Common;
-using Microsoft.Extensions.Logging;
+using Cartex.Domain.Entities;
+using Cartex.Domain.Enums;
+using Cartex.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace Cartex.Infrastructure.Notifications;
 
@@ -14,7 +16,7 @@ public sealed class NotificationService(
     ISmsService sms,
     ISender sender,
     IReceiptPdfRenderer pdfRenderer,
-    ILogger<NotificationService> logger) : INotificationService
+    IApplicationDbContext db) : INotificationService
 {
     public async Task SendAsync(NotificationMessage message, CancellationToken cancellationToken = default)
     {
@@ -25,7 +27,7 @@ public sealed class NotificationService(
         }
 
         var text = await BuildTextAsync(message, cancellationToken);
-        await SendTextAsync(message.Channel, message.Recipient, text, Subject(message.Template), cancellationToken);
+        await SendTrackedAsync(message, Subject(message.Template), text, null, cancellationToken);
     }
 
     private async Task SendReceiptAsync(NotificationMessage message, CancellationToken cancellationToken)
@@ -35,15 +37,15 @@ public sealed class NotificationService(
 
         var cfg = await settings.GetAsync<NotificationSettings>(SettingKeys.Notification, cancellationToken) ?? new();
         var mode = ReceiptDeliveryPolicy.Resolve(message.Channel, cfg);
-        var total = message.Data.TryGetValue("total", out var t) ? t : "";
-        var lang = message.Data.TryGetValue("lang", out var l) ? l : null;
+        var total = message.Data.GetValueOrDefault("total", "");
+        var lang = message.Data.GetValueOrDefault("lang");
         string T(string key) => Cartex.Shared.Localization.ReceiptTexts.Get(key, lang);
 
         if (mode == "link")
         {
             var baseUrl = cfg.PublicBaseUrl!.TrimEnd('/');
             var text = $"{T("thanks")} {T("your_receipt")}: {baseUrl}/r/{token}" + (string.IsNullOrEmpty(total) ? "" : $" ({total})");
-            await SendTextAsync(message.Channel, message.Recipient, text, T("your_receipt"), cancellationToken);
+            await SendTrackedAsync(message, T("your_receipt"), text, null, cancellationToken);
             return;
         }
 
@@ -53,7 +55,7 @@ public sealed class NotificationService(
             var text = fullReceipt is null
                 ? $"{T("your_purchase")}: {total}. {T("thanks")}"
                 : ReceiptTextRenderer.Render(fullReceipt, await settings.GetAsync<ReceiptSettings>(SettingKeys.Receipt, cancellationToken));
-            await SendTextAsync(message.Channel, message.Recipient, text, T("your_receipt"), cancellationToken);
+            await SendTrackedAsync(message, T("your_receipt"), text, null, cancellationToken);
             return;
         }
 
@@ -61,47 +63,135 @@ public sealed class NotificationService(
         if (receipt is null)
             return;
 
-        var receiptCfg = await settings.GetAsync<ReceiptSettings>(SettingKeys.Receipt, cancellationToken);
-        var pdf = receiptCfg?.PaperFormat switch
+        var receiptCfg = await settings.GetAsync<ReceiptSettings>(SettingKeys.Receipt, cancellationToken) ?? new();
+        receiptCfg.PublicReceiptBaseUrl = cfg.PublicBaseUrl;
+        var pdf = receiptCfg.PaperFormat switch
         {
             "A4" => pdfRenderer.RenderDocument(receipt, receiptCfg, a4: true),
             "A5" => pdfRenderer.RenderDocument(receipt, receiptCfg),
             _ => pdfRenderer.Render(receipt, receiptCfg)
         };
-        var fileName = $"chek-{token[..8]}.pdf";
+        var attachment = new EmailAttachment(pdf, $"chek-{token[..8]}.pdf");
         var caption = $"{T("thanks")} ({total})";
+        await SendTrackedAsync(message, T("your_receipt"), caption, attachment, cancellationToken);
+    }
 
-        switch (message.Channel)
+    private async Task SendTrackedAsync(
+        NotificationMessage message,
+        string subject,
+        string content,
+        EmailAttachment? attachment,
+        CancellationToken cancellationToken)
+    {
+        var provider = await ResolveProviderAsync(message.Channel, cancellationToken);
+        var delivery = new NotificationDelivery
         {
-            case NotificationChannel.Telegram:
-                await telegram.SendDocumentAsync(message.Recipient, pdf, fileName, caption, cancellationToken);
-                break;
-            case NotificationChannel.Email:
-                await email.SendAsync(message.Recipient, T("your_receipt"), caption, cancellationToken, new EmailAttachment(pdf, fileName));
-                break;
-            default:
-                logger.LogInformation("PDF receipt not supported for {Channel}; skipped", message.Channel);
-                break;
+            CustomerId = message.CustomerId,
+            Channel = message.Channel,
+            Purpose = message.Template,
+            Recipient = message.Recipient,
+            Subject = subject,
+            Content = content
+        };
+        var attempt = new NotificationDeliveryAttempt
+        {
+            NotificationDelivery = delivery,
+            AttemptNumber = 1,
+            Provider = provider
+        };
+        delivery.Attempts.Add(attempt);
+        db.NotificationDeliveries.Add(delivery);
+        await db.SaveChangesAsync(cancellationToken);
+
+        try
+        {
+            var result = message.Channel switch
+            {
+                NotificationChannel.Telegram when attachment is not null =>
+                    await telegram.SendDocumentAsync(message.Recipient, attachment.Content, attachment.FileName, content, cancellationToken),
+                NotificationChannel.Telegram =>
+                    await telegram.SendMessageAsync(message.Recipient, content, cancellationToken),
+                NotificationChannel.Email =>
+                    await email.SendAsync(message.Recipient, subject, content, cancellationToken, attachment),
+                NotificationChannel.Sms =>
+                    await sms.SendAsync(message.Recipient, content,
+                        await SmsContextAsync(message, delivery.Id, attempt.Id, cancellationToken), cancellationToken),
+                _ => null
+            };
+
+            var now = DateTime.UtcNow;
+            if (result is null)
+            {
+                delivery.Status = NotificationDeliveryStatus.Skipped;
+                delivery.CompletedAt = now;
+                attempt.Status = NotificationDeliveryStatus.Skipped;
+                attempt.CompletedAt = now;
+                attempt.ErrorMessage = "Kanal sozlanmagan yoki adapter mavjud emas.";
+            }
+            else
+            {
+                attempt.Provider = result.Provider;
+                attempt.ProviderMessageId = result.ProviderMessageId;
+                attempt.Units = Math.Max(1, result.Units);
+                if (!result.Pending)
+                {
+                    delivery.Status = NotificationDeliveryStatus.Accepted;
+                    delivery.AcceptedAt = now;
+                    attempt.Status = NotificationDeliveryStatus.Accepted;
+                    attempt.AcceptedAt = now;
+                    attempt.CompletedAt = now;
+                }
+            }
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            var now = DateTime.UtcNow;
+            delivery.Status = NotificationDeliveryStatus.Failed;
+            delivery.CompletedAt = now;
+            attempt.Status = NotificationDeliveryStatus.Failed;
+            attempt.CompletedAt = now;
+            attempt.ErrorCode = ex.GetType().Name;
+            attempt.ErrorMessage = Truncate(ex.Message, 1000);
+            await db.SaveChangesAsync(CancellationToken.None);
+            throw;
         }
     }
 
-    private async Task SendTextAsync(NotificationChannel channel, string recipient, string text, string subject, CancellationToken cancellationToken)
-    {
-        switch (channel)
+    private async Task<string> ResolveProviderAsync(NotificationChannel channel, CancellationToken cancellationToken) =>
+        channel switch
         {
-            case NotificationChannel.Telegram:
-                await telegram.SendMessageAsync(recipient, text, cancellationToken);
-                break;
-            case NotificationChannel.Sms:
-                await sms.SendAsync(recipient, text, cancellationToken);
-                break;
-            case NotificationChannel.Email:
-                await email.SendAsync(recipient, subject, text, cancellationToken);
-                break;
-            default:
-                logger.LogInformation("Notification channel {Channel} has no adapter; skipped", channel);
-                break;
+            NotificationChannel.Sms =>
+                (await settings.GetAsync<SmsSettings>(SettingKeys.Sms, cancellationToken))?.Provider ?? "sms:unconfigured",
+            NotificationChannel.Email =>
+                (await settings.GetAsync<EmailSettings>(SettingKeys.Email, cancellationToken))?.Host ?? "smtp:unconfigured",
+            NotificationChannel.Telegram => "api.telegram.org",
+            NotificationChannel.AppPush => "push:unconfigured",
+            _ => "unknown"
+        };
+
+    private async Task<SmsSendContext> SmsContextAsync(
+        NotificationMessage message,
+        long deliveryId,
+        long attemptId,
+        CancellationToken cancellationToken)
+    {
+        long? branchId = null;
+        if (message.Data.TryGetValue("receiptToken", out var token))
+            branchId = await db.Sales.Where(x => x.ReceiptToken == token).Select(x => (long?)x.BranchId).FirstOrDefaultAsync(cancellationToken);
+        if (branchId is null && message.CustomerId is long customerId)
+        {
+            branchId = await db.Accounts.Where(x => x.CustomerId == customerId && x.BranchId != null)
+                .OrderByDescending(x => x.Balance).Select(x => x.BranchId).FirstOrDefaultAsync(cancellationToken);
+            branchId ??= await db.Sales.Where(x => x.CustomerId == customerId).OrderByDescending(x => x.CreatedAt)
+                .Select(x => (long?)x.BranchId).FirstOrDefaultAsync(cancellationToken);
         }
+        var kind = message.Template == "sale_receipt"
+            ? SmsGatewayJobKind.ReceiptLink
+            : message.Template.StartsWith("debt_", StringComparison.Ordinal)
+                ? SmsGatewayJobKind.DebtReminder
+                : SmsGatewayJobKind.Manual;
+        return new SmsSendContext(branchId, kind, message.CustomerId, $"notification:{deliveryId}", deliveryId, attemptId);
     }
 
     private async Task<string> BuildTextAsync(NotificationMessage message, CancellationToken cancellationToken)
@@ -112,26 +202,39 @@ public sealed class NotificationService(
         var days = message.Data.GetValueOrDefault("days", "");
         var dueDate = message.Data.GetValueOrDefault("dueDate", "");
 
-        if (message.Template is "debt_reminder" or "debt_due_soon")
+        if (message.Template is "debt_reminder" or "debt_due_soon" or "debt_due_today")
         {
             var reminder = await settings.GetAsync<ReminderSettings>(SettingKeys.Reminder, cancellationToken);
-            var template = message.Template == "debt_reminder" ? reminder?.OverdueTemplate : reminder?.DueSoonTemplate;
+            var template = message.Template switch
+            {
+                "debt_due_soon" => reminder?.DueSoonTemplate,
+                "debt_due_today" => reminder?.DueTodayTemplate,
+                _ => reminder?.OverdueTemplate
+            };
             if (!string.IsNullOrWhiteSpace(template))
-                return template
-                    .Replace("{name}", name)
-                    .Replace("{balance}", balance)
-                    .Replace("{currency}", currency)
-                    .Replace("{days}", days)
-                    .Replace("{dueDate}", dueDate);
+                return ApplyVariables(template, name, balance, currency, days, dueDate);
         }
 
         return message.Template switch
         {
             "debt_reminder" => $"Hurmatli {name}! Do'kondan qarzingiz: {balance} {currency} ({days} kundan beri). Iltimos, to'lovni amalga oshiring.",
-            "debt_due_soon" => $"Hurmatli {name}! Do'kondan qarzingiz {balance} {currency} bo'yicha to'lov muddati: {dueDate}. Iltimos, o'z vaqtida to'lang.",
+            "debt_due_soon" => $"Hurmatli {name}! {balance} {currency} qarzingizni to'lash muddati {dueDate}.",
+            "debt_due_today" => $"Hurmatli {name}! {balance} {currency} qarzingizni to'lash muddati bugun.",
+            "sms_quota_low" => $"{message.Data.GetValueOrDefault("device", "SMS shlyuzi")}: oylik limitdan {message.Data.GetValueOrDefault("remaining", "0")} / {message.Data.GetValueOrDefault("limit", "0")} qoldi.",
             _ => message.Template
         };
     }
 
-    private static string Subject(string template) => template is "debt_reminder" or "debt_due_soon" ? "Qarz eslatmasi" : "Chek";
+    private static string ApplyVariables(string template, string name, string balance, string currency, string days, string dueDate) =>
+        template.Replace("{name}", name)
+            .Replace("{balance}", balance)
+            .Replace("{currency}", currency)
+            .Replace("{days}", days)
+            .Replace("{dueDate}", dueDate);
+
+    private static string Subject(string template) =>
+        template.StartsWith("debt_", StringComparison.Ordinal) ? "Qarz eslatmasi" : "Xabarnoma";
+
+    private static string Truncate(string value, int maxLength) =>
+        value.Length <= maxLength ? value : value[..maxLength];
 }

@@ -1,11 +1,10 @@
-using Cartex.Application.Common.Messaging;
-using FluentValidation;
+﻿using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
 
 namespace Cartex.Application.Suppliers.Commands;
 
-public record UpdateSupplierCommand(long Id, string Name, string? Phone) : ICommand<Unit>;
+public record UpdateSupplierCommand(long Id, string Name, string? Phone, bool AcceptsReturns = false) : ICommand<Unit>;
 
 public sealed class UpdateSupplierCommandHandler(IApplicationDbContext db) : IRequestHandler<UpdateSupplierCommand, Unit>
 {
@@ -16,6 +15,7 @@ public sealed class UpdateSupplierCommandHandler(IApplicationDbContext db) : IRe
 
         supplier.Name = request.Name;
         supplier.Phone = request.Phone;
+        supplier.AcceptsReturns = request.AcceptsReturns;
 
         await db.SaveChangesAsync(cancellationToken);
         return Unit.Value;

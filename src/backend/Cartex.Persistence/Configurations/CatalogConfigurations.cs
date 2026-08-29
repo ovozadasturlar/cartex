@@ -10,6 +10,9 @@ public class CategoryConfiguration : IEntityTypeConfiguration<Category>
     {
         builder.ToTable("categories");
         builder.Property(x => x.Name).IsRequired();
+        builder.Property(x => x.SortOrder).HasDefaultValue(0);
+        builder.HasIndex(x => new { x.ParentId, x.SortOrder });
+        builder.HasIndex(x => x.SearchFold, "ix_categories_search_fold_trgm").HasDatabaseName("ix_categories_search_fold_trgm").HasMethod("gin").HasOperators("gin_trgm_ops");
 
         builder.HasOne(x => x.Parent)
             .WithMany(c => c.Children)
@@ -27,6 +30,8 @@ public class UnitConfiguration : IEntityTypeConfiguration<Unit>
         builder.Property(x => x.ShortName).HasMaxLength(10).IsRequired();
         builder.Property(x => x.Dimension).HasConversion<string>().HasMaxLength(20);
         builder.Property(x => x.Factor).HasPrecision(18, 6);
+        builder.Property(x => x.AllowFractional).HasDefaultValue(true);
+        builder.Property(x => x.DefaultAllowAmountEntry).HasDefaultValue(false);
         builder.Property(x => x.IsEnabled).HasDefaultValue(true);
     }
 }
@@ -47,11 +52,15 @@ public class ProductConfiguration : IEntityTypeConfiguration<Product>
     {
         builder.ToTable("products");
         builder.Property(x => x.Name).IsRequired();
+        builder.HasIndex(x => x.SearchFold, "ix_products_search_fold_trgm").HasDatabaseName("ix_products_search_fold_trgm").HasMethod("gin").HasOperators("gin_trgm_ops");
         builder.Property(x => x.MinStock).HasPrecision(12, 3);
         builder.Property(x => x.Attributes).HasColumnType("jsonb");
         builder.Property(x => x.IkpuCode).HasMaxLength(30);
         builder.Property(x => x.VatRate).HasPrecision(5, 2);
         builder.Property(x => x.ImageKey).HasMaxLength(200);
+        builder.Property(x => x.IsEnabled).HasDefaultValue(true);
+        builder.Property(x => x.FractionalOverride);
+        builder.Property(x => x.AmountEntryEnabled);
         builder.HasIndex(x => x.Name, "ix_products_name_trgm").HasDatabaseName("ix_products_name_trgm").HasMethod("gin").HasOperators("gin_trgm_ops");
         builder.HasIndex(x => x.IkpuCode, "ix_products_ikpu_code_trgm").HasDatabaseName("ix_products_ikpu_code_trgm").HasMethod("gin").HasOperators("gin_trgm_ops");
 
@@ -113,11 +122,6 @@ public class BarcodeConfiguration : IEntityTypeConfiguration<Barcode>
             .WithMany(v => v.Barcodes)
             .HasForeignKey(x => x.VariantId)
             .OnDelete(DeleteBehavior.Cascade);
-
-        builder.HasOne(x => x.Pack)
-            .WithMany()
-            .HasForeignKey(x => x.PackId)
-            .OnDelete(DeleteBehavior.SetNull);
     }
 }
 

@@ -18,7 +18,7 @@ public static class AppLock
 
     public static int LockAfterSeconds
     {
-        get => Preferences.Get("lock_after", 0);
+        get => Preferences.Get("lock_after", 120);
         set => Preferences.Set("lock_after", value);
     }
 

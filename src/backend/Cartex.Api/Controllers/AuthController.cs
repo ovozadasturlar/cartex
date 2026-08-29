@@ -1,4 +1,4 @@
-using Cartex.Application.Auth.Commands;
+﻿using Cartex.Application.Auth.Commands;
 using Cartex.Application.Auth.Queries;
 using Cartex.Application.Common.Messaging;
 using Cartex.Auth.Authorization;
@@ -6,6 +6,7 @@ using Cartex.Domain.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Cartex.Shared.Models.Auth;
 
 namespace Cartex.Api.Controllers;
 
@@ -72,16 +73,21 @@ public class AuthController(ISender sender) : ControllerBase
         return NoContent();
     }
 
+    [Authorize]
+    [HttpGet("context")]
+    public async Task<ActionResult<UserContextDto>> Context() =>
+        Ok(await sender.Send(new GetUserContextQuery()));
+
     [HttpGet("sessions")]
-    [HasPermission(AppPermissions.Devices.Manage)]
+    [HasPermission(AppPermissions.Devices.View)]
     public async Task<ActionResult<IReadOnlyList<DeviceSessionDto>>> Sessions([FromQuery] bool all = false) =>
         Ok(await sender.Send(new GetSessionsQuery(all)));
 
     [HttpDelete("sessions/{id:long}")]
-    [HasPermission(AppPermissions.Devices.Manage)]
-    public async Task<IActionResult> RevokeSession(long id)
+    [HasPermission(AppPermissions.Devices.Revoke)]
+    public async Task<IActionResult> RevokeSession(long id, [FromQuery] bool releaseOffline = false)
     {
-        await sender.Send(new RevokeSessionCommand(id));
+        await sender.Send(new RevokeSessionCommand(id, releaseOffline));
         return NoContent();
     }
 }

@@ -93,6 +93,12 @@
     }
   </mat-dialog-content>
   <mat-dialog-actions align="end">
+    @if (canEdit && detail()) {
+      <button matButton="outlined" (click)="editSupply()">
+        <mat-icon>edit</mat-icon>
+        {{ t('edit') }}
+      </button>
+    }
     @if (canVoid && detail()) {
       <button matButton="filled" class="danger-btn" [disabled]="voiding()" (click)="voidSupply()">
         <mat-icon>block</mat-icon>

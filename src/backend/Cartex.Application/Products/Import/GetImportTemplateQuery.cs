@@ -9,7 +9,7 @@ public sealed class GetImportTemplateQueryHandler(ISpreadsheetService spreadshee
     private static readonly string[] Headers =
     [
         "Nomi", "Barkod", "Pachka soni", "Artikul", "Kategoriya", "Birlik",
-        "Sotish narxi", "Kirim narxi", "Soni", "Yaroqlilik muddati", "Min qoldiq"
+        "Sotish narxi", "Valyuta", "Min qoldiq", "Surat URL"
     ];
 
     public Task<byte[]> Handle(GetImportTemplateQuery request, CancellationToken cancellationToken) =>

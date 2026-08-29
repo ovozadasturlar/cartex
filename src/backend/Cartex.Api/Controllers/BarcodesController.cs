@@ -1,10 +1,11 @@
-using Cartex.Application.Barcodes.Commands;
+﻿using Cartex.Application.Barcodes.Commands;
 using Cartex.Application.Barcodes.Queries;
 using Cartex.Auth.Authorization;
 using Cartex.Domain.Authorization;
 using Cartex.Application.Common.Messaging;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Cartex.Shared.Models.Barcodes;
 
 namespace Cartex.Api.Controllers;
 
@@ -22,7 +23,7 @@ public class BarcodesController(ISender sender) : ControllerBase
     }
 
     [HttpPost]
-    [HasPermission(AppPermissions.Products.Manage)]
+    [HasPermission(AppPermissions.Barcodes.Create)]
     public async Task<ActionResult<long>> CreateBarcode(CreateBarcodeCommand command)
     {
         var id = await sender.Send(command);
@@ -30,7 +31,7 @@ public class BarcodesController(ISender sender) : ControllerBase
     }
 
     [HttpDelete("{id:long}")]
-    [HasPermission(AppPermissions.Products.Manage)]
+    [HasPermission(AppPermissions.Barcodes.Delete)]
     public async Task<IActionResult> DeleteBarcode(long id)
     {
         await sender.Send(new DeleteBarcodeCommand(id));

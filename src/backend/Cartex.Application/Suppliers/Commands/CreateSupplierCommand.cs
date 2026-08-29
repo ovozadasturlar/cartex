@@ -1,11 +1,10 @@
-using Cartex.Application.Common.Messaging;
-using FluentValidation;
+﻿using FluentValidation;
 using Cartex.Persistence;
 using Cartex.Domain.Entities;
 
 namespace Cartex.Application.Suppliers.Commands;
 
-public record CreateSupplierCommand(string Name, string? Phone) : ICommand<long>;
+public record CreateSupplierCommand(string Name, string? Phone, bool AcceptsReturns = false) : ICommand<long>;
 
 public sealed class CreateSupplierCommandHandler(IApplicationDbContext db) : IRequestHandler<CreateSupplierCommand, long>
 {
@@ -14,7 +13,8 @@ public sealed class CreateSupplierCommandHandler(IApplicationDbContext db) : IRe
         var supplier = new Supplier
         {
             Name = request.Name,
-            Phone = request.Phone
+            Phone = request.Phone,
+            AcceptsReturns = request.AcceptsReturns
         };
 
         db.Suppliers.Add(supplier);

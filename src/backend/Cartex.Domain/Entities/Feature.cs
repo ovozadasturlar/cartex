@@ -7,4 +7,6 @@ public class Feature : AuditableEntity
     public string Code { get; set; } = null!;
     public string Name { get; set; } = null!;
     public bool IsEnabled { get; set; } = true;
+
+    public bool OwnerEnabled { get; set; } = true;
 }

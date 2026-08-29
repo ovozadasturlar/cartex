@@ -1,3 +1,4 @@
+﻿using Cartex.Application.Common.Finance;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Customers.Commands;
 using Cartex.Application.Stocks.Queries;
@@ -11,6 +12,7 @@ using Cartex.Application.Common.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Cartex.Shared.Models.Stocks;
 
 namespace Cartex.Application.Tests;
 
@@ -39,8 +41,8 @@ public class StockDiscountBadgeTests(DatabaseFixture fixture) : DatabaseTest(fix
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         await db.Features.Where(f => f.Code == FeatureCatalog.Loyalty)
             .ExecuteUpdateAsync(s => s.SetProperty(f => f.IsEnabled, enableFeature));
-        var branch1 = (await db.Branches.FirstAsync(b => b.Name == "Filial 1")).Id;
-        var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Filial 1 ombori")).Id;
+        var branch1 = (await db.Branches.FirstAsync(b => b.Name == "Asosiy filial")).Id;
+        var warehouse1 = (await db.Warehouses.FirstAsync(w => w.Name == "Asosiy ombor")).Id;
         var businessId = (await db.Businesses.FirstAsync()).Id;
         var adminId = (await db.Users.FirstAsync(u => u.Username == "admin")).Id;
         var productId = (await db.Products.FirstAsync(p => p.Name == "Smesitel oshxona Zegor")).Id;
@@ -62,7 +64,10 @@ public class StockDiscountBadgeTests(DatabaseFixture fixture) : DatabaseTest(fix
         var handler = new GetStockOnHandQueryHandler(
             scope.ServiceProvider.GetRequiredService<IApplicationDbContext>(),
             new NoStorage(),
-            scope.ServiceProvider.GetRequiredService<IFeatureStateProvider>());
+            scope.ServiceProvider.GetRequiredService<IFeatureStateProvider>(),
+            scope.ServiceProvider.GetRequiredService<ISettingsService>(),
+            scope.ServiceProvider.GetRequiredService<ICurrencyService>(),
+            scope.ServiceProvider.GetRequiredService<IProductPopularity>());
         var page = await handler.Handle(new GetStockOnHandQuery(warehouseId), default);
         return page.Items;
     }

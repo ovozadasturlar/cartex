@@ -2,7 +2,7 @@
   <div class="head">
     <button matIconButton class="back-ico" (click)="back()"><mat-icon>arrow_back</mat-icon></button>
     <div>
-      <h1>{{ t('new_supply') }}</h1>
+      <h1>{{ t(isEdit ? 'supply_edit' : 'new_supply') }}</h1>
       <p>{{ t('supplies_subtitle') }}</p>
     </div>
   </div>
@@ -47,6 +47,12 @@
 
         <div class="cx-card card">
           <h3>{{ t('add_line') }}</h3>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic" class="scan-field">
+            <mat-label>{{ t('scan_barcode') }}</mat-label>
+            <mat-icon matPrefix>barcode_reader</mat-icon>
+            <input matInput #scan (keydown.enter)="onScanBarcode(scan)" />
+            <cx-scan-indicator matSuffix [state]="scanIndicator.state()" />
+          </mat-form-field>
           <div class="editor-grid">
             <mat-form-field appearance="outline" subscriptSizing="dynamic" class="product">
               <mat-label>{{ t('product') }}</mat-label>
@@ -132,12 +138,12 @@
       </div>
 
       <aside class="cx-card summary">
-        <h3>{{ t('payment') }}</h3>
+        <h3>{{ t(isEdit ? 'total' : 'payment') }}</h3>
         <div class="sum-row">
           <span>{{ t('total') }}</span>
           <b class="cx-money big">{{ total() | cxMoney }}</b>
         </div>
-        @if (supplierId() !== null) {
+        @if (!isEdit && supplierId() !== null) {
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
             <mat-label>{{ t('paid_cash') }}</mat-label>
             <input matInput type="number" min="0" [(ngModel)]="paidCash" />

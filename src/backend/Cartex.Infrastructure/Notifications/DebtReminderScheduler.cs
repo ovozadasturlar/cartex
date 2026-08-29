@@ -51,7 +51,7 @@ public sealed class DebtReminderScheduler(IServiceProvider services, ILogger<Deb
     {
         var accounts = await db.Accounts
             .Where(a => a.Type == AccountType.Debt && a.CustomerId != null && a.Balance > 0 && !a.Customer!.NotificationsOptOut)
-            .Select(a => new { a.Id, CustomerId = a.CustomerId!.Value, CustomerName = a.Customer!.FullName, a.Balance, a.Currency })
+            .Select(a => new { a.Id, CustomerId = a.CustomerId!.Value, CustomerName = a.Customer!.Party.FullName, a.Balance, a.Currency })
             .ToListAsync(cancellationToken);
 
         if (accounts.Count == 0)
@@ -68,12 +68,6 @@ public sealed class DebtReminderScheduler(IServiceProvider services, ILogger<Deb
 
         var lastByAccount = activity.ToDictionary(a => a.AccountId, a => a.Last);
 
-        var window = nowUtc.AddDays(-cfg.RepeatEveryDays);
-        var recentCustomerIds = (await db.DebtReminderLogs
-            .Where(l => l.SentAt > window)
-            .Select(l => l.CustomerId)
-            .ToListAsync(cancellationToken)).ToHashSet();
-
         var customerIds = accounts.Select(a => a.CustomerId).Distinct().ToList();
         var today = DateOnly.FromDateTime(nowUtc);
         var dueDates = await db.Sales
@@ -82,13 +76,15 @@ public sealed class DebtReminderScheduler(IServiceProvider services, ILogger<Deb
             .Select(g => new { CustomerId = g.Key, DueDate = g.Min(s => s.DebtDueDate!.Value) })
             .ToListAsync(cancellationToken);
         var dueByCustomer = dueDates.ToDictionary(d => d.CustomerId, d => d.DueDate);
+        var logWindow = nowUtc.AddDays(-Math.Max(cfg.RepeatEveryDays, cfg.DaysBeforeDue + 2));
+        var recentLogs = await db.DebtReminderLogs
+            .Where(l => customerIds.Contains(l.CustomerId) && l.SentAt > logWindow)
+            .Select(l => new { l.CustomerId, l.SentAt, l.Purpose, l.DueDate })
+            .ToListAsync(cancellationToken);
 
         var enqueued = 0;
         foreach (var group in accounts.GroupBy(a => a.CustomerId))
         {
-            if (recentCustomerIds.Contains(group.Key))
-                continue;
-
             var hasDueDate = dueByCustomer.TryGetValue(group.Key, out var dueDate);
             var due = group
                 .Select(a => new
@@ -99,14 +95,36 @@ public sealed class DebtReminderScheduler(IServiceProvider services, ILogger<Deb
                     Days = lastByAccount.TryGetValue(a.Id, out var last) ? (int)(nowUtc - last).TotalDays : 0
                 })
                 .Where(a => a.Balance >= cfg.MinBalance)
-                .Where(a => hasDueDate ? dueDate <= today.AddDays(1) : a.Days >= cfg.MinDaysOverdue)
+                .Where(a => hasDueDate || a.Days >= cfg.MinDaysOverdue)
                 .OrderByDescending(a => a.Balance)
                 .FirstOrDefault();
 
             if (due is null)
                 continue;
 
-            var template = hasDueDate && dueDate >= today ? "debt_due_soon" : "debt_reminder";
+            var daysUntilDue = hasDueDate ? dueDate.DayNumber - today.DayNumber : int.MinValue;
+            var template = hasDueDate
+                ? daysUntilDue == cfg.DaysBeforeDue && cfg.NotifyBeforeDue
+                    ? "debt_due_soon"
+                    : daysUntilDue == 0 && cfg.NotifyOnDueDate
+                        ? "debt_due_today"
+                        : daysUntilDue < 0
+                            ? "debt_reminder"
+                            : null
+                : "debt_reminder";
+            if (template is null)
+                continue;
+
+            var alreadySent = template == "debt_reminder"
+                ? recentLogs.Any(l => l.CustomerId == group.Key
+                    && l.Purpose == template
+                    && l.SentAt > nowUtc.AddDays(-cfg.RepeatEveryDays))
+                : recentLogs.Any(l => l.CustomerId == group.Key
+                    && l.Purpose == template
+                    && l.DueDate == dueDate);
+            if (alreadySent)
+                continue;
+
             var evt = new DebtReminderDueEvent(group.Key, due.CustomerName, due.Balance, due.Currency, due.Days, template, hasDueDate ? dueDate : null);
             db.NotificationOutbox.Add(new NotificationOutbox
             {
@@ -118,7 +136,9 @@ public sealed class DebtReminderScheduler(IServiceProvider services, ILogger<Deb
                 CustomerId = group.Key,
                 SentAt = nowUtc,
                 Balance = due.Balance,
-                DaysOverdue = due.Days
+                DaysOverdue = hasDueDate ? Math.Max(0, -daysUntilDue) : due.Days,
+                Purpose = template,
+                DueDate = hasDueDate ? dueDate : null
             });
             enqueued++;
         }

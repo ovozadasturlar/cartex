@@ -1,15 +1,19 @@
-using Cartex.Application.Common.Messaging;
 using Cartex.Application.Common.Interfaces;
 using Cartex.Application.Common.Settings;
+using Cartex.Application.Common.Inventory;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Cartex.Persistence;
+using Cartex.Persistence.Services;
 using Cartex.Domain.Common;
 using Cartex.Domain.Entities;
 using Cartex.Domain.Enums;
-using Cartex.Domain.Measurement;
 using Cartex.Application.Common.Finance;
+using Cartex.Application.Common.Shifts;
 using Cartex.Application.Products;
+using Cartex.Application.Common.Measurement;
+using Cartex.Domain.Authorization;
+using System.Text.Json.Serialization;
 
 namespace Cartex.Application.Supplies.Commands;
 
@@ -30,13 +34,37 @@ public record CreateSupplyCommand(
     List<CreateSupplyItemDto> Items,
     decimal PaidCash = 0,
     decimal PaidCard = 0,
-    string? Currency = null) : ICommand<long>;
-
-public sealed class CreateSupplyCommandHandler(IApplicationDbContext db, ICurrentUser currentUser, ILedgerService ledger, ICurrencyService currency, ISettingsService settingsService, IAuditService audit) : IRequestHandler<CreateSupplyCommand, long>
+    string? Currency = null) : ICommand<long>
 {
-    public async Task<long> Handle(CreateSupplyCommand request, CancellationToken cancellationToken)
+    public string? IdempotencyKey { get; init; }
+    [JsonIgnore] public bool FromOfflineSync { get; init; }
+    [JsonIgnore] public long? OfflineActorUserId { get; init; }
+}
+
+public sealed class CreateSupplyCommandHandler(IApplicationDbContext db, ICurrentUser currentUser, ILedgerService ledger, ICurrencyService currency, ISettingsService settingsService, IBranchCatalogService branchCatalog, IShiftLock shiftLock, IAuditService audit, IQuantityPolicyService quantityPolicy, InventoryReasonState inventoryReason) : IRequestHandler<CreateSupplyCommand, long>
+{
+    public Task<long> Handle(CreateSupplyCommand request, CancellationToken cancellationToken) =>
+        db.ExecuteInTransactionAsync(() => HandleCoreAsync(request, cancellationToken), cancellationToken);
+
+    private async Task<long> HandleCoreAsync(CreateSupplyCommand request, CancellationToken cancellationToken)
     {
-        var userId = currentUser.UserId ?? throw new UnauthorizedAccessException("Not authenticated.");
+        var authenticatedUserId = currentUser.UserId ?? throw new UnauthorizedAccessException("Not authenticated.");
+        if (request.OfflineActorUserId.HasValue && !request.FromOfflineSync)
+            throw new ForbiddenException("Offline actor can only be used by the replay pipeline.");
+        var userId = request.OfflineActorUserId ?? authenticatedUserId;
+        if (!currentUser.HasPermission(AppPermissions.Supplies.Create))
+            throw new ForbiddenException("Kirim yaratishga ruxsat yo'q.");
+
+        var idempotencyKey = string.IsNullOrWhiteSpace(request.IdempotencyKey) ? null : request.IdempotencyKey.Trim();
+        if (idempotencyKey is not null)
+        {
+            var existing = await db.Supplies
+                .Where(s => s.UserId == userId && s.IdempotencyKey == idempotencyKey)
+                .Select(s => (long?)s.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (existing is not null)
+                return existing.Value;
+        }
 
         if (request.SupplierId is null)
         {
@@ -50,12 +78,13 @@ public sealed class CreateSupplyCommandHandler(IApplicationDbContext db, ICurren
 
         var baseCode = await currency.BaseAsync(cancellationToken);
         var supplyCurrency = request.Currency ?? baseCode;
-        if (supplyCurrency != baseCode && !await currency.IsMulticurrencyAsync(cancellationToken))
-            throw new BusinessRuleException("Ko'p valyuta rejimi o'chirilgan.");
+        await currency.EnsurePricingAllowedAsync(supplyCurrency, cancellationToken);
         var supplyRate = supplyCurrency == baseCode ? 1m : await currency.RateAsync(supplyCurrency, cancellationToken);
 
         var resolver = await SupplyLineResolver.LoadAsync(db, request.Items, cancellationToken);
         var lines = request.Items.Select(item => (item, resolved: resolver.Resolve(item))).ToList();
+        await quantityPolicy.ValidateAsync(
+            lines.Select(x => (x.item.VariantId, x.resolved.Quantity)), cancellationToken);
 
         var supply = new Supply
         {
@@ -66,7 +95,8 @@ public sealed class CreateSupplyCommandHandler(IApplicationDbContext db, ICurren
             SupplyDate = request.SupplyDate,
             TotalAmount = lines.Sum(l => l.resolved.Quantity * l.resolved.Price),
             Currency = supplyCurrency,
-            Rate = supplyRate
+            Rate = supplyRate,
+            IdempotencyKey = idempotencyKey
         };
 
         foreach (var (item, resolved) in lines)
@@ -84,6 +114,17 @@ public sealed class CreateSupplyCommandHandler(IApplicationDbContext db, ICurren
                 PriceBasis = item.PriceBasis
             });
 
+            if (resolved.SellingPrice is { } sellingPrice)
+                await ProductPriceWriter.UpsertAsync(db, item.VariantId, null, sellingPrice, cancellationToken, supplyCurrency);
+        }
+
+        db.Supplies.Add(supply);
+        await db.SaveChangesAsync(cancellationToken);
+
+        inventoryReason.Declare(new(InventoryMovementKind.SupplyReceipt, "Supply", supply.Id,
+            InventoryLocation.External(request.SupplierId ?? 0)));
+
+        foreach (var (item, resolved) in lines)
             db.Stocks.Add(new Stock
             {
                 BranchId = warehouse.BranchId,
@@ -95,11 +136,7 @@ public sealed class CreateSupplyCommandHandler(IApplicationDbContext db, ICurren
                 ExpiredAt = item.ExpiredAt
             });
 
-            if (resolved.SellingPrice is { } sellingPrice)
-                await ProductPriceWriter.UpsertAsync(db, item.VariantId, null, sellingPrice, cancellationToken, supplyCurrency);
-        }
-
-        db.Supplies.Add(supply);
+        await branchCatalog.ActivateAsync(warehouse.BranchId, request.Items.Select(x => x.VariantId), BranchCatalogActivationSource.Supply, cancellationToken);
 
         var totalBase = Math.Round(supply.TotalAmount * supplyRate, 2);
         if (request.PaidCash + request.PaidCard > totalBase)
@@ -108,10 +145,7 @@ public sealed class CreateSupplyCommandHandler(IApplicationDbContext db, ICurren
         long? shiftId = null;
         if (request.PaidCash > 0)
         {
-            shiftId = await db.Shifts
-                .Where(s => s.UserId == userId && s.BranchId == warehouse.BranchId && s.Status == ShiftStatus.Open)
-                .Select(s => (long?)s.Id)
-                .FirstOrDefaultAsync(cancellationToken);
+            shiftId = (await shiftLock.OpenAsync(userId, warehouse.BranchId, cancellationToken))?.Id;
             var policy = await settingsService.GetAsync<SalesPolicySettings>(SettingKeys.SalesPolicy, cancellationToken) ?? new SalesPolicySettings();
             if (shiftId is null && policy.ShiftPolicy != "Off")
                 throw new BusinessRuleException("Naqd to'lov uchun ochiq smena talab qilinadi.");
@@ -120,29 +154,29 @@ public sealed class CreateSupplyCommandHandler(IApplicationDbContext db, ICurren
         if (request.SupplierId is { } supplierId)
         {
             var supplierDebt = await ledger.SupplierAccountAsync(supplierId, AccountType.Debt, cancellationToken, supplyCurrency);
-            ledger.Post(OperationType.DebtCharge, supply.TotalAmount, supplierDebt, null, userId, rate: supplyRate).Supply = supply;
+            (await ledger.PostAsync(OperationType.DebtCharge, supply.TotalAmount, supplierDebt, null, userId, cancellationToken, rate: supplyRate)).Supply = supply;
 
             if (request.PaidCash > 0)
             {
-                var cash = await ledger.BranchAccountAsync(warehouse.BranchId, AccountType.Cash, cancellationToken);
-                PostPayment(request.PaidCash, cash);
+                var cash = await CashPayout.AccountAsync(ledger, warehouse.BranchId, request.PaidCash, cancellationToken);
+                await PostPaymentAsync(request.PaidCash, cash);
             }
 
             if (request.PaidCard > 0)
             {
                 var card = await ledger.BranchAccountAsync(warehouse.BranchId, AccountType.Card, cancellationToken);
-                PostPayment(request.PaidCard, card);
+                await PostPaymentAsync(request.PaidCard, card);
             }
 
-            void PostPayment(decimal amountBase, Cartex.Domain.Entities.Account account)
+            async Task PostPaymentAsync(decimal amountBase, Cartex.Domain.Entities.Account account)
             {
                 if (supplyCurrency == baseCode)
                 {
-                    ledger.Post(OperationType.SupplyPay, amountBase, account, supplierDebt, userId, shiftId).Supply = supply;
+                    (await ledger.PostAsync(OperationType.SupplyPay, amountBase, account, supplierDebt, userId, cancellationToken, shiftId)).Supply = supply;
                     return;
                 }
-                ledger.Post(OperationType.SupplyPay, amountBase, account, null, userId, shiftId).Supply = supply;
-                ledger.Post(OperationType.SupplyPay, Math.Round(amountBase / supplyRate, 2), null, supplierDebt, userId, shiftId, supplyRate).Supply = supply;
+                (await ledger.PostAsync(OperationType.SupplyPay, amountBase, account, null, userId, cancellationToken, shiftId)).Supply = supply;
+                (await ledger.PostAsync(OperationType.SupplyPay, Math.Round(amountBase / supplyRate, 4), null, supplierDebt, userId, cancellationToken, shiftId, supplyRate)).Supply = supply;
             }
         }
 

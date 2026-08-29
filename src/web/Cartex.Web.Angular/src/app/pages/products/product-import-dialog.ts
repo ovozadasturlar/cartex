@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -10,15 +10,13 @@ import { MatSelectModule } from '@angular/material/select';
 import { TranslocoModule, TranslocoService } from '@jsverse/transloco';
 import { lastValueFrom } from 'rxjs';
 import {
-  ImportPreview, ImportRow, ImportStockMode, ProductsCatalogApi,
+  ImportPreview, ImportRow, ProductsCatalogApi,
 } from '../../core/api/catalog.api';
-import { InventoryApi, Supplier, WarehouseOption } from '../../core/api/inventory.api';
-import { isoDay } from '../../core/format';
 import { NotifyService } from '../../core/notify.service';
 
 const FIELDS = [
   'Name', 'Barcode', 'PackQty', 'Sku', 'Category', 'Unit',
-  'SellingPrice', 'PurchasePrice', 'Quantity', 'ExpiredAt', 'MinStock', 'Ikpu', 'Vat',
+  'SellingPrice', 'PurchasePrice', 'Quantity', 'ExpiredAt', 'MinStock', 'Ikpu', 'Vat', 'ImageUrl', 'Currency',
 ];
 
 @Component({
@@ -86,45 +84,6 @@ const FIELDS = [
           </div>
 
           <div class="options">
-            <div class="cx-seg">
-              <button type="button" [class.active]="mode === 'None'" (click)="mode = 'None'">
-                {{ t('import_mode_catalog') }}
-              </button>
-              <button type="button" [class.active]="mode === 'Supply'" (click)="mode = 'Supply'">
-                {{ t('import_mode_supply') }}
-              </button>
-              <button type="button" [class.active]="mode === 'Opening'" (click)="mode = 'Opening'">
-                {{ t('import_mode_opening') }}
-              </button>
-            </div>
-
-            @if (mode !== 'None') {
-              <div class="row">
-                <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                  <mat-label>{{ t('warehouse') }}</mat-label>
-                  <mat-select [(ngModel)]="warehouseId">
-                    @for (w of warehouses(); track w.id) {
-                      <mat-option [value]="w.id">{{ w.name }}</mat-option>
-                    }
-                  </mat-select>
-                </mat-form-field>
-                @if (mode === 'Supply') {
-                  <mat-form-field appearance="outline" subscriptSizing="dynamic">
-                    <mat-label>{{ t('supplier') }}</mat-label>
-                    <mat-select [(ngModel)]="supplierId">
-                      @for (s of suppliers(); track s.id) {
-                        <mat-option [value]="s.id">{{ s.name }}</mat-option>
-                      }
-                    </mat-select>
-                  </mat-form-field>
-                }
-              </div>
-            }
-
-            @if (mode === 'Opening') {
-              <p class="hint">{{ t('import_opening_hint') }}</p>
-            }
-
             <div class="checks">
               <mat-checkbox [(ngModel)]="updatePrices">{{ t('import_update_prices') }}</mat-checkbox>
               <mat-checkbox [(ngModel)]="createMissingCategories">{{ t('import_create_categories') }}</mat-checkbox>
@@ -186,9 +145,8 @@ const FIELDS = [
     </div>
   `,
 })
-export class ProductImportDialog implements OnInit {
+export class ProductImportDialog {
   private readonly api = inject(ProductsCatalogApi);
-  private readonly inventory = inject(InventoryApi);
   private readonly notify = inject(NotifyService);
   private readonly i18n = inject(TranslocoService);
   private readonly ref = inject(MatDialogRef<ProductImportDialog>);
@@ -198,32 +156,13 @@ export class ProductImportDialog implements OnInit {
   readonly saving = signal(false);
   readonly fileName = signal<string | null>(null);
   readonly preview = signal<ImportPreview | null>(null);
-  readonly warehouses = signal<WarehouseOption[]>([]);
-  readonly suppliers = signal<Supplier[]>([]);
   readonly selected = new Set<number>();
 
   mapping: Record<number, string> = {};
-  mode: ImportStockMode = 'None';
-  warehouseId: number | null = null;
-  supplierId: number | null = null;
   updatePrices = false;
   createMissingCategories = true;
 
   private file: File | null = null;
-
-  async ngOnInit(): Promise<void> {
-    try {
-      const [warehouses, suppliers] = await Promise.all([
-        lastValueFrom(this.inventory.warehouses()),
-        lastValueFrom(this.inventory.suppliersAll()).catch(() => []),
-      ]);
-      this.warehouses.set(warehouses);
-      this.suppliers.set(suppliers);
-      this.warehouseId = warehouses[0]?.id ?? null;
-    } catch (e) {
-      this.notify.error(e);
-    }
-  }
 
   async onFile(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
@@ -297,26 +236,11 @@ export class ProductImportDialog implements OnInit {
       this.notify.error(this.i18n.translate('import_no_rows'));
       return;
     }
-    if (this.mode !== 'None' && !this.warehouseId) {
-      this.notify.error(this.i18n.translate('warehouse'));
-      return;
-    }
-    if (this.mode === 'Supply' && !this.supplierId) {
-      this.notify.error(this.i18n.translate('supplier'));
-      return;
-    }
-
     this.saving.set(true);
     try {
       const result = await lastValueFrom(
         this.api.import({
           rows,
-          stockMode: this.mode,
-          warehouseId: this.mode === 'None' ? null : this.warehouseId,
-          supplierId: this.mode === 'Supply' ? this.supplierId : null,
-          supplyDate: isoDay(new Date()),
-          paidCash: 0,
-          paidCard: 0,
           updatePrices: this.updatePrices,
           createMissingCategories: this.createMissingCategories,
         }),

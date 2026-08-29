@@ -13,6 +13,8 @@ public static class ServiceLocator
         (_provider ?? throw new InvalidOperationException("ServiceLocator not initialized"))
             .GetRequiredService<T>();
 
+    public static T? TryResolve<T>() where T : class => _provider?.GetService<T>();
+
     public static object Resolve(Type type) =>
         (_provider ?? throw new InvalidOperationException("ServiceLocator not initialized"))
             .GetRequiredService(type);
