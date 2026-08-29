@@ -238,7 +238,7 @@
         </Border>
 
         <!-- ===== CHANGE USERNAME DIALOG (developer only) ===== -->
-        <Border IsVisible="{Binding IsChangeUsernameOpen}" Background="#30000000"
+        <Border IsVisible="{Binding IsChangeUsernameOpen}" c:FormBehaviors.AutoFocus="True" Background="#30000000"
                 c:OverlayBehaviors.DismissCommand="{Binding CancelChangeUsernameCommand}">
             <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="400"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"

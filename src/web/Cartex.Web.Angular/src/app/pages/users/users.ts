@@ -124,7 +124,7 @@ export class Users implements OnInit {
         data: { user, roles: this.roles, branches: this.branches },
         width: '520px',
         maxWidth: '94vw',
-        autoFocus: false,
+        autoFocus: 'first-tabbable',
       })
       .afterClosed()
       .subscribe((saved) => {
@@ -188,7 +188,7 @@ export class Users implements OnInit {
       <div mat-dialog-content class="dlg-form">
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('username') }}</mat-label>
-          <input matInput [(ngModel)]="username" [disabled]="!!user" />
+          <input matInput [(ngModel)]="username" [disabled]="!!user" [attr.cdkFocusInitial]="user ? null : ''" />
         </mat-form-field>
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('full_name') }}</mat-label>

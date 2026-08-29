@@ -167,7 +167,7 @@ export class Warehouse implements OnInit {
       data: { stock, warehouseId },
       width: '430px',
       maxWidth: '94vw',
-      autoFocus: false,
+      autoFocus: 'first-tabbable',
     }).afterClosed().subscribe((changed) => {
         if (changed) void this.load();
       });
@@ -219,7 +219,7 @@ export class Warehouse implements OnInit {
         </div>
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('quantity') }}</mat-label>
-          <input matInput type="number" min="0" [(ngModel)]="countedQuantity" />
+          <input matInput type="number" min="0" [(ngModel)]="countedQuantity" cdkFocusInitial />
         </mat-form-field>
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('reason') }}</mat-label>

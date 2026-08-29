@@ -30,7 +30,7 @@ import { NotifyService } from '../../core/notify.service';
       <mat-dialog-content>
         <mat-form-field appearance="outline" subscriptSizing="dynamic" class="full">
           <mat-label>{{ t('channel') }}</mat-label>
-          <mat-select [(ngModel)]="channel">
+          <mat-select [(ngModel)]="channel" cdkFocusInitial>
             @for (c of channels(); track c) {
               <mat-option [value]="c">{{ t('channel_' + c) }}</mat-option>
             }

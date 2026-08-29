@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mi="using:Material.Icons.Avalonia"
+             xmlns:c="using:Cartex.UI.Controls"
              x:Class="Cartex.UI.Views.OnboardingView"
              x:CompileBindings="False">
 
@@ -36,7 +37,7 @@
                            HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" />
             </StackPanel>
 
-            <StackPanel IsVisible="{Binding IsStep1}" Spacing="12">
+            <StackPanel IsVisible="{Binding IsStep1}" Spacing="12" c:FormBehaviors.AutoFocus="True">
                 <StackPanel Spacing="6">
                     <TextBlock Text="{Binding L[business_name]}" Classes="caption" />
                     <TextBox Text="{Binding BusinessName, Mode=TwoWay}" MinHeight="44" />
@@ -75,7 +76,7 @@
                 </ScrollViewer>
             </StackPanel>
 
-            <StackPanel IsVisible="{Binding IsStep3}" Spacing="12">
+            <StackPanel IsVisible="{Binding IsStep3}" Spacing="12" c:FormBehaviors.AutoFocus="True">
                 <StackPanel Spacing="6">
                     <TextBlock Text="{Binding L[branch]}" Classes="caption" />
                     <TextBox Text="{Binding BranchName, Mode=TwoWay}" MinHeight="44" />

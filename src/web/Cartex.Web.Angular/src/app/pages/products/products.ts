@@ -194,7 +194,7 @@ export class Products implements OnInit, OnDestroy {
 
   private openDialog(product: CatalogProduct | null): void {
     this.dialog
-      .open(ProductDialog, { data: { product }, width: '760px', maxWidth: '94vw', autoFocus: false })
+      .open(ProductDialog, { data: { product }, width: '760px', maxWidth: '94vw', autoFocus: 'first-tabbable' })
       .afterClosed()
       .subscribe((saved) => {
         if (saved) void this.load();

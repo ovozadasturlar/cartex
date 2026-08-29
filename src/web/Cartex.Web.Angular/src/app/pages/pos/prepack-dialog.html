@@ -11,7 +11,7 @@
         <div class="finder">
           <mat-form-field appearance="outline" subscriptSizing="dynamic" class="grow">
             <mat-label>{{ t('search') }}</mat-label>
-            <input matInput [(ngModel)]="search" (keyup.enter)="find()" />
+            <input matInput cdkFocusInitial [(ngModel)]="search" (keyup.enter)="find()" />
           </mat-form-field>
           <button matButton="filled" (click)="find()"><mat-icon>search</mat-icon></button>
         </div>

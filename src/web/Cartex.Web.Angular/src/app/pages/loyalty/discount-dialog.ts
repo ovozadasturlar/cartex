@@ -51,7 +51,7 @@ interface ExceptionChip {
         <div class="row2 center">
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
             <mat-label>{{ t('name') }}</mat-label>
-            <input matInput [(ngModel)]="name" />
+            <input matInput cdkFocusInitial [(ngModel)]="name" />
           </mat-form-field>
           <mat-slide-toggle [(ngModel)]="enabled">{{ t('active') }}</mat-slide-toggle>
         </div>

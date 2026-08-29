@@ -127,7 +127,7 @@ export class Sales implements OnInit {
   async openReturn(row: Sale, event: Event): Promise<void> {
     event.stopPropagation();
     const done: boolean | undefined = await lastValueFrom(
-this.dialog.open<ReturnDialog, unknown, boolean>(ReturnDialog, { data: row, width: '480px', maxWidth: '94vw', autoFocus: false }).afterClosed(),
+this.dialog.open<ReturnDialog, unknown, boolean>(ReturnDialog, { data: row, width: '480px', maxWidth: '94vw', autoFocus: 'first-tabbable' }).afterClosed(),
     );
     if (done) void this.load();
   }
@@ -450,7 +450,7 @@ interface ReturnLine {
             <div class="ctrl">
               <mat-form-field appearance="outline" subscriptSizing="dynamic" class="qty">
                 <mat-label>{{ t('quantity') }}</mat-label>
-                <input matInput type="number" min="0" [max]="line.remaining" [(ngModel)]="line.quantity" />
+                <input matInput type="number" min="0" [max]="line.remaining" [(ngModel)]="line.quantity" [attr.cdkFocusInitial]="$first ? '' : null" />
               </mat-form-field>
               <mat-checkbox [(ngModel)]="line.restock">{{ t('restock') }}</mat-checkbox>
             </div>

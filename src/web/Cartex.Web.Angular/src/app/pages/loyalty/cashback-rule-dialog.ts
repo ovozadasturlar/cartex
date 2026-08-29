@@ -43,7 +43,7 @@ export interface CashbackRuleData {
       <mat-dialog-content class="form">
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>{{ t('scope') }}</mat-label>
-          <mat-select [value]="scope()" (selectionChange)="setScope($event.value)">
+          <mat-select [value]="scope()" (selectionChange)="setScope($event.value)" cdkFocusInitial>
             <mat-option value="Product">{{ t('product') }}</mat-option>
             <mat-option value="Category">{{ t('category') }}</mat-option>
           </mat-select>

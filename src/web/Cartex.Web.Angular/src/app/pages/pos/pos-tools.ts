@@ -154,7 +154,7 @@ export class PosProductDialog {
         @if (suppliers().length || supplierRequired()) {
           <mat-form-field appearance="outline" subscriptSizing="dynamic" class="full">
             <mat-label>{{ t('supplier') }}</mat-label>
-            <mat-select [(ngModel)]="supplierId">
+            <mat-select [(ngModel)]="supplierId" cdkFocusInitial>
               @if (!supplierRequired()) {
                 <mat-option [value]="null">{{ t('none') }}</mat-option>
               }
@@ -312,7 +312,7 @@ interface QuickRateRow {
             <span class="cur">{{ r.current }}</span>
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
               <mat-label>{{ t('rate') }}</mat-label>
-              <input matInput type="number" min="0" [(ngModel)]="r.next" />
+              <input matInput type="number" min="0" [(ngModel)]="r.next" [attr.cdkFocusInitial]="$first ? '' : null" />
             </mat-form-field>
           </div>
         } @empty {

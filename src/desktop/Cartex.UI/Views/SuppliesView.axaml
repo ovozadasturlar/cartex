@@ -453,7 +453,7 @@
 
         <views:BarcodeLabelDialog DataContext="{Binding BarcodePrint}" />
 
-        <Border IsVisible="{Binding IsPaymentOpen}" Background="#30000000"
+        <Border IsVisible="{Binding IsPaymentOpen}" c:FormBehaviors.AutoFocus="True" Background="#30000000"
                 c:OverlayBehaviors.DismissCommand="{Binding CancelPaymentCommand}">
             <Border Background="{DynamicResource CardBg}" CornerRadius="14" MaxWidth="720" MaxHeight="720" Margin="32" Padding="22"
                     BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"

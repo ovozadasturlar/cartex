@@ -96,7 +96,7 @@ export class Transfers implements OnInit {
 
   async openCreate(): Promise<void> {
     if (!this.canCreate) return;
-    const ref = this.dialog.open(TransferCreateDialog, { width: '480px', maxWidth: '94vw', autoFocus: false });
+    const ref = this.dialog.open(TransferCreateDialog, { width: '480px', maxWidth: '94vw', autoFocus: 'first-tabbable' });
     if (await lastValueFrom(ref.afterClosed())) void this.load();
   }
 
@@ -154,7 +154,7 @@ export class Transfers implements OnInit {
           <div class="fields">
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
               <mat-label>{{ t('from_account') }}</mat-label>
-              <mat-select [(ngModel)]="fromWarehouseId">
+              <mat-select [(ngModel)]="fromWarehouseId" cdkFocusInitial>
                 @for (w of warehouses(); track w.id) {
                   <mat-option [value]="w.id">{{ w.name }}</mat-option>
                 }

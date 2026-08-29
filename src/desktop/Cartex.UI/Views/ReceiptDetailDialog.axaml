@@ -382,7 +382,7 @@
                             </DockPanel>
 
                             <!-- CUSTOMER CREATION FORM -->
-                            <ScrollViewer IsVisible="{Binding IsCreatingCustomer}">
+                            <ScrollViewer IsVisible="{Binding IsCreatingCustomer}" ctl:FormBehaviors.AutoFocus="True">
                                 <StackPanel Spacing="12">
                                     <Button Classes="icon" HorizontalAlignment="Left" Command="{Binding BackToCustomerListCommand}">
                                         <mi:MaterialIcon Kind="ArrowLeft" Width="18" Height="18" Foreground="{DynamicResource TextMuted}" />

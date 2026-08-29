@@ -846,7 +846,7 @@
                     BoxShadow="0 16 48 0 #44000000">
                 <Panel>
 
-                <DockPanel IsVisible="{Binding !IsAddingCustomer}">
+                <DockPanel IsVisible="{Binding !IsAddingCustomer}" c:FormBehaviors.AutoFocus="True">
                     <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,14">
                         <TextBlock Text="{Binding L[customers]}" FontSize="18" FontWeight="Bold"
                                    Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center" />
@@ -915,7 +915,7 @@
                     </ScrollViewer>
                 </DockPanel>
 
-                <StackPanel Spacing="12" IsVisible="{Binding IsAddingCustomer}">
+                <StackPanel Spacing="12" IsVisible="{Binding IsAddingCustomer}" c:FormBehaviors.AutoFocus="True">
                     <Grid ColumnDefinitions="Auto,*" Margin="0,0,0,2">
                         <Button Grid.Column="0" Background="Transparent" BorderThickness="0" Padding="4" Cursor="Hand"
                                 Command="{Binding CancelAddCustomerCommand}">
@@ -1467,7 +1467,7 @@
             </Border>
         </Border>
 
-        <Border Grid.ColumnSpan="3" Background="#30000000" IsVisible="{Binding IsQuickRatesOpen}"
+        <Border Grid.ColumnSpan="3" Background="#30000000" IsVisible="{Binding IsQuickRatesOpen}" c:FormBehaviors.AutoFocus="True"
                 c:OverlayBehaviors.DismissCommand="{Binding CloseQuickRatesCommand}">
             <Border Background="{DynamicResource CardBg}" CornerRadius="14" Width="400" MaxHeight="520"
                     VerticalAlignment="Center" HorizontalAlignment="Center"

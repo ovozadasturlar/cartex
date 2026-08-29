@@ -157,7 +157,7 @@ export class Loyalty implements OnInit {
         data: { rule, products: this.products, categories: this.categories, manufacturers: this.manufacturers },
         width: '640px',
         maxWidth: '94vw',
-        autoFocus: false,
+        autoFocus: 'first-tabbable',
       })
       .afterClosed()
       .subscribe((saved) => {
@@ -179,7 +179,7 @@ export class Loyalty implements OnInit {
         data: { rule, products: this.products, categories: this.categories },
         width: '480px',
         maxWidth: '94vw',
-        autoFocus: false,
+        autoFocus: 'first-tabbable',
       })
       .afterClosed()
       .subscribe((saved) => {
